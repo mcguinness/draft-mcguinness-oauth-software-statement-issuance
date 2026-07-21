@@ -13,14 +13,16 @@ Expires: 22 January 2027
 
 Abstract
 
-   This specification defines an OAuth 2.0 flow through which a client
+   This specification defines OAuth 2.0 flows through which a client
    requests a software statement, as defined in RFC 7591, from an
-   authorization server.  The flow uses a new authorization endpoint
-   response_type value, software_statement, and a corresponding
-   extension grant.  A Client ID Metadata Document identifies a client
-   that has not been registered with the authorization server.  An
-   optional registration parameter selects a request-specific subset of
-   the metadata to be attested.
+   authorization server.  The redirect flow uses a new authorization
+   endpoint response_type value, software_statement; the client redeems
+   the resulting intermediate code with the standard authorization_code
+   grant type.  The backchannel flow uses a new extension grant.  A
+   Client ID Metadata Document identifies a client that has not been
+   registered with the authorization server.  An optional registration
+   parameter selects a request-specific subset of the metadata to be
+   attested.
 
    When issuance can complete synchronously, the authorization endpoint
    returns a short-lived code that the client exchanges at the token
@@ -34,9 +36,9 @@ Abstract
 
    A client without access to a user agent can instead send a
    backchannel software statement request directly to the token endpoint
-   using the same extension grant.  Issuance that cannot complete
-   immediately then uses the deferred token response defined by Deferred
-   Token Response, without any redirect.
+   using the extension grant.  Issuance that cannot complete immediately
+   then uses the deferred token response defined by Deferred Token
+   Response, without any redirect.
 
 Status of This Memo
 
@@ -85,7 +87,7 @@ Table of Contents
    6.  Authorization Response
      6.1.  Synchronous Response
      6.2.  Direct Deferred Response
-   7.  Software Statement Grant
+   7.  Intermediate Code Redemption
    8.  Backchannel Software Statement Request
    9.  Deferred Processing
      9.1.  First Polling Request
@@ -123,7 +125,8 @@ Table of Contents
      A.2.  Why Use the Authorization Endpoint
      A.3.  Why Not the Device Authorization Grant
      A.4.  Why the Backchannel Flow Uses the Token Endpoint
-     A.5.  Why a New Grant Type
+     A.5.  Why One Grant Type, and Why Redemption Uses
+           authorization_code
      A.6.  Why Use Direct Authorization Endpoint Deferral
      A.7.  Why the Response Uses access_token
      A.8.  Why Reuse the registration Parameter
@@ -170,17 +173,19 @@ Table of Contents
    administrative domain rather than the open web.
 
    The protocol introduces response_type=software_statement at the
-   authorization endpoint and the urn:ietf:params:oauth:grant-
-   type:software-statement extension grant at the token endpoint.
-   Clients identify themselves with the HTTPS URL and metadata document
-   defined by [CIMD].  If issuance is approved without deferral, the
-   authorization server returns an intermediate code that the client
-   redeems for the software statement.  If issuance remains pending and
-   the client opted in to deferral, the authorization server returns a
-   deferral_code directly from the authorization endpoint and the client
-   polls the token endpoint for the eventual response.  A client without
-   access to a user agent can initiate the same request directly at the
-   token endpoint.
+   authorization endpoint and one extension grant,
+   urn:ietf:params:oauth:grant-type:software-statement, for initiating a
+   backchannel request at the token endpoint; an intermediate code from
+   the redirect flow is redeemed with the standard authorization_code
+   grant type.  Clients identify themselves with the HTTPS URL and
+   metadata document defined by [CIMD].  If issuance is approved without
+   deferral, the authorization server returns an intermediate code that
+   the client redeems for the software statement.  If issuance remains
+   pending and the client opted in to deferral, the authorization server
+   returns a deferral_code directly from the authorization endpoint and
+   the client polls the token endpoint for the eventual response.  A
+   client without access to a user agent instead initiates the request
+   with the software statement grant.
 
    The flow concerns client establishment, not authorization to access a
    protected resource.  Consequently, a software statement request
@@ -231,11 +236,20 @@ Table of Contents
       cancellation, callbacks, PKCE verification on the first poll, and
       sender constraint.  This specification profiles the token endpoint
       deferral for the backchannel flow and the direct-deferral
-      mechanism for the redirect flow, and defines the originating
+      mechanism for the redirect flow, and defines each originating
       request's successful response.
 
    *  [RFC8693] establishes the token response convention used to return
       a security token that is not an OAuth access token.
+
+   _Editor's note (remove before publication): The direct authorization
+   endpoint deferral profiled by the redirect flow, including PKCE
+   verification on the first poll and the
+   deferred_authorization_endpoint_supported metadata member, currently
+   exists only as an open change proposal against DTR
+   (https://github.com/maxwellgerber/deferred-token-response/pull/47).
+   This specification cannot advance until that proposal is merged into
+   DTR or published as equivalent stable text._
 
    [APPROVAL-DCR] defines an approval-based extension to the dynamic
    client registration endpoint that ultimately creates an
@@ -320,7 +334,8 @@ Table of Contents
    Software Statement Request:  A request in which a client asks an
       authorization server to issue a software statement, sent either as
       an authorization request with response_type=software_statement
-      (the redirect flow) or directly to the token endpoint (the
+      (the redirect flow) or as a urn:ietf:params:oauth:grant-
+      type:software-statement grant request to the token endpoint (the
       backchannel flow).
 
    Issuing Authorization Server:  The authorization server that
@@ -338,15 +353,17 @@ Table of Contents
 
    Intermediate Code:  The short-lived, single-use code returned by a
       synchronous authorization response (Section 6.1) and redeemed with
-      the software statement grant (Section 7).  It is distinct from an
-      [RFC6749] authorization code and cannot be redeemed as one.
+      the authorization_code grant type (Section 7).  It is not an
+      authorization code: redeeming it yields the software statement
+      token response, never an access token.
 
    Metadata Snapshot:  The validated canonical metadata and accepted
       registration overlay bound to a request, as defined in
       Section 4.1.
 
-   Canonical Digest:  The SHA-256 hash of a metadata document in the
-      canonical form of [RFC8785], as defined in Section 4.1.
+   Canonical Digest:  The unpadded base64url encoding of the SHA-256
+      hash of a metadata document in the canonical form of [RFC8785], as
+      defined in Section 4.1.
 
 3.  Protocol Overview
 
@@ -368,6 +385,7 @@ Table of Contents
        |     response_type=software_statement            |
        |     client_id=<metadata document URL>           |
        |     code_challenge, [registration],             |
+       |     [audience],                                 |
        |     [completion_mode=deferred]                  |
        |------------------------------------------------>|
        |                                                 |
@@ -422,7 +440,9 @@ Table of Contents
        | (A) Token request                               |
        |     grant_type=...:software-statement           |
        |     client_id=<metadata document URL>           |
+       |     [initial_access_token],                     |
        |     [registration],                             |
+       |     [audience],                                 |
        |     [completion_mode=deferred]                  |
        |------------------------------------------------>|
        |                                                 |
@@ -430,7 +450,8 @@ Table of Contents
        |<------------------------------------------------|
        |                     or                          |
        | (B2) Deferred token response                    |
-       |      (deferral_code, expires_in, [interval])    |
+       |      (authorization_pending, deferral_code,     |
+       |       expires_in, interval)                     |
        |<------------------------------------------------|
        |                                                 |
        | (C) Poll(s) (deferral_code)                     |
@@ -438,14 +459,17 @@ Table of Contents
        |     authorization_pending or final response     |
        |<------------------------------------------------|
 
-   At (A), the client sends the software statement grant directly to the
-   token endpoint, authenticating according to Section 4 and optionally
-   including a registration overlay in the request body.  If issuance
-   completes immediately, the authorization server returns the software
-   statement at (B1).  If issuance remains pending and the client opted
-   in to deferral, the authorization server returns the deferred token
-   response of [DTR] at (B2), and the client polls at (C) until it
-   receives the final response.  Section 8 defines this flow.
+   At (A), the client sends the software statement grant request
+   directly to the token endpoint, authenticating according to Section 4
+   when the Client ID Metadata Document establishes an authentication
+   method, presenting an initial_access_token when the authorization
+   server requires one, and optionally including a registration overlay
+   in the request body.  If issuance completes immediately, the
+   authorization server returns the software statement at (B1).  If
+   issuance remains pending and the client opted in to deferral, the
+   authorization server returns the deferred token response of [DTR] at
+   (B2), and the client polls at (C) until it receives the final
+   response.  Section 8 defines this flow.
 
 4.  Client Identification and Authentication
 
@@ -499,15 +523,23 @@ Table of Contents
 
    Because JSON member ordering and serialization details carry no
    meaning, comparing retrieved documents byte for byte over-detects
-   change.  The canonical digest of a metadata document is the SHA-256
-   hash [RFC6234] of the document transformed to the canonical form
-   defined by [RFC8785].  Two retrievals with the same canonical digest
-   contain the same metadata; a changed digest is the concrete signal
-   for the re-evaluation requirement above.  The canonical digest also
-   serves the cimd_digest claim (Section 11) and the audit guidance in
-   Section 14.  Deployments MAY use other deterministic encodings
-   internally for change detection, but interoperable uses of the
-   canonical digest MUST use the form defined here.
+   change.  Before calculating a canonical digest, the authorization
+   server MUST verify that the document can be represented as the I-JSON
+   input required by [RFC8785].  In particular, it MUST reject a
+   document containing duplicate object member names or a number that
+   cannot be represented as an IEEE 754 double-precision value without
+   loss.
+
+   The canonical digest of a metadata document is the unpadded base64url
+   encoding of the SHA-256 hash [RFC6234] of the UTF-8 bytes produced by
+   applying [RFC8785] to the complete document.  Two retrievals with the
+   same canonical digest contain the same metadata for purposes of this
+   specification; a changed digest is the concrete signal for the re-
+   evaluation requirement above.  The canonical digest also serves the
+   cimd_digest claim (Section 11) and the audit guidance in Section 14.
+   Deployments MAY use other deterministic encodings internally for
+   change detection, but interoperable uses of the canonical digest MUST
+   use the form defined here.
 
 5.  Software Statement Authorization Request
 
@@ -540,6 +572,22 @@ Table of Contents
    registration:  OPTIONAL.  A JSON object containing the registration
       overlay described in Section 5.2.  A request containing this
       parameter MUST be submitted using PAR [RFC9126].
+
+   audience:  OPTIONAL.  A target service at which the client intends to
+      use the issued software statement, with the semantics of the
+      audience parameter defined in Section 2.1 of [RFC8693].  The
+      parameter MAY be repeated to request multiple audiences.  Each
+      value MUST be an authorization server issuer identifier as defined
+      by [RFC8414], values MUST NOT be repeated, and order is not
+      significant.  The authorization server determines the final
+      audience according to policy, but when this parameter is present
+      every value in the statement's aud claim MUST have appeared in the
+      request.  If none of the requested audiences is acceptable, the
+      authorization server MUST reject the request with invalid_target
+      [RFC8693].  Some deployments use a proprietary audience
+      authorization request parameter to select an API for access
+      tokens; the semantics defined here apply only to software
+      statement requests.
 
    completion_mode:  OPTIONAL.  The client MAY include deferred among
       the values of this parameter to opt in to direct authorization
@@ -583,7 +631,11 @@ Table of Contents
    An authorization server MUST reject a request containing any of these
    parameters with invalid_request.  A scope member inside the
    registration JSON object is client metadata and is not the OAuth
-   authorization request parameter prohibited by this section.
+   authorization request parameter prohibited by this section.  The
+   audience parameter (Section 5) names the authorization servers at
+   which the issued statement will be presented, a property of the
+   requested artifact rather than a request for access, and is not
+   prohibited by this section.
 
    Hybrid response types that combine software_statement with code,
    token, id_token, or any other response type are not defined.  An
@@ -595,22 +647,39 @@ Table of Contents
    The registration parameter syntax is defined in Section 7.2.1 of
    [OIDC-CORE].  Its value is a JSON object.  In this specification,
    each member MUST be client metadata registered in the IANA "OAuth
-   Dynamic Client Registration Metadata" registry and recognized by the
-   authorization server.
+   Dynamic Client Registration Metadata" registry, recognized by the
+   authorization server, and eligible for attestation under this
+   section.
+
+   The following authorization-server-assigned, credential, and
+   recursive metadata members are not eligible for attestation and MUST
+   NOT appear in an overlay or in a software statement issued under this
+   specification: client_id, client_secret, client_id_issued_at,
+   client_secret_expires_at, registration_access_token,
+   registration_client_uri, and software_statement.  An authorization
+   server MAY exclude additional metadata according to policy.  The
+   client_id member required in the Client ID Metadata Document by
+   [CIMD] identifies the canonical document during issuance; the
+   statement represents that identifier in sub and MUST NOT copy it as
+   client metadata.
 
    The overlay selects values from the canonical metadata in the Client
-   ID Metadata Document.  The authorization server MUST apply the
-   following rules:
+   ID Metadata Document.  It MUST satisfy the same I-JSON input
+   requirements used for the canonical digest in Section 4.1.  The
+   authorization server MUST apply the following rules:
 
    1.  For metadata whose value is an array, every overlay value MUST
-       occur in the corresponding canonical array.
+       occur in the corresponding canonical array.  Two JSON values are
+       equal for this comparison when their [RFC8785] serializations are
+       byte-for-byte identical.
 
    2.  For space-delimited metadata, every space-delimited value in the
        overlay MUST occur among the space-delimited values of the
        corresponding canonical value.
 
-   3.  For all other metadata, the overlay value MUST be identical to
-       the corresponding canonical value.
+   3.  For all other metadata, the [RFC8785] serialization of the
+       overlay value MUST be byte-for-byte identical to the
+       serialization of the corresponding canonical value.
 
    4.  A member absent from the canonical metadata MUST NOT be
        introduced by the overlay.
@@ -660,9 +729,10 @@ Table of Contents
 
    code:  REQUIRED.  A short-lived, single-use intermediate code.  The
       code MUST be bound to the client identifier, redirect URI, PKCE
-      challenge, and metadata snapshot (which incorporates any accepted
-      registration overlay).  If the authorization request was bound to
-      a DPoP key, the code MUST also be bound to that key's thumbprint.
+      challenge, metadata snapshot (which incorporates any accepted
+      registration overlay), and requested audience.  If the
+      authorization request was bound to a DPoP key, the code MUST also
+      be bound to that key's thumbprint.
 
    state:  REQUIRED.  The exact value received in the authorization
       request.
@@ -687,9 +757,9 @@ Table of Contents
 
    deferral_code:  REQUIRED.  The deferral code defined by [DTR].  It
       MUST be bound to the client identifier, redirect URI, PKCE
-      challenge, and metadata snapshot (which incorporates any accepted
-      registration overlay).  If dpop_jkt was present, it MUST also be
-      bound to that JWK thumbprint.
+      challenge, metadata snapshot (which incorporates any accepted
+      registration overlay), and requested audience.  If dpop_jkt was
+      present, it MUST also be bound to that JWK thumbprint.
 
    state:  REQUIRED.  The exact value received in the authorization
       request.
@@ -749,19 +819,22 @@ Table of Contents
    This error code lets a client distinguish a request that can be
    retried with deferral from one that was denied.
 
-7.  Software Statement Grant
+7.  Intermediate Code Redemption
 
-   This section defines the redemption of an intermediate code obtained
-   from a synchronous authorization response.  The same grant type, sent
-   without a code parameter, initiates a backchannel software statement
-   request (Section 8).
+   The client redeems an intermediate code with the authorization_code
+   grant type of [RFC6749].  The code, not the grant type, determines
+   what the token endpoint returns, mirroring how OpenID Connect returns
+   artifacts other than access tokens through the same grant.
+   Backchannel initiation uses the extension grant defined in Section 8
+   and never involves an intermediate code; a redemption request missing
+   code is an ordinary invalid_request under [RFC6749] and cannot
+   initiate issuance work.
 
    The client redeems the intermediate code by sending an HTTP POST
    request to the token endpoint using the application/x-www-form-
    urlencoded format.  The request contains:
 
-   grant_type:  REQUIRED.  The value MUST be
-      urn:ietf:params:oauth:grant-type:software-statement.
+   grant_type:  REQUIRED.  The value MUST be authorization_code.
 
    code:  REQUIRED.  The intermediate code returned by the authorization
       endpoint.
@@ -785,20 +858,24 @@ Table of Contents
    invalid_grant error.  A PKCE or DPoP binding failure is handled
    according to [RFC7636] or [RFC9449], respectively.
 
-   If the request is valid, the authorization server returns the
-   software statement response in Section 10.  Because the synchronous
-   authorization response indicates that issuance has already been
-   approved, redemption of an intermediate code never returns a deferred
-   response.
+   Because the intermediate code was issued for
+   response_type=software_statement, a valid redemption returns the
+   software statement response in Section 10; it MUST NOT return an
+   access token or refresh token.  Conversely, an authorization code
+   issued for any other response type MUST NOT be redeemed for a
+   software statement.  Because the synchronous authorization response
+   indicates that issuance has already been approved, redemption of an
+   intermediate code never returns a deferred response.
 
 8.  Backchannel Software Statement Request
 
    A client without access to a user agent can request a software
    statement directly at the token endpoint.  An authorization server
-   advertises support for this flow with the
-   software_statement_backchannel_supported metadata member
-   (Section 13); a client MUST NOT send a backchannel request to an
-   authorization server that does not advertise support.
+   advertises support for this flow by listing
+   urn:ietf:params:oauth:grant-type:software-statement in
+   grant_types_supported (Section 13); a client MUST NOT send a
+   backchannel request to an authorization server that does not
+   advertise that value.
 
    The client sends an HTTP POST request to the token endpoint using the
    application/x-www-form-urlencoded format with:
@@ -814,36 +891,65 @@ Table of Contents
       rules.  Rule 6 does not apply, because the request uses no
       redirect_uri.
 
+   audience:  OPTIONAL.  The requested audience described in Section 5.
+      The same syntax, validation, and narrowing rules apply.
+
    completion_mode:  OPTIONAL.  The client MAY include deferred among
       the values of this parameter to opt in to a deferred token
       response as defined by [DTR].  If the parameter is absent or does
       not include deferred, the authorization server MUST NOT return a
       deferred token response.
 
-   initial_access_token:  OPTIONAL.  An access credential issued out of
-      band by the authorization server that pre-authorizes software
-      statement requests, analogous to the initial access token of
-      [RFC7591].  An authorization server MAY require this parameter for
-      backchannel requests; issuance, format, and lifetime of the
-      credential are deployment-specific.
+   initial_access_token:  OPTIONAL.  An authorization credential issued
+      out of band by the authorization server that pre-authorizes
+      software statement requests, analogous to the initial access token
+      of [RFC7591].  An authorization server MAY require this parameter
+      for backchannel requests.  The credential is distinct from OAuth
+      client authentication and is used together with client
+      authentication when the Client ID Metadata Document establishes an
+      authentication method.
 
-   The request MUST NOT contain code, redirect_uri, code_verifier, or
-   state.  The prohibitions of Section 5.1 apply: the request MUST NOT
-   contain scope, resource, or authorization_details.
+   client_notification_token:  OPTIONAL.  The callback authentication
+      credential defined by [DTR].  It MUST be used only when
+      completion_mode includes deferred.  If the client has a
+      deferred_client_notification_endpoint and intends to accept
+      callbacks, it SHOULD include this parameter.
 
-   The client authenticates according to Section 4.  A public client
-   that opts in to deferral MUST include a DPoP proof [RFC9449] for the
-   token endpoint on the initiating request; the authorization server
-   MUST bind any resulting deferral state to the proof's public key.  A
-   confidential client MAY additionally use DPoP.
+   The request MUST NOT contain code, redirect_uri, code_verifier,
+   state, or dpop_jkt.  The prohibitions of Section 5.1 apply: the
+   request MUST NOT contain scope, resource, or authorization_details.
+
+   The client authenticates according to Section 4 when its metadata
+   establishes an authentication method and presents an
+   initial_access_token when the authorization server requires one.  A
+   public client that opts in to deferral MUST additionally include a
+   DPoP proof [RFC9449] for the token endpoint on the initiating
+   request; the authorization server MUST bind any resulting deferral
+   state to the proof's public key.  A confidential client MAY
+   additionally use DPoP.  A DPoP proof establishes sender constraint
+   but, by itself, does not authorize the presenter to request a
+   statement for the client_id URL.
+
+   When an initial_access_token is presented, the authorization server
+   MUST validate it before retrieving client-controlled metadata or
+   enqueueing approval work.  The credential SHOULD be integrity
+   protected, confidential in transit and at rest, limited to the
+   issuing authorization server, time limited, and bound to an exact
+   client identifier URL or an explicitly authorized client identifier
+   namespace; it MAY further restrict audiences, metadata, overlays, or
+   the number of uses.  An opaque bearer credential SHOULD contain at
+   least 128 bits of entropy.  The authorization server MUST enforce
+   every restriction the credential carries and MUST prevent replay
+   beyond its permitted number of uses.
 
    The authorization server MUST obtain and validate the Client ID
    Metadata Document and any overlay exactly as in the redirect flow and
-   MUST bind the metadata snapshot (Section 4.1) before returning either
-   the software statement or a deferral code.  Because no user agent is
-   present, approval and any verification of the requesting party occur
-   out of band.  The authorization server MUST apply the same issuance
-   policy to backchannel requests as to redirect flow requests.
+   MUST bind the metadata snapshot (Section 4.1) and the requested
+   audience before returning either the software statement or a deferral
+   code.  Because no user agent is present, approval and any
+   verification of the requesting party occur out of band.  The
+   authorization server MUST apply the same issuance policy to
+   backchannel requests as to redirect flow requests.
 
    If issuance completes immediately, the authorization server returns
    the software statement token response (Section 10).  If issuance
@@ -851,8 +957,30 @@ Table of Contents
    authorization server returns the deferred token response defined by
    [DTR], and the client polls according to Section 9.  If issuance
    cannot complete immediately and the request did not opt in, the
-   authorization server returns a token error response with the error
-   code deferral_required (Section 6.2).
+   authorization server returns a token error response with HTTP status
+   code 400 and the error code deferral_required (Section 6.2).
+
+   Other backchannel errors use the token error response format of
+   Section 5.2 of [RFC6749]:
+
+   *  A malformed request, invalid Client ID Metadata Document, invalid
+      overlay, or unacceptable requested audience results in
+      invalid_request with HTTP status code 400.
+
+   *  Failed client authentication, or a missing, invalid, expired, or
+      insufficient initial_access_token where the authorization server
+      requires one, results in invalid_client with HTTP status code 401.
+
+   *  A request rejected by issuance policy results in access_denied
+      with HTTP status code 400.
+
+   *  A server that does not support the backchannel grant returns
+      unsupported_grant_type with HTTP status code 400.
+
+   These errors are terminal for the submitted request, except that a
+   client receiving deferral_required MAY submit a new request that opts
+   in to deferral.  The authorization server MUST include Cache-Control:
+   no-store on every backchannel error response.
 
    The following is a non-normative example of an initiating backchannel
    request (line breaks are for display purposes only):
@@ -860,11 +988,13 @@ Table of Contents
    POST /token HTTP/1.1
    Host: server.example.com
    Content-Type: application/x-www-form-urlencoded
+   DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2IiwiandrIjp7Li4ufX0...
 
    grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3A
      software-statement
      &client_id=https%3A%2F%2Fclient.example.org%2Fmetadata.json
      &completion_mode=deferred
+     &initial_access_token=iat_2f7e9c1a6d...
 
 9.  Deferred Processing
 
@@ -877,9 +1007,13 @@ Table of Contents
    rather than the seconds typical of user authentication, for example
    when it involves reviewing the client's policy or compliance
    documentation.  Issuers SHOULD set deferral code lifetimes that
-   reflect their actual approval latency, and clients SHOULD use the
-   callback mechanism of [DTR], where available, in preference to
-   extended polling.
+   reflect their actual approval latency.  A backchannel client with a
+   registered notification endpoint SHOULD use the callback mechanism of
+   [DTR] together with client_notification_token, while continuing to
+   poll as required by [DTR].  This specification does not enable
+   callbacks for direct authorization endpoint deferrals because their
+   originating authorization request does not establish a
+   client_notification_token.
 
 9.1.  First Polling Request
 
@@ -917,7 +1051,8 @@ Table of Contents
    thumbprint.
 
    The first polling request MUST NOT contain an intermediate code,
-   redirect_uri, registration, or completion_mode parameter.
+   redirect_uri, registration, audience, completion_mode,
+   initial_access_token, or client_notification_token parameter.
 
 9.2.  Subsequent Polling Requests
 
@@ -932,10 +1067,11 @@ Table of Contents
    identified by dpop_jkt in the redirect flow or the key of the
    initiating DPoP proof in the backchannel flow.
 
-   Pending, denied, expired, cancelled, callback, and polling-rate
-   behavior follows [DTR].  A successful first or subsequent polling
-   response is the software statement token response defined in
-   Section 10.
+   Pending, denied, expired, cancelled, and polling-rate behavior
+   follows [DTR].  Callback behavior follows [DTR] only for a
+   backchannel request that supplied client_notification_token.  A
+   successful first or subsequent polling response is the software
+   statement token response defined in Section 10.
 
 10.  Software Statement Token Response
 
@@ -1007,7 +1143,9 @@ Table of Contents
    from being accepted as software statements.
 
    The JWT payload MUST contain the following claims in addition to the
-   approved client metadata:
+   approved client metadata that is eligible for attestation under
+   Section 5.2.  It MUST NOT contain any metadata prohibited by that
+   section.
 
    iss:  REQUIRED.  The issuer identifier of the issuing authorization
       server, as defined by [RFC8414].
@@ -1020,7 +1158,9 @@ Table of Contents
       value SHOULD be an authorization server issuer identifier as
       defined by [RFC8414].  A trusting authorization server MUST reject
       the statement unless one of its locally configured audience
-      identifiers exactly matches a value in this claim.
+      identifiers exactly matches a value in this claim.  When the
+      request contained audience values, every value in this claim MUST
+      have appeared among them.
 
    iat:  REQUIRED.  A NumericDate value representing the time at which
       the software statement was issued.
@@ -1035,17 +1175,20 @@ Table of Contents
    The JWT payload SHOULD also contain:
 
    cimd_digest:  The canonical digest (Section 4.1) of the Client ID
-      Metadata Document from which the metadata snapshot was derived,
-      encoded with base64url.  This claim binds the statement to the
-      exact document content evaluated during issuance and lets any
-      party determine whether the client's currently published metadata
-      still matches what was attested.
+      Metadata Document from which the metadata snapshot was derived.
+      This claim binds the statement to the exact document content
+      evaluated during issuance and lets any party determine whether the
+      client's currently published metadata still matches what was
+      attested.
 
    The issuer determines the audience and lifetime according to policy;
-   neither is supplied in the registration overlay.  The client metadata
-   claims MUST reflect the metadata snapshot and any further narrowing
-   performed by the issuing authorization server.  They MUST NOT
-   contradict or widen the snapshot.
+   neither is supplied in the registration overlay.  A client can
+   request an audience using the audience parameter, but the issuer MAY
+   narrow that request and MUST NOT widen it.  If the parameter is
+   omitted, the issuer selects an audience entirely according to policy.
+   The client metadata claims MUST reflect the metadata snapshot and any
+   further narrowing performed by the issuing authorization server.
+   They MUST NOT contradict or widen the snapshot.
 
    The sub claim identifies the client software by its client identifier
    URL; it does not name the client_id that a trusting authorization
@@ -1088,21 +1231,24 @@ Table of Contents
    verify that the typ header carries the value software-statement+jwt;
    verify the signature under a key trusted for the exact iss value;
    validate the presence and type of every required claim; validate iss,
-   aud, iat, and exp; and apply the JWT validation guidance in
-   [RFC8725].  In particular, it MUST reject a statement whose iat is
-   unreasonably far in the future according to its clock-skew policy.
-   Publishing an issuer URL or a JWK Set does not by itself establish
-   trust: signature keys for a trusted issuer are conventionally
-   obtained from the jwks_uri in the issuer's authorization server
-   metadata [RFC8414], but the decision to trust the issuer MUST come
-   from explicit local configuration.  When the statement contains
-   cimd_digest, a trusting authorization server MAY retrieve the
-   client's current metadata document and compare canonical digests to
-   learn whether the attested content is still published; a mismatch
-   indicates post-issuance change and is an input to registration policy
-   rather than a validation failure.  The trusting authorization server
-   then processes the software statement according to [RFC7591] and its
-   local registration policy.
+   aud, iat, and exp; verify that sub is a Client Identifier URL
+   conforming to [CIMD]; reject every metadata claim prohibited by
+   Section 5.2; and apply the JWT validation guidance in [RFC8725].  In
+   particular, it MUST reject a statement whose iat is unreasonably far
+   in the future according to its clock-skew policy.  Publishing an
+   issuer URL or a JWK Set does not by itself establish trust: signature
+   keys for a trusted issuer are conventionally obtained from the
+   jwks_uri in the issuer's authorization server metadata [RFC8414], but
+   the decision to trust the issuer MUST come from explicit local
+   configuration.  When the statement contains cimd_digest, a trusting
+   authorization server MAY retrieve the client's current metadata
+   document and compare canonical digests to learn whether the attested
+   content is still published; if it does so, it MUST also verify that
+   the document's client_id is exactly equal to sub as required by
+   [CIMD].  A digest mismatch indicates post-issuance change and is an
+   input to registration policy rather than a validation failure.  The
+   trusting authorization server then processes the software statement
+   according to [RFC7591] and its local registration policy.
 
 12.  Multi-Instance Client Software
 
@@ -1124,11 +1270,13 @@ Table of Contents
    differentiate instances at the token endpoint, for example with
    [CLIENT-INSTANCE], rather than minting a registration per instance.
    Where authorization server policy is keyed on client_id and genuinely
-   requires per-instance registrations, the same statement supports that
-   model: each registration supplies its own instance keys as plain
-   metadata alongside the statement, subject to the software statement
-   precedence rules of [RFC7591] and to trusting authorization server
-   policy.
+   requires per-instance registrations, the same statement can support
+   that model only if it omits jwks and jwks_uri: each registration can
+   then supply its own instance key as plain metadata, subject to
+   trusting authorization server policy.  If the statement contains jwks
+   or jwks_uri, that attested value takes precedence under [RFC7591] and
+   every registration derived from the statement MUST use the attested
+   key material rather than an instance-supplied replacement.
 
 12.1.  Attesting Instance Issuers
 
@@ -1169,27 +1317,34 @@ Table of Contents
 
 13.  Authorization Server Metadata
 
-   An authorization server supporting this specification advertises:
+   An authorization server that issues software statements under this
+   specification advertises true for
+   client_id_metadata_document_supported, as defined by [CIMD], and
+   publishes software_statement_signing_alg_values_supported below.
+
+   An authorization server supporting the redirect flow additionally
+   advertises:
 
    *  software_statement in response_types_supported;
 
-   *  urn:ietf:params:oauth:grant-type:software-statement in
-      grant_types_supported;
-
-   *  true for client_id_metadata_document_supported, as defined by
-      [CIMD];
+   *  authorization_code in grant_types_supported, used to redeem
+      intermediate codes (Section 7); and
 
    *  true for authorization_response_iss_parameter_supported, as
-      defined by [RFC9207];
+      defined by [RFC9207].
 
-   *  true for both deferred_token_response_supported and
-      deferred_authorization_endpoint_supported, as defined by [DTR], if
-      it can defer software statement requests directly at the
-      authorization endpoint; and
+   If it can defer redirect-flow requests directly at the authorization
+   endpoint, it also advertises true for both
+   deferred_token_response_supported and
+   deferred_authorization_endpoint_supported, as defined by [DTR].
 
-   *  true for software_statement_backchannel_supported if it accepts
-      backchannel software statement requests (Section 8), together with
-      deferred_token_response_supported if it can defer them.
+   An authorization server supporting the backchannel flow advertises
+   urn:ietf:params:oauth:grant-type:software-statement in
+   grant_types_supported.  If it can defer backchannel requests, it also
+   advertises true for deferred_token_response_supported.  A
+   backchannel-only implementation does not advertise software_statement
+   in response_types_supported and need not advertise
+   authorization_response_iss_parameter_supported.
 
    A client MUST NOT rely on direct authorization endpoint deferral
    unless both deferred_token_response_supported and
@@ -1197,11 +1352,6 @@ Table of Contents
 
    This specification defines the following additional authorization
    server metadata members:
-
-   software_statement_backchannel_supported:  OPTIONAL.  Boolean value
-      indicating whether the authorization server accepts backchannel
-      software statement requests at the token endpoint (Section 8).  If
-      omitted, the default value is false.
 
    software_statement_signing_alg_values_supported:  REQUIRED for an
       authorization server that issues software statements under this
@@ -1211,6 +1361,14 @@ Table of Contents
       algorithm.  This member describes the issuing role; an
       authorization server that only accepts software statements does
       not publish it.
+
+   software_statement_audiences_supported:  OPTIONAL.  A JSON array
+      containing authorization server issuer identifiers that the issuer
+      is prepared to place in a software statement's aud claim.
+      Omission means that the complete set is not publicly enumerable;
+      it does not mean that no audience is supported.  Publication does
+      not guarantee that every client is eligible for every listed
+      audience.
 
 14.  Security Considerations
 
@@ -1236,12 +1394,14 @@ Table of Contents
    An erroneous approval is amplified by the statement's audience: every
    authorization server in the audience will accept the resulting
    credential until it expires.  The approval interface therefore MUST
-   present the client identifier URL and the effective metadata being
-   attested, and SHOULD present the intended audience and lifetime of
-   the statement.  Metadata that itself delegates authority deserves
-   particular scrutiny: attesting the instance_issuers member
-   (Section 12) endorses the listed authorities to attest runtime
-   instances of the client.
+   present the client identifier URL, the effective metadata being
+   attested, and the audience the issuer intends to place in the
+   statement; when the client requested a different or broader audience,
+   the interface SHOULD also make the narrowing visible.  It SHOULD
+   present the intended lifetime of the statement.  Metadata that itself
+   delegates authority deserves particular scrutiny: attesting the
+   instance_issuers member (Section 12) endorses the listed authorities
+   to attest runtime instances of the client.
 
 14.2.  What Issuance Attests
 
@@ -1337,7 +1497,10 @@ Table of Contents
    authorization response and polling sequence.
 
    All additional sender-constraint, polling-rate, replay, cancellation,
-   logging, and callback requirements of [DTR] apply.
+   and logging requirements of [DTR] apply.  Callback behavior applies
+   only to backchannel deferrals as described in Section 8; this
+   specification does not establish callback authentication for a direct
+   authorization endpoint deferral.
 
 14.7.  Backchannel Request Considerations
 
@@ -1346,9 +1509,22 @@ Table of Contents
    can therefore trigger metadata document retrieval and enqueue
    approval work at little cost to the requester.  Authorization servers
    SHOULD rate-limit backchannel requests, SHOULD cache metadata
-   retrieval results and failures, and MAY restrict the backchannel flow
-   to clients that can authenticate or to requests that carry a valid
-   initial_access_token.
+   retrieval results and failures, and MAY require an
+   initial_access_token; when one is presented, it MUST be validated
+   before client-controlled metadata is retrieved or approval work is
+   enqueued.  Client authentication remains mandatory when established
+   by the Client ID Metadata Document.
+
+   An initial_access_token is an authorization credential, not a client
+   identifier and not a substitute for client authentication when the
+   Client ID Metadata Document establishes an authentication method.  It
+   is sent in a form body and is therefore exposed to any component that
+   records request bodies.  Authorization servers MUST exclude it from
+   logs, traces, error messages, and audit records; clients and
+   authorization servers MUST protect it as a bearer credential unless
+   its format provides proof of possession.  The binding, lifetime,
+   entropy, and replay requirements of Section 8 limit the effect of
+   disclosure.
 
    The absence of a user agent removes front-channel exposure: neither
    the deferral code nor any other response parameter transits a
@@ -1361,6 +1537,9 @@ Table of Contents
    initiation through client authentication or a DPoP proof.  There is
    no PKCE state, so the code_verifier check in Section 9.1 is replaced
    by verification of the initiating key or credentials on every poll.
+   If a callback is configured, the client uses
+   client_notification_token as defined by [DTR]; that token
+   authenticates the callback but does not authorize issuance.
 
 14.8.  Statement Validation and Replay
 
@@ -1372,12 +1551,16 @@ Table of Contents
    inventory the registrations derived from a statement and to enforce
    any local bound on their number.
 
-   When the canonical metadata provides jwks or jwks_uri, the issuer
-   SHOULD include it in the attested metadata.  A trusting authorization
-   server can then require proof of possession of a corresponding
-   private key during or after registration, which renders a stolen
-   statement unusable to a party that does not also hold the client's
-   key.
+   When registrations derived from a statement are intended to share a
+   client key, and the canonical metadata provides jwks or jwks_uri, the
+   issuer SHOULD include that member in the attested metadata.  A
+   trusting authorization server can then require proof of possession of
+   a corresponding private key during or after registration, which
+   renders a stolen statement unusable to a party that does not also
+   hold the client's key.  When each registration is expected to supply
+   a distinct instance key, the issuer MUST omit jwks and jwks_uri so
+   that the plain registration metadata can carry that key without
+   conflicting with the precedence rule of [RFC7591].
 
    This specification does not define online revocation of an issued
    software statement.  A deployment that cannot tolerate acceptance of
@@ -1451,6 +1634,10 @@ Table of Contents
    omit metadata that is not required by the intended audience and
    SHOULD choose the narrowest practical audience.  Clients SHOULD NOT
    present statements outside their intended deployment context.
+   Requested audience values reveal the authorization servers with which
+   the client plans to establish relationships.  A redirect-flow client
+   SHOULD use PAR when that relationship is sensitive, even when no
+   registration overlay is present.
 
    The registration parameter can reveal request-specific metadata.
    Requiring PAR prevents that object from appearing directly in the
@@ -1489,7 +1676,7 @@ Table of Contents
 
    Change Controller:  IETF
 
-   Specification Document(s):  This specification, Section 7
+   Specification Document(s):  This specification, Section 8
 
    URN:  urn:ietf:params:oauth:token-type:software-statement
 
@@ -1506,6 +1693,12 @@ Table of Contents
    existing registration parameter and extend its usage location to
    include token requests.  The parameter name and change controller are
    unchanged.
+
+   This specification further requests that IANA add this specification,
+   Section 5 and Section 8, as an additional reference for the existing
+   audience parameter registered by [RFC8693] and extend its usage
+   location to include authorization requests.  The parameter name and
+   change controller are unchanged.
 
    This specification also requests registration of the following value
    in the IANA "OAuth Parameters" registry established by [RFC6749]:
@@ -1524,20 +1717,21 @@ Table of Contents
    the IANA "OAuth Authorization Server Metadata" registry established
    by [RFC8414]:
 
-   Metadata Name:  software_statement_backchannel_supported
-
-   Metadata Description:  Boolean value indicating support for
-      backchannel software statement requests at the token endpoint.
-
-   Change Controller:  IESG
-
-   Specification Document(s):  This specification, Section 8
-
    Metadata Name:  software_statement_signing_alg_values_supported
 
    Metadata Description:  JSON array containing the asymmetric JWS
       algorithms supported by the authorization server for signing
       software statements.
+
+   Change Controller:  IESG
+
+   Specification Document(s):  This specification, Section 13
+
+   Metadata Name:  software_statement_audiences_supported
+
+   Metadata Description:  JSON array containing authorization server
+      issuer identifiers that the issuer is prepared to place in
+      software statement audience claims.
 
    Change Controller:  IESG
 
@@ -1557,7 +1751,8 @@ Table of Contents
 
    Change Controller:  IETF
 
-   Specification Document(s):  This specification, Section 6.2
+   Specification Document(s):  This specification, Section 6.2 and
+      Section 8
 
 16.6.  Media Type Registration
 
@@ -1611,8 +1806,9 @@ Table of Contents
 
    Claim Name:  cimd_digest
 
-   Claim Description:  Canonical digest of the Client ID Metadata
-      Document evaluated during software statement issuance
+   Claim Description:  Unpadded base64url-encoded SHA-256 digest of the
+      JCS-serialized Client ID Metadata Document evaluated during
+      software statement issuance
 
    Change Controller:  IETF
 
@@ -1657,6 +1853,11 @@ Table of Contents
    [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
               RFC 6749, DOI 10.17487/RFC6749, October 2012,
               <https://www.rfc-editor.org/rfc/rfc6749>.
+
+   [RFC6838]  Freed, N., Klensin, J., and T. Hansen, "Media Type
+              Specifications and Registration Procedures", BCP 13,
+              RFC 6838, DOI 10.17487/RFC6838, January 2013,
+              <https://www.rfc-editor.org/rfc/rfc6838>.
 
    [RFC7515]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web
               Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
@@ -1755,11 +1956,6 @@ Table of Contents
               <https://datatracker.ietf.org/doc/draft-richer-oauth-
               pushed-client-registration>.
 
-   [RFC6838]  Freed, N., Klensin, J., and T. Hansen, "Media Type
-              Specifications and Registration Procedures", BCP 13,
-              RFC 6838, DOI 10.17487/RFC6838, January 2013,
-              <https://www.rfc-editor.org/rfc/rfc6838>.
-
    [RFC8628]  Denniss, W., Bradley, J., Jones, M., and H. Tschofenig,
               "OAuth 2.0 Device Authorization Grant", RFC 8628,
               DOI 10.17487/RFC8628, August 2019,
@@ -1832,7 +2028,8 @@ A.2.  Why Use the Authorization Endpoint
    statement itself out of the browser and delivers it over a direct
    TLS-protected connection.  When no in-band interaction is possible,
    the backchannel flow in Section 8 substitutes direct client
-   authentication and out-of-band approval for the front channel.
+   authentication, optional pre-authorization through an initial access
+   token, and out-of-band approval for the front channel.
 
 A.3.  Why Not the Device Authorization Grant
 
@@ -1878,17 +2075,25 @@ A.4.  Why the Backchannel Flow Uses the Token Endpoint
    available to the backchannel flow through the initial_access_token
    parameter (Section 8).
 
-A.5.  Why a New Grant Type
+A.5.  Why One Grant Type, and Why Redemption Uses authorization_code
 
-   The intermediate code could have been redeemed with the
-   authorization_code grant type, as OpenID Connect does for ID Tokens.
-   Existing authorization_code processing, however, is built to mint an
-   access token: it attaches access-token token_type, scope, and
-   refresh-token semantics to the result.  A distinct extension grant
-   makes the token endpoint's routing explicit, prevents an intermediate
-   code issued for a software statement from being redeemed as an
-   authorization code (and the reverse), and preserves the invariant
-   that a successful authorization_code grant yields an access token.
+   Only the backchannel request needs a new grant type: it initiates
+   issuance work at the token endpoint, which no existing grant
+   expresses. urn:ietf:params:oauth:grant-type:software-statement
+   therefore means exactly one thing.
+
+   Redemption of an intermediate code reuses authorization_code,
+   following the OpenID Connect precedent in which the request that
+   produced a code, not the grant type, determines what its redemption
+   yields.  The intermediate code is bound to
+   response_type=software_statement, so redeeming it returns the
+   software statement token response and never an access token, and an
+   authorization code issued for any other response type cannot be
+   redeemed for a statement (Section 7).  This split also removes two
+   failure modes at once: a malformed redemption missing code is an
+   ordinary authorization_code error and cannot initiate new issuance
+   work, and no special-purpose grant exists whose behavior changes
+   based on which parameters happen to be present.
 
 A.6.  Why Use Direct Authorization Endpoint Deferral
 

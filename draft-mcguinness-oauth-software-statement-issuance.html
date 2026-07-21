@@ -7,9 +7,9 @@
 <title>OAuth 2.0 Software Statement Issuance</title>
 <meta content="Karl McGuinness" name="author">
 <meta content="
-       This specification defines an OAuth 2.0 flow through which a client requests a software statement, as defined in RFC 7591, from an authorization server. The flow uses a new authorization endpoint  response_type  value,  software_statement , and a corresponding extension grant. A Client ID Metadata Document identifies a client that has not been registered with the authorization server. An optional  registration  parameter selects a request-specific subset of the metadata to be attested. 
+       This specification defines OAuth 2.0 flows through which a client requests a software statement, as defined in RFC 7591, from an authorization server. The redirect flow uses a new authorization endpoint  response_type  value,  software_statement ; the client redeems the resulting intermediate code with the standard  authorization_code  grant type. The backchannel flow uses a new extension grant. A Client ID Metadata Document identifies a client that has not been registered with the authorization server. An optional  registration  parameter selects a request-specific subset of the metadata to be attested. 
        When issuance can complete synchronously, the authorization endpoint returns a short-lived code that the client exchanges at the token endpoint for the software statement. When issuance requires additional processing or approval, the authorization server instead returns the direct authorization endpoint response defined by Deferred Token Response. That response contains a  deferral_code , which the client uses to poll the token endpoint for the eventual software statement. The software statement itself is never placed in an authorization response URL. 
-       A client without access to a user agent can instead send a backchannel software statement request directly to the token endpoint using the same extension grant. Issuance that cannot complete immediately then uses the deferred token response defined by Deferred Token Response, without any redirect. 
+       A client without access to a user agent can instead send a backchannel software statement request directly to the token endpoint using the extension grant. Issuance that cannot complete immediately then uses the deferred token response defined by Deferred Token Response, without any redirect. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
 <meta content="OAuth" name="keyword">
@@ -1085,9 +1085,9 @@ svg {
 <h1 id="title">OAuth 2.0 Software Statement Issuance</h1>
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
-<p id="section-abstract-1">This specification defines an OAuth 2.0 flow through which a client requests a software statement, as defined in RFC 7591, from an authorization server. The flow uses a new authorization endpoint <code>response_type</code> value, <code>software_statement</code>, and a corresponding extension grant. A Client ID Metadata Document identifies a client that has not been registered with the authorization server. An optional <code>registration</code> parameter selects a request-specific subset of the metadata to be attested.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+<p id="section-abstract-1">This specification defines OAuth 2.0 flows through which a client requests a software statement, as defined in RFC 7591, from an authorization server. The redirect flow uses a new authorization endpoint <code>response_type</code> value, <code>software_statement</code>; the client redeems the resulting intermediate code with the standard <code>authorization_code</code> grant type. The backchannel flow uses a new extension grant. A Client ID Metadata Document identifies a client that has not been registered with the authorization server. An optional <code>registration</code> parameter selects a request-specific subset of the metadata to be attested.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 <p id="section-abstract-2">When issuance can complete synchronously, the authorization endpoint returns a short-lived code that the client exchanges at the token endpoint for the software statement. When issuance requires additional processing or approval, the authorization server instead returns the direct authorization endpoint response defined by Deferred Token Response. That response contains a <code>deferral_code</code>, which the client uses to poll the token endpoint for the eventual software statement. The software statement itself is never placed in an authorization response URL.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
-<p id="section-abstract-3">A client without access to a user agent can instead send a backchannel software statement request directly to the token endpoint using the same extension grant. Issuance that cannot complete immediately then uses the deferred token response defined by Deferred Token Response, without any redirect.<a href="#section-abstract-3" class="pilcrow">¶</a></p>
+<p id="section-abstract-3">A client without access to a user agent can instead send a backchannel software statement request directly to the token endpoint using the extension grant. Issuance that cannot complete immediately then uses the deferred token response defined by Deferred Token Response, without any redirect.<a href="#section-abstract-3" class="pilcrow">¶</a></p>
 </section>
 <div id="status-of-memo">
 <section id="section-boilerplate.1">
@@ -1190,7 +1190,7 @@ svg {
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
-            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-software-statement-grant" class="internal xref">Software Statement Grant</a></p>
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-intermediate-code-redemptio" class="internal xref">Intermediate Code Redemption</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
             <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-backchannel-software-statem" class="internal xref">Backchannel Software Statement Request</a></p>
@@ -1314,7 +1314,7 @@ svg {
                 <p id="section-toc.1-1.18.2.4.1"><a href="#appendix-A.4" class="auto internal xref">A.4</a>.  <a href="#name-why-the-backchannel-flow-us" class="internal xref">Why the Backchannel Flow Uses the Token Endpoint</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18.2.5">
-                <p id="section-toc.1-1.18.2.5.1"><a href="#appendix-A.5" class="auto internal xref">A.5</a>.  <a href="#name-why-a-new-grant-type" class="internal xref">Why a New Grant Type</a></p>
+                <p id="section-toc.1-1.18.2.5.1"><a href="#appendix-A.5" class="auto internal xref">A.5</a>.  <a href="#name-why-one-grant-type-and-why-" class="internal xref">Why One Grant Type, and Why Redemption Uses <code>authorization_code</code></a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18.2.6">
                 <p id="section-toc.1-1.18.2.6.1"><a href="#appendix-A.6" class="auto internal xref">A.6</a>.  <a href="#name-why-use-direct-authorizatio" class="internal xref">Why Use Direct Authorization Endpoint Deferral</a></p>
@@ -1346,7 +1346,7 @@ svg {
 <p id="section-1-2">In practice, software statements are commonly issued through manual provisioning, deployment-specific portals, or proprietary federation processes. Those mechanisms do not give clients an interoperable way to request a statement, redirect a user or administrator for interaction, and retrieve the resulting credential without exposing it through the browser.<a href="#section-1-2" class="pilcrow">¶</a></p>
 <p id="section-1-3">The client establishment mechanisms adjacent to this specification are bilateral: pre-registration of a client identifier URL as described by <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span>, pushed registration of ephemeral clients <span>[<a href="#PUSHED-DCR" class="cite xref">PUSHED-DCR</a>]</span>, and approval-gated registration <span>[<a href="#APPROVAL-DCR" class="cite xref">APPROVAL-DCR</a>]</span> each establish trust at a single authorization server, and each asks that authorization server to decide on the client's own assertion of its metadata. A software statement changes both properties: the metadata a trusting authorization server evaluates originates from an issuer's signed issuance decision rather than from the client alone (<a href="#what-issuance-attests" class="auto internal xref">Section 14.2</a>), and one issuance decision is honored at every authorization server in the statement's audience rather than being repeated at each (<a href="#comparison" class="auto internal xref">Appendix A.1</a>).<a href="#section-1-3" class="pilcrow">¶</a></p>
 <p id="section-1-4">The consumption side of this design is already standardized and deployed: <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> registration endpoints have accepted the <code>software_statement</code> request member since 2015. This specification supplies the missing issuance protocol and hardens the artifact so that independent issuers and consumers interoperate (<a href="#software-statement-format" class="auto internal xref">Section 11</a>). The resulting portability is bounded by trust: a statement is honored only where the trusting authorization server is configured to trust its issuer, so its practical audience is an ecosystem or administrative domain rather than the open web.<a href="#section-1-4" class="pilcrow">¶</a></p>
-<p id="section-1-5">The protocol introduces <code>response_type=software_statement</code> at the authorization endpoint and the <code>urn:ietf:params:oauth:grant-type:software-statement</code> extension grant at the token endpoint. Clients identify themselves with the HTTPS URL and metadata document defined by <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span>. If issuance is approved without deferral, the authorization server returns an intermediate code that the client redeems for the software statement. If issuance remains pending and the client opted in to deferral, the authorization server returns a <code>deferral_code</code> directly from the authorization endpoint and the client polls the token endpoint for the eventual response. A client without access to a user agent can initiate the same request directly at the token endpoint.<a href="#section-1-5" class="pilcrow">¶</a></p>
+<p id="section-1-5">The protocol introduces <code>response_type=software_statement</code> at the authorization endpoint and one extension grant, <code>urn:ietf:params:oauth:grant-type:software-statement</code>, for initiating a backchannel request at the token endpoint; an intermediate code from the redirect flow is redeemed with the standard <code>authorization_code</code> grant type. Clients identify themselves with the HTTPS URL and metadata document defined by <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span>. If issuance is approved without deferral, the authorization server returns an intermediate code that the client redeems for the software statement. If issuance remains pending and the client opted in to deferral, the authorization server returns a <code>deferral_code</code> directly from the authorization endpoint and the client polls the token endpoint for the eventual response. A client without access to a user agent instead initiates the request with the software statement grant.<a href="#section-1-5" class="pilcrow">¶</a></p>
 <p id="section-1-6">The flow concerns client establishment, not authorization to access a protected resource. Consequently, a software statement request cannot be combined with <code>scope</code>, <code>resource</code>, <code>authorization_details</code>, or an access-token-producing response type.<a href="#section-1-6" class="pilcrow">¶</a></p>
 <p id="section-1-7">The redirect flow requires the client to operate a redirection endpoint and to reach the authorization endpoint through a user agent. For software without access to a user agent, such as a daemon or command-line tool, this specification defines a backchannel flow (<a href="#backchannel-request" class="auto internal xref">Section 8</a>) in which the client requests the software statement directly at the token endpoint and any approval completes out of band through deferred processing.<a href="#section-1-7" class="pilcrow">¶</a></p>
 <p id="section-1-8">Not every client establishment problem calls for a software statement. When the approving party is the resource owner and the client needs only the authorization server that resource owner uses, the approval is the OAuth authorization grant itself, and identifying the client by its metadata document <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span> suffices. A software statement earns its cost when the trust decision is made by a party other than the user in a transaction, must be made before any transaction exists, or must be made once and honored at many authorization servers. Issuance is therefore deliberately decoupled from any access-granting transaction and can complete out of band over hours or days.<a href="#section-1-8" class="pilcrow">¶</a></p>
@@ -1367,18 +1367,19 @@ svg {
             <p id="section-1.1-2.3.1">Section 7.2.1 of <span>[<a href="#OIDC-CORE" class="cite xref">OIDC-CORE</a>]</span> defines the syntax of the <code>registration</code> authorization request parameter. This specification defines a more constrained use of that parameter for selecting metadata to be attested.<a href="#section-1.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-1.1-2.4">
-            <p id="section-1.1-2.4.1"><span>[<a href="#DTR" class="cite xref">DTR</a>]</span> defines client opt-in, deferred token responses at the token endpoint, direct deferral at the authorization endpoint, polling, cancellation, callbacks, PKCE verification on the first poll, and sender constraint. This specification profiles the token endpoint deferral for the backchannel flow and the direct-deferral mechanism for the redirect flow, and defines the originating request's successful response.<a href="#section-1.1-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-1.1-2.4.1"><span>[<a href="#DTR" class="cite xref">DTR</a>]</span> defines client opt-in, deferred token responses at the token endpoint, direct deferral at the authorization endpoint, polling, cancellation, callbacks, PKCE verification on the first poll, and sender constraint. This specification profiles the token endpoint deferral for the backchannel flow and the direct-deferral mechanism for the redirect flow, and defines each originating request's successful response.<a href="#section-1.1-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-1.1-2.5">
             <p id="section-1.1-2.5.1"><span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> establishes the token response convention used to return a security token that is not an OAuth access token.<a href="#section-1.1-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-1.1-3"><span>[<a href="#APPROVAL-DCR" class="cite xref">APPROVAL-DCR</a>]</span> defines an approval-based extension to the dynamic client registration endpoint that ultimately creates an authorization-server-specific <code>client_id</code> and, when applicable, client credentials. This specification instead issues a signed software statement that can be presented in a later <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> registration request. The two specifications address different deployment models, do not depend on each other, and compose: an approval-gated registration whose request carries a software statement gives its approver an issuer's signed decision to evaluate instead of only client-asserted values.<a href="#section-1.1-3" class="pilcrow">¶</a></p>
-<p id="section-1.1-4"><span>[<a href="#PUSHED-DCR" class="cite xref">PUSHED-DCR</a>]</span> explores pushing client registration alongside the start of an authorization flow at the same authorization server. A trusting authorization server that supports such a mechanism can accept a software statement issued under this specification within that pushed registration, sparing the user consecutive interactive flows. That composition occurs at the trusting authorization server and is out of scope here; combining issuance itself with an access-granting response type remains prohibited (<a href="#prohibited-parameters" class="auto internal xref">Section 5.1</a>), because the party that attests client metadata is not necessarily a party from which the client will request access.<a href="#section-1.1-4" class="pilcrow">¶</a></p>
-<p id="section-1.1-5"><span>[<a href="#CLIENT-INSTANCE" class="cite xref">CLIENT-INSTANCE</a>]</span> addresses the instance layer: a single <code>client_id</code>, including one established by presenting a software statement, abstracts over many runtime instances, which prove themselves at the token endpoint through assertions from instance issuers endorsed in the client's metadata. The two specifications compose as layers: this specification carries the trust decision about the client software to the trusting authorization server, and <span>[<a href="#CLIENT-INSTANCE" class="cite xref">CLIENT-INSTANCE</a>]</span> carries per-instance identity into issued tokens. <a href="#multi-instance" class="auto internal xref">Section 12</a> describes the composition, including attestation of the <code>instance_issuers</code> metadata itself.<a href="#section-1.1-5" class="pilcrow">¶</a></p>
-<p id="section-1.1-6">OpenID Federation <span>[<a href="#OPENID-FED" class="cite xref">OPENID-FED</a>]</span> also conveys third-party-attested client metadata across authorization servers, through entity statements resolved along trust chains anchored in a federation operator. That architecture suits ecosystems prepared to operate trust anchors and intermediates and to adopt its resolution model. This specification targets deployments below that threshold: it issues the <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> artifact that existing registration endpoints already accept, with issuer trust established by explicit pairwise configuration rather than chain resolution. The two address different scales of trust establishment and do not depend on each other.<a href="#section-1.1-6" class="pilcrow">¶</a></p>
-<p id="section-1.1-7">The pairwise issuer configuration this specification assumes can itself be generalized. The OAuth Identity Assertion Trust Framework <span>[<a href="#TRUST-FRAMEWORK" class="cite xref">TRUST-FRAMEWORK</a>]</span> defines an authority delegation model in which a verifier publishes the conditions an assertion issuer must satisfy, instead of enumerating acceptable issuers, and evaluates published evidence when an assertion is presented; membership in an OpenID Federation is one such form of evidence. Applied to software statements, that model would let a trusting authorization server evaluate a previously unconfigured issuer and verify that the owner of the client identifier's namespace has authorized that issuer to attest software under it. Such a profile, including a subject identifier extraction for client identifier URLs and a binding at the registration endpoint, is out of scope for this specification.<a href="#section-1.1-7" class="pilcrow">¶</a></p>
-<p id="section-1.1-8">This specification does not define the approval workflow, the identity of an approver, or a protocol between the authorization server and an external approval system. It also does not require a trusting authorization server to accept any particular issuer. Acceptance policy and trust establishment remain deployment-specific.<a href="#section-1.1-8" class="pilcrow">¶</a></p>
+<p id="section-1.1-3"><em>Editor's note (remove before publication): The direct authorization endpoint deferral profiled by the redirect flow, including PKCE verification on the first poll and the <code>deferred_authorization_endpoint_supported</code> metadata member, currently exists only as an open change proposal against DTR (https://github.com/maxwellgerber/deferred-token-response/pull/47). This specification cannot advance until that proposal is merged into DTR or published as equivalent stable text.</em><a href="#section-1.1-3" class="pilcrow">¶</a></p>
+<p id="section-1.1-4"><span>[<a href="#APPROVAL-DCR" class="cite xref">APPROVAL-DCR</a>]</span> defines an approval-based extension to the dynamic client registration endpoint that ultimately creates an authorization-server-specific <code>client_id</code> and, when applicable, client credentials. This specification instead issues a signed software statement that can be presented in a later <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> registration request. The two specifications address different deployment models, do not depend on each other, and compose: an approval-gated registration whose request carries a software statement gives its approver an issuer's signed decision to evaluate instead of only client-asserted values.<a href="#section-1.1-4" class="pilcrow">¶</a></p>
+<p id="section-1.1-5"><span>[<a href="#PUSHED-DCR" class="cite xref">PUSHED-DCR</a>]</span> explores pushing client registration alongside the start of an authorization flow at the same authorization server. A trusting authorization server that supports such a mechanism can accept a software statement issued under this specification within that pushed registration, sparing the user consecutive interactive flows. That composition occurs at the trusting authorization server and is out of scope here; combining issuance itself with an access-granting response type remains prohibited (<a href="#prohibited-parameters" class="auto internal xref">Section 5.1</a>), because the party that attests client metadata is not necessarily a party from which the client will request access.<a href="#section-1.1-5" class="pilcrow">¶</a></p>
+<p id="section-1.1-6"><span>[<a href="#CLIENT-INSTANCE" class="cite xref">CLIENT-INSTANCE</a>]</span> addresses the instance layer: a single <code>client_id</code>, including one established by presenting a software statement, abstracts over many runtime instances, which prove themselves at the token endpoint through assertions from instance issuers endorsed in the client's metadata. The two specifications compose as layers: this specification carries the trust decision about the client software to the trusting authorization server, and <span>[<a href="#CLIENT-INSTANCE" class="cite xref">CLIENT-INSTANCE</a>]</span> carries per-instance identity into issued tokens. <a href="#multi-instance" class="auto internal xref">Section 12</a> describes the composition, including attestation of the <code>instance_issuers</code> metadata itself.<a href="#section-1.1-6" class="pilcrow">¶</a></p>
+<p id="section-1.1-7">OpenID Federation <span>[<a href="#OPENID-FED" class="cite xref">OPENID-FED</a>]</span> also conveys third-party-attested client metadata across authorization servers, through entity statements resolved along trust chains anchored in a federation operator. That architecture suits ecosystems prepared to operate trust anchors and intermediates and to adopt its resolution model. This specification targets deployments below that threshold: it issues the <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> artifact that existing registration endpoints already accept, with issuer trust established by explicit pairwise configuration rather than chain resolution. The two address different scales of trust establishment and do not depend on each other.<a href="#section-1.1-7" class="pilcrow">¶</a></p>
+<p id="section-1.1-8">The pairwise issuer configuration this specification assumes can itself be generalized. The OAuth Identity Assertion Trust Framework <span>[<a href="#TRUST-FRAMEWORK" class="cite xref">TRUST-FRAMEWORK</a>]</span> defines an authority delegation model in which a verifier publishes the conditions an assertion issuer must satisfy, instead of enumerating acceptable issuers, and evaluates published evidence when an assertion is presented; membership in an OpenID Federation is one such form of evidence. Applied to software statements, that model would let a trusting authorization server evaluate a previously unconfigured issuer and verify that the owner of the client identifier's namespace has authorized that issuer to attest software under it. Such a profile, including a subject identifier extraction for client identifier URLs and a binding at the registration endpoint, is out of scope for this specification.<a href="#section-1.1-8" class="pilcrow">¶</a></p>
+<p id="section-1.1-9">This specification does not define the approval workflow, the identity of an approver, or a protocol between the authorization server and an external approval system. It also does not require a trusting authorization server to accept any particular issuer. Acceptance policy and trust establishment remain deployment-specific.<a href="#section-1.1-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1397,7 +1398,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <span class="break"></span><dl class="dlParallel" id="section-2-4">
         <dt id="section-2-4.1">Software Statement Request:</dt>
         <dd style="margin-left: 1.5em" id="section-2-4.2">
-          <p id="section-2-4.2.1">A request in which a client asks an authorization server to issue a software statement, sent either as an authorization request with <code>response_type=software_statement</code> (the redirect flow) or directly to the token endpoint (the backchannel flow).<a href="#section-2-4.2.1" class="pilcrow">¶</a></p>
+          <p id="section-2-4.2.1">A request in which a client asks an authorization server to issue a software statement, sent either as an authorization request with <code>response_type=software_statement</code> (the redirect flow) or as a <code>urn:ietf:params:oauth:grant-type:software-statement</code> grant request to the token endpoint (the backchannel flow).<a href="#section-2-4.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-2-4.3">Issuing Authorization Server:</dt>
@@ -1417,7 +1418,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
         <dd class="break"></dd>
 <dt id="section-2-4.9">Intermediate Code:</dt>
         <dd style="margin-left: 1.5em" id="section-2-4.10">
-          <p id="section-2-4.10.1">The short-lived, single-use code returned by a synchronous authorization response (<a href="#synchronous-response" class="auto internal xref">Section 6.1</a>) and redeemed with the software statement grant (<a href="#software-statement-grant" class="auto internal xref">Section 7</a>). It is distinct from an <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> authorization code and cannot be redeemed as one.<a href="#section-2-4.10.1" class="pilcrow">¶</a></p>
+          <p id="section-2-4.10.1">The short-lived, single-use code returned by a synchronous authorization response (<a href="#synchronous-response" class="auto internal xref">Section 6.1</a>) and redeemed with the <code>authorization_code</code> grant type (<a href="#code-redemption" class="auto internal xref">Section 7</a>). It is not an authorization code: redeeming it yields the software statement token response, never an access token.<a href="#section-2-4.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-2-4.11">Metadata Snapshot:</dt>
@@ -1427,7 +1428,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
         <dd class="break"></dd>
 <dt id="section-2-4.13">Canonical Digest:</dt>
         <dd style="margin-left: 1.5em" id="section-2-4.14">
-          <p id="section-2-4.14.1">The SHA-256 hash of a metadata document in the canonical form of <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>, as defined in <a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>.<a href="#section-2-4.14.1" class="pilcrow">¶</a></p>
+          <p id="section-2-4.14.1">The unpadded base64url encoding of the SHA-256 hash of a metadata document in the canonical form of <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>, as defined in <a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>.<a href="#section-2-4.14.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1454,6 +1455,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
     |     response_type=software_statement            |
     |     client_id=&lt;metadata document URL&gt;           |
     |     code_challenge, [registration],             |
+    |     [audience],                                 |
     |     [completion_mode=deferred]                  |
     |------------------------------------------------&gt;|
     |                                                 |
@@ -1498,7 +1500,9 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
     | (A) Token request                               |
     |     grant_type=...:software-statement           |
     |     client_id=&lt;metadata document URL&gt;           |
+    |     [initial_access_token],                     |
     |     [registration],                             |
+    |     [audience],                                 |
     |     [completion_mode=deferred]                  |
     |------------------------------------------------&gt;|
     |                                                 |
@@ -1506,7 +1510,8 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
     |&lt;------------------------------------------------|
     |                     or                          |
     | (B2) Deferred token response                    |
-    |      (deferral_code, expires_in, [interval])    |
+    |      (authorization_pending, deferral_code,     |
+    |       expires_in, interval)                     |
     |&lt;------------------------------------------------|
     |                                                 |
     | (C) Poll(s) (deferral_code)                     |
@@ -1515,7 +1520,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
     |&lt;------------------------------------------------|
 </pre><a href="#section-3.2-1" class="pilcrow">¶</a>
 </div>
-<p id="section-3.2-2">At (A), the client sends the software statement grant directly to the token endpoint, authenticating according to <a href="#client-identity" class="auto internal xref">Section 4</a> and optionally including a <code>registration</code> overlay in the request body. If issuance completes immediately, the authorization server returns the software statement at (B1). If issuance remains pending and the client opted in to deferral, the authorization server returns the deferred token response of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> at (B2), and the client polls at (C) until it receives the final response. <a href="#backchannel-request" class="auto internal xref">Section 8</a> defines this flow.<a href="#section-3.2-2" class="pilcrow">¶</a></p>
+<p id="section-3.2-2">At (A), the client sends the software statement grant request directly to the token endpoint, authenticating according to <a href="#client-identity" class="auto internal xref">Section 4</a> when the Client ID Metadata Document establishes an authentication method, presenting an <code>initial_access_token</code> when the authorization server requires one, and optionally including a <code>registration</code> overlay in the request body. If issuance completes immediately, the authorization server returns the software statement at (B1). If issuance remains pending and the client opted in to deferral, the authorization server returns the deferred token response of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> at (B2), and the client polls at (C) until it receives the final response. <a href="#backchannel-request" class="auto internal xref">Section 8</a> defines this flow.<a href="#section-3.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1536,7 +1541,8 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
         </h3>
 <p id="section-4.1-1">Client metadata documents can change while a request is pending. Before returning either an intermediate code or a deferral code, the authorization server <span class="bcp14">MUST</span> bind the returned credential to the validated canonical metadata and registration overlay. The bound values constitute the metadata snapshot for the request.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
 <p id="section-4.1-2">The authorization server <span class="bcp14">MAY</span> retrieve the document again before issuing the software statement. If it does so and detects a security-relevant change (for example, a change to <code>jwks</code>, <code>jwks_uri</code>, <code>redirect_uris</code>, <code>token_endpoint_auth_method</code>, or any metadata selected by the overlay), it <span class="bcp14">MUST</span> either re-evaluate the request under the new metadata or reject the request. It <span class="bcp14">MUST NOT</span> silently combine values from different document versions.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
-<p id="section-4.1-3">Because JSON member ordering and serialization details carry no meaning, comparing retrieved documents byte for byte over-detects change. The canonical digest of a metadata document is the SHA-256 hash <span>[<a href="#RFC6234" class="cite xref">RFC6234</a>]</span> of the document transformed to the canonical form defined by <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>. Two retrievals with the same canonical digest contain the same metadata; a changed digest is the concrete signal for the re-evaluation requirement above. The canonical digest also serves the <code>cimd_digest</code> claim (<a href="#software-statement-format" class="auto internal xref">Section 11</a>) and the audit guidance in <a href="#security-considerations" class="auto internal xref">Section 14</a>. Deployments <span class="bcp14">MAY</span> use other deterministic encodings internally for change detection, but interoperable uses of the canonical digest <span class="bcp14">MUST</span> use the form defined here.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+<p id="section-4.1-3">Because JSON member ordering and serialization details carry no meaning, comparing retrieved documents byte for byte over-detects change. Before calculating a canonical digest, the authorization server <span class="bcp14">MUST</span> verify that the document can be represented as the I-JSON input required by <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>. In particular, it <span class="bcp14">MUST</span> reject a document containing duplicate object member names or a number that cannot be represented as an IEEE 754 double-precision value without loss.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+<p id="section-4.1-4">The canonical digest of a metadata document is the unpadded base64url encoding of the SHA-256 hash <span>[<a href="#RFC6234" class="cite xref">RFC6234</a>]</span> of the UTF-8 bytes produced by applying <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> to the complete document. Two retrievals with the same canonical digest contain the same metadata for purposes of this specification; a changed digest is the concrete signal for the re-evaluation requirement above. The canonical digest also serves the <code>cimd_digest</code> claim (<a href="#software-statement-format" class="auto internal xref">Section 11</a>) and the audit guidance in <a href="#security-considerations" class="auto internal xref">Section 14</a>. Deployments <span class="bcp14">MAY</span> use other deterministic encodings internally for change detection, but interoperable uses of the canonical digest <span class="bcp14">MUST</span> use the form defined here.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1597,15 +1603,21 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 </dd>
         <dd class="break"></dd>
 <dt id="section-5-2.17">
-<code>completion_mode</code>:</dt>
+<code>audience</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-5-2.18">
-          <p id="section-5-2.18.1"><span class="bcp14">OPTIONAL</span>. The client <span class="bcp14">MAY</span> include <code>deferred</code> among the values of this parameter to opt in to direct authorization endpoint deferral as defined by <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>. If the parameter is absent or does not include <code>deferred</code>, the authorization server <span class="bcp14">MUST NOT</span> return a direct deferred response.<a href="#section-5-2.18.1" class="pilcrow">¶</a></p>
+          <p id="section-5-2.18.1"><span class="bcp14">OPTIONAL</span>. A target service at which the client intends to use the issued software statement, with the semantics of the <code>audience</code> parameter defined in Section 2.1 of <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>. The parameter <span class="bcp14">MAY</span> be repeated to request multiple audiences. Each value <span class="bcp14">MUST</span> be an authorization server issuer identifier as defined by <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>, values <span class="bcp14">MUST NOT</span> be repeated, and order is not significant. The authorization server determines the final audience according to policy, but when this parameter is present every value in the statement's <code>aud</code> claim <span class="bcp14">MUST</span> have appeared in the request. If none of the requested audiences is acceptable, the authorization server <span class="bcp14">MUST</span> reject the request with <code>invalid_target</code> <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>. Some deployments use a proprietary <code>audience</code> authorization request parameter to select an API for access tokens; the semantics defined here apply only to software statement requests.<a href="#section-5-2.18.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-5-2.19">
-<code>dpop_jkt</code>:</dt>
+<code>completion_mode</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-5-2.20">
-          <p id="section-5-2.20.1"><span class="bcp14">REQUIRED</span> for a public client when <code>completion_mode</code> includes <code>deferred</code>, and <span class="bcp14">OPTIONAL</span> otherwise. The parameter has the semantics defined in Section 10 of <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>. When present, its value <span class="bcp14">MUST</span> be associated with the resulting intermediate code or the direct-deferral state, whichever is returned.<a href="#section-5-2.20.1" class="pilcrow">¶</a></p>
+          <p id="section-5-2.20.1"><span class="bcp14">OPTIONAL</span>. The client <span class="bcp14">MAY</span> include <code>deferred</code> among the values of this parameter to opt in to direct authorization endpoint deferral as defined by <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>. If the parameter is absent or does not include <code>deferred</code>, the authorization server <span class="bcp14">MUST NOT</span> return a direct deferred response.<a href="#section-5-2.20.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.21">
+<code>dpop_jkt</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.22">
+          <p id="section-5-2.22.1"><span class="bcp14">REQUIRED</span> for a public client when <code>completion_mode</code> includes <code>deferred</code>, and <span class="bcp14">OPTIONAL</span> otherwise. The parameter has the semantics defined in Section 10 of <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>. When present, its value <span class="bcp14">MUST</span> be associated with the resulting intermediate code or the direct-deferral state, whichever is returned.<a href="#section-5-2.22.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1639,7 +1651,7 @@ Host: server.example.com
             <p id="section-5.1-2.3.1"><code>authorization_details</code>, as defined by <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>.<a href="#section-5.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.1-3">An authorization server <span class="bcp14">MUST</span> reject a request containing any of these parameters with <code>invalid_request</code>. A <code>scope</code> member inside the <code>registration</code> JSON object is client metadata and is not the OAuth authorization request parameter prohibited by this section.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+<p id="section-5.1-3">An authorization server <span class="bcp14">MUST</span> reject a request containing any of these parameters with <code>invalid_request</code>. A <code>scope</code> member inside the <code>registration</code> JSON object is client metadata and is not the OAuth authorization request parameter prohibited by this section. The <code>audience</code> parameter (<a href="#authorization-request" class="auto internal xref">Section 5</a>) names the authorization servers at which the issued statement will be presented, a property of the requested artifact rather than a request for access, and is not prohibited by this section.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
 <p id="section-5.1-4">Hybrid response types that combine <code>software_statement</code> with <code>code</code>, <code>token</code>, <code>id_token</code>, or any other response type are not defined. An authorization server <span class="bcp14">MUST</span> reject such a request with <code>unsupported_response_type</code>.<a href="#section-5.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1648,40 +1660,41 @@ Host: server.example.com
         <h3 id="name-registration-overlay">
 <a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-registration-overlay" class="section-name selfRef">Registration Overlay</a>
         </h3>
-<p id="section-5.2-1">The <code>registration</code> parameter syntax is defined in Section 7.2.1 of <span>[<a href="#OIDC-CORE" class="cite xref">OIDC-CORE</a>]</span>. Its value is a JSON object. In this specification, each member <span class="bcp14">MUST</span> be client metadata registered in the IANA "OAuth Dynamic Client Registration Metadata" registry and recognized by the authorization server.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
-<p id="section-5.2-2">The overlay selects values from the canonical metadata in the Client ID Metadata Document. The authorization server <span class="bcp14">MUST</span> apply the following rules:<a href="#section-5.2-2" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-5.2-3">
-<li id="section-5.2-3.1">
-            <p id="section-5.2-3.1.1">For metadata whose value is an array, every overlay value <span class="bcp14">MUST</span> occur in the corresponding canonical array.<a href="#section-5.2-3.1.1" class="pilcrow">¶</a></p>
+<p id="section-5.2-1">The <code>registration</code> parameter syntax is defined in Section 7.2.1 of <span>[<a href="#OIDC-CORE" class="cite xref">OIDC-CORE</a>]</span>. Its value is a JSON object. In this specification, each member <span class="bcp14">MUST</span> be client metadata registered in the IANA "OAuth Dynamic Client Registration Metadata" registry, recognized by the authorization server, and eligible for attestation under this section.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<p id="section-5.2-2">The following authorization-server-assigned, credential, and recursive metadata members are not eligible for attestation and <span class="bcp14">MUST NOT</span> appear in an overlay or in a software statement issued under this specification: <code>client_id</code>, <code>client_secret</code>, <code>client_id_issued_at</code>, <code>client_secret_expires_at</code>, <code>registration_access_token</code>, <code>registration_client_uri</code>, and <code>software_statement</code>. An authorization server <span class="bcp14">MAY</span> exclude additional metadata according to policy. The <code>client_id</code> member required in the Client ID Metadata Document by <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span> identifies the canonical document during issuance; the statement represents that identifier in <code>sub</code> and <span class="bcp14">MUST NOT</span> copy it as client metadata.<a href="#section-5.2-2" class="pilcrow">¶</a></p>
+<p id="section-5.2-3">The overlay selects values from the canonical metadata in the Client ID Metadata Document. It <span class="bcp14">MUST</span> satisfy the same I-JSON input requirements used for the canonical digest in <a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>. The authorization server <span class="bcp14">MUST</span> apply the following rules:<a href="#section-5.2-3" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5.2-4">
+<li id="section-5.2-4.1">
+            <p id="section-5.2-4.1.1">For metadata whose value is an array, every overlay value <span class="bcp14">MUST</span> occur in the corresponding canonical array. Two JSON values are equal for this comparison when their <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> serializations are byte-for-byte identical.<a href="#section-5.2-4.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.2-3.2">
-            <p id="section-5.2-3.2.1">For space-delimited metadata, every space-delimited value in the overlay <span class="bcp14">MUST</span> occur among the space-delimited values of the corresponding canonical value.<a href="#section-5.2-3.2.1" class="pilcrow">¶</a></p>
+          <li id="section-5.2-4.2">
+            <p id="section-5.2-4.2.1">For space-delimited metadata, every space-delimited value in the overlay <span class="bcp14">MUST</span> occur among the space-delimited values of the corresponding canonical value.<a href="#section-5.2-4.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.2-3.3">
-            <p id="section-5.2-3.3.1">For all other metadata, the overlay value <span class="bcp14">MUST</span> be identical to the corresponding canonical value.<a href="#section-5.2-3.3.1" class="pilcrow">¶</a></p>
+          <li id="section-5.2-4.3">
+            <p id="section-5.2-4.3.1">For all other metadata, the <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> serialization of the overlay value <span class="bcp14">MUST</span> be byte-for-byte identical to the serialization of the corresponding canonical value.<a href="#section-5.2-4.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.2-3.4">
-            <p id="section-5.2-3.4.1">A member absent from the canonical metadata <span class="bcp14">MUST NOT</span> be introduced by the overlay.<a href="#section-5.2-3.4.1" class="pilcrow">¶</a></p>
+          <li id="section-5.2-4.4">
+            <p id="section-5.2-4.4.1">A member absent from the canonical metadata <span class="bcp14">MUST NOT</span> be introduced by the overlay.<a href="#section-5.2-4.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.2-3.5">
-            <p id="section-5.2-3.5.1">An unrecognized member or a member that violates these rules <span class="bcp14">MUST</span> cause the request to be rejected with <code>invalid_request</code>.<a href="#section-5.2-3.5.1" class="pilcrow">¶</a></p>
+          <li id="section-5.2-4.5">
+            <p id="section-5.2-4.5.1">An unrecognized member or a member that violates these rules <span class="bcp14">MUST</span> cause the request to be rejected with <code>invalid_request</code>.<a href="#section-5.2-4.5.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.2-3.6">
-            <p id="section-5.2-3.6.1">If the overlay contains <code>redirect_uris</code>, that array <span class="bcp14">MUST</span> contain the <code>redirect_uri</code> used for the authorization request, so that the redirection endpoint delivering the response remains within the attested metadata.<a href="#section-5.2-3.6.1" class="pilcrow">¶</a></p>
+          <li id="section-5.2-4.6">
+            <p id="section-5.2-4.6.1">If the overlay contains <code>redirect_uris</code>, that array <span class="bcp14">MUST</span> contain the <code>redirect_uri</code> used for the authorization request, so that the redirection endpoint delivering the response remains within the attested metadata.<a href="#section-5.2-4.6.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-5.2-4">For example, the following overlay selects one redirection URI and a subset of the grant types and scope values present in the client's canonical metadata:<a href="#section-5.2-4" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-5.2-5">
+<p id="section-5.2-5">For example, the following overlay selects one redirection URI and a subset of the grant types and scope values present in the client's canonical metadata:<a href="#section-5.2-5" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-5.2-6">
 <pre>
 {
   "redirect_uris": ["https://client.example.org/cb"],
   "grant_types": ["authorization_code"],
   "scope": "read"
 }
-</pre><a href="#section-5.2-5" class="pilcrow">¶</a>
+</pre><a href="#section-5.2-6" class="pilcrow">¶</a>
 </div>
-<p id="section-5.2-6">When an overlay is accepted, its values replace the corresponding values in the metadata snapshot. The authorization server <span class="bcp14">MAY</span> omit additional metadata from the software statement according to policy, but it <span class="bcp14">MUST NOT</span> add a value that contradicts or widens the snapshot.<a href="#section-5.2-6" class="pilcrow">¶</a></p>
-<p id="section-5.2-7">The <code>registration</code> parameter is not a container for approval notes, business justification, requested JWT claims, or deployment-specific context. A profile that needs such information <span class="bcp14">MUST</span> define separate parameters, including their validation, privacy, and IANA requirements.<a href="#section-5.2-7" class="pilcrow">¶</a></p>
+<p id="section-5.2-7">When an overlay is accepted, its values replace the corresponding values in the metadata snapshot. The authorization server <span class="bcp14">MAY</span> omit additional metadata from the software statement according to policy, but it <span class="bcp14">MUST NOT</span> add a value that contradicts or widens the snapshot.<a href="#section-5.2-7" class="pilcrow">¶</a></p>
+<p id="section-5.2-8">The <code>registration</code> parameter is not a container for approval notes, business justification, requested JWT claims, or deployment-specific context. A profile that needs such information <span class="bcp14">MUST</span> define separate parameters, including their validation, privacy, and IANA requirements.<a href="#section-5.2-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1702,7 +1715,7 @@ Host: server.example.com
           <dt id="section-6.1-2.1">
 <code>code</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-6.1-2.2">
-            <p id="section-6.1-2.2.1"><span class="bcp14">REQUIRED</span>. A short-lived, single-use intermediate code. The code <span class="bcp14">MUST</span> be bound to the client identifier, redirect URI, PKCE challenge, and metadata snapshot (which incorporates any accepted registration overlay). If the authorization request was bound to a DPoP key, the code <span class="bcp14">MUST</span> also be bound to that key's thumbprint.<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-6.1-2.2.1"><span class="bcp14">REQUIRED</span>. A short-lived, single-use intermediate code. The code <span class="bcp14">MUST</span> be bound to the client identifier, redirect URI, PKCE challenge, metadata snapshot (which incorporates any accepted registration overlay), and requested audience. If the authorization request was bound to a DPoP key, the code <span class="bcp14">MUST</span> also be bound to that key's thumbprint.<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-6.1-2.3">
@@ -1732,7 +1745,7 @@ Host: server.example.com
           <dt id="section-6.2-2.1">
 <code>deferral_code</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-6.2-2.2">
-            <p id="section-6.2-2.2.1"><span class="bcp14">REQUIRED</span>. The deferral code defined by <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>. It <span class="bcp14">MUST</span> be bound to the client identifier, redirect URI, PKCE challenge, and metadata snapshot (which incorporates any accepted registration overlay). If <code>dpop_jkt</code> was present, it <span class="bcp14">MUST</span> also be bound to that JWK thumbprint.<a href="#section-6.2-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-6.2-2.2.1"><span class="bcp14">REQUIRED</span>. The deferral code defined by <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>. It <span class="bcp14">MUST</span> be bound to the client identifier, redirect URI, PKCE challenge, metadata snapshot (which incorporates any accepted registration overlay), and requested audience. If <code>dpop_jkt</code> was present, it <span class="bcp14">MUST</span> also be bound to that JWK thumbprint.<a href="#section-6.2-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-6.2-2.3">
@@ -1797,18 +1810,18 @@ Cache-Control: no-store
 </div>
 </section>
 </div>
-<div id="software-statement-grant">
+<div id="code-redemption">
 <section id="section-7">
-      <h2 id="name-software-statement-grant">
-<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-software-statement-grant" class="section-name selfRef">Software Statement Grant</a>
+      <h2 id="name-intermediate-code-redemptio">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-intermediate-code-redemptio" class="section-name selfRef">Intermediate Code Redemption</a>
       </h2>
-<p id="section-7-1">This section defines the redemption of an intermediate code obtained from a synchronous authorization response. The same grant type, sent without a <code>code</code> parameter, initiates a backchannel software statement request (<a href="#backchannel-request" class="auto internal xref">Section 8</a>).<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-1">The client redeems an intermediate code with the <code>authorization_code</code> grant type of <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>. The code, not the grant type, determines what the token endpoint returns, mirroring how OpenID Connect returns artifacts other than access tokens through the same grant. Backchannel initiation uses the extension grant defined in <a href="#backchannel-request" class="auto internal xref">Section 8</a> and never involves an intermediate code; a redemption request missing <code>code</code> is an ordinary <code>invalid_request</code> under <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> and cannot initiate issuance work.<a href="#section-7-1" class="pilcrow">¶</a></p>
 <p id="section-7-2">The client redeems the intermediate code by sending an HTTP <code>POST</code> request to the token endpoint using the <code>application/x-www-form-urlencoded</code> format. The request contains:<a href="#section-7-2" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-7-3">
         <dt id="section-7-3.1">
 <code>grant_type</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-3.2">
-          <p id="section-7-3.2.1"><span class="bcp14">REQUIRED</span>. The value <span class="bcp14">MUST</span> be <code>urn:ietf:params:oauth:grant-type:software-statement</code>.<a href="#section-7-3.2.1" class="pilcrow">¶</a></p>
+          <p id="section-7-3.2.1"><span class="bcp14">REQUIRED</span>. The value <span class="bcp14">MUST</span> be <code>authorization_code</code>.<a href="#section-7-3.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-7-3.3">
@@ -1838,7 +1851,7 @@ Cache-Control: no-store
 </dl>
 <p id="section-7-4">The client authenticates according to <a href="#client-identity" class="auto internal xref">Section 4</a>. When <code>dpop_jkt</code> was included in the authorization request, the client <span class="bcp14">MUST</span> send a DPoP proof for the token endpoint using the same key.<a href="#section-7-4" class="pilcrow">¶</a></p>
 <p id="section-7-5">The authorization server <span class="bcp14">MUST</span> validate the code and all of its bindings before processing the request. An invalid, expired, previously used, or incorrectly bound code <span class="bcp14">MUST</span> result in an <code>invalid_grant</code> error. A PKCE or DPoP binding failure is handled according to <span>[<a href="#RFC7636" class="cite xref">RFC7636</a>]</span> or <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>, respectively.<a href="#section-7-5" class="pilcrow">¶</a></p>
-<p id="section-7-6">If the request is valid, the authorization server returns the software statement response in <a href="#software-statement-response" class="auto internal xref">Section 10</a>. Because the synchronous authorization response indicates that issuance has already been approved, redemption of an intermediate code never returns a deferred response.<a href="#section-7-6" class="pilcrow">¶</a></p>
+<p id="section-7-6">Because the intermediate code was issued for <code>response_type=software_statement</code>, a valid redemption returns the software statement response in <a href="#software-statement-response" class="auto internal xref">Section 10</a>; it <span class="bcp14">MUST NOT</span> return an access token or refresh token. Conversely, an authorization code issued for any other response type <span class="bcp14">MUST NOT</span> be redeemed for a software statement. Because the synchronous authorization response indicates that issuance has already been approved, redemption of an intermediate code never returns a deferred response.<a href="#section-7-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="backchannel-request">
@@ -1846,7 +1859,7 @@ Cache-Control: no-store
       <h2 id="name-backchannel-software-statem">
 <a href="#section-8" class="section-number selfRef">8. </a><a href="#name-backchannel-software-statem" class="section-name selfRef">Backchannel Software Statement Request</a>
       </h2>
-<p id="section-8-1">A client without access to a user agent can request a software statement directly at the token endpoint. An authorization server advertises support for this flow with the <code>software_statement_backchannel_supported</code> metadata member (<a href="#authorization-server-metadata" class="auto internal xref">Section 13</a>); a client <span class="bcp14">MUST NOT</span> send a backchannel request to an authorization server that does not advertise support.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-1">A client without access to a user agent can request a software statement directly at the token endpoint. An authorization server advertises support for this flow by listing <code>urn:ietf:params:oauth:grant-type:software-statement</code> in <code>grant_types_supported</code> (<a href="#authorization-server-metadata" class="auto internal xref">Section 13</a>); a client <span class="bcp14">MUST NOT</span> send a backchannel request to an authorization server that does not advertise that value.<a href="#section-8-1" class="pilcrow">¶</a></p>
 <p id="section-8-2">The client sends an HTTP <code>POST</code> request to the token endpoint using the <code>application/x-www-form-urlencoded</code> format with:<a href="#section-8-2" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-8-3">
         <dt id="section-8-3.1">
@@ -1868,34 +1881,65 @@ Cache-Control: no-store
 </dd>
         <dd class="break"></dd>
 <dt id="section-8-3.7">
-<code>completion_mode</code>:</dt>
+<code>audience</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-8-3.8">
-          <p id="section-8-3.8.1"><span class="bcp14">OPTIONAL</span>. The client <span class="bcp14">MAY</span> include <code>deferred</code> among the values of this parameter to opt in to a deferred token response as defined by <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>. If the parameter is absent or does not include <code>deferred</code>, the authorization server <span class="bcp14">MUST NOT</span> return a deferred token response.<a href="#section-8-3.8.1" class="pilcrow">¶</a></p>
+          <p id="section-8-3.8.1"><span class="bcp14">OPTIONAL</span>. The requested audience described in <a href="#authorization-request" class="auto internal xref">Section 5</a>. The same syntax, validation, and narrowing rules apply.<a href="#section-8-3.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-8-3.9">
-<code>initial_access_token</code>:</dt>
+<code>completion_mode</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-8-3.10">
-          <p id="section-8-3.10.1"><span class="bcp14">OPTIONAL</span>. An access credential issued out of band by the authorization server that pre-authorizes software statement requests, analogous to the initial access token of <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span>. An authorization server <span class="bcp14">MAY</span> require this parameter for backchannel requests; issuance, format, and lifetime of the credential are deployment-specific.<a href="#section-8-3.10.1" class="pilcrow">¶</a></p>
+          <p id="section-8-3.10.1"><span class="bcp14">OPTIONAL</span>. The client <span class="bcp14">MAY</span> include <code>deferred</code> among the values of this parameter to opt in to a deferred token response as defined by <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>. If the parameter is absent or does not include <code>deferred</code>, the authorization server <span class="bcp14">MUST NOT</span> return a deferred token response.<a href="#section-8-3.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-8-3.11">
+<code>initial_access_token</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-8-3.12">
+          <p id="section-8-3.12.1"><span class="bcp14">OPTIONAL</span>. An authorization credential issued out of band by the authorization server that pre-authorizes software statement requests, analogous to the initial access token of <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span>. An authorization server <span class="bcp14">MAY</span> require this parameter for backchannel requests. The credential is distinct from OAuth client authentication and is used together with client authentication when the Client ID Metadata Document establishes an authentication method.<a href="#section-8-3.12.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-8-3.13">
+<code>client_notification_token</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-8-3.14">
+          <p id="section-8-3.14.1"><span class="bcp14">OPTIONAL</span>. The callback authentication credential defined by <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>. It <span class="bcp14">MUST</span> be used only when <code>completion_mode</code> includes <code>deferred</code>. If the client has a <code>deferred_client_notification_endpoint</code> and intends to accept callbacks, it <span class="bcp14">SHOULD</span> include this parameter.<a href="#section-8-3.14.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-8-4">The request <span class="bcp14">MUST NOT</span> contain <code>code</code>, <code>redirect_uri</code>, <code>code_verifier</code>, or <code>state</code>. The prohibitions of <a href="#prohibited-parameters" class="auto internal xref">Section 5.1</a> apply: the request <span class="bcp14">MUST NOT</span> contain <code>scope</code>, <code>resource</code>, or <code>authorization_details</code>.<a href="#section-8-4" class="pilcrow">¶</a></p>
-<p id="section-8-5">The client authenticates according to <a href="#client-identity" class="auto internal xref">Section 4</a>. A public client that opts in to deferral <span class="bcp14">MUST</span> include a DPoP proof <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> for the token endpoint on the initiating request; the authorization server <span class="bcp14">MUST</span> bind any resulting deferral state to the proof's public key. A confidential client <span class="bcp14">MAY</span> additionally use DPoP.<a href="#section-8-5" class="pilcrow">¶</a></p>
-<p id="section-8-6">The authorization server <span class="bcp14">MUST</span> obtain and validate the Client ID Metadata Document and any overlay exactly as in the redirect flow and <span class="bcp14">MUST</span> bind the metadata snapshot (<a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>) before returning either the software statement or a deferral code. Because no user agent is present, approval and any verification of the requesting party occur out of band. The authorization server <span class="bcp14">MUST</span> apply the same issuance policy to backchannel requests as to redirect flow requests.<a href="#section-8-6" class="pilcrow">¶</a></p>
-<p id="section-8-7">If issuance completes immediately, the authorization server returns the software statement token response (<a href="#software-statement-response" class="auto internal xref">Section 10</a>). If issuance remains pending and the request opted in to deferral, the authorization server returns the deferred token response defined by <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>, and the client polls according to <a href="#deferred-processing" class="auto internal xref">Section 9</a>. If issuance cannot complete immediately and the request did not opt in, the authorization server returns a token error response with the error code <code>deferral_required</code> (<a href="#deferred-authorization-response" class="auto internal xref">Section 6.2</a>).<a href="#section-8-7" class="pilcrow">¶</a></p>
-<p id="section-8-8">The following is a non-normative example of an initiating backchannel request (line breaks are for display purposes only):<a href="#section-8-8" class="pilcrow">¶</a></p>
-<div class="lang-http sourcecode" id="section-8-9">
+<p id="section-8-4">The request <span class="bcp14">MUST NOT</span> contain <code>code</code>, <code>redirect_uri</code>, <code>code_verifier</code>, <code>state</code>, or <code>dpop_jkt</code>. The prohibitions of <a href="#prohibited-parameters" class="auto internal xref">Section 5.1</a> apply: the request <span class="bcp14">MUST NOT</span> contain <code>scope</code>, <code>resource</code>, or <code>authorization_details</code>.<a href="#section-8-4" class="pilcrow">¶</a></p>
+<p id="section-8-5">The client authenticates according to <a href="#client-identity" class="auto internal xref">Section 4</a> when its metadata establishes an authentication method and presents an <code>initial_access_token</code> when the authorization server requires one. A public client that opts in to deferral <span class="bcp14">MUST</span> additionally include a DPoP proof <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> for the token endpoint on the initiating request; the authorization server <span class="bcp14">MUST</span> bind any resulting deferral state to the proof's public key. A confidential client <span class="bcp14">MAY</span> additionally use DPoP. A DPoP proof establishes sender constraint but, by itself, does not authorize the presenter to request a statement for the <code>client_id</code> URL.<a href="#section-8-5" class="pilcrow">¶</a></p>
+<p id="section-8-6">When an <code>initial_access_token</code> is presented, the authorization server <span class="bcp14">MUST</span> validate it before retrieving client-controlled metadata or enqueueing approval work. The credential <span class="bcp14">SHOULD</span> be integrity protected, confidential in transit and at rest, limited to the issuing authorization server, time limited, and bound to an exact client identifier URL or an explicitly authorized client identifier namespace; it <span class="bcp14">MAY</span> further restrict audiences, metadata, overlays, or the number of uses. An opaque bearer credential <span class="bcp14">SHOULD</span> contain at least 128 bits of entropy. The authorization server <span class="bcp14">MUST</span> enforce every restriction the credential carries and <span class="bcp14">MUST</span> prevent replay beyond its permitted number of uses.<a href="#section-8-6" class="pilcrow">¶</a></p>
+<p id="section-8-7">The authorization server <span class="bcp14">MUST</span> obtain and validate the Client ID Metadata Document and any overlay exactly as in the redirect flow and <span class="bcp14">MUST</span> bind the metadata snapshot (<a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>) and the requested audience before returning either the software statement or a deferral code. Because no user agent is present, approval and any verification of the requesting party occur out of band. The authorization server <span class="bcp14">MUST</span> apply the same issuance policy to backchannel requests as to redirect flow requests.<a href="#section-8-7" class="pilcrow">¶</a></p>
+<p id="section-8-8">If issuance completes immediately, the authorization server returns the software statement token response (<a href="#software-statement-response" class="auto internal xref">Section 10</a>). If issuance remains pending and the request opted in to deferral, the authorization server returns the deferred token response defined by <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>, and the client polls according to <a href="#deferred-processing" class="auto internal xref">Section 9</a>. If issuance cannot complete immediately and the request did not opt in, the authorization server returns a token error response with HTTP status code 400 and the error code <code>deferral_required</code> (<a href="#deferred-authorization-response" class="auto internal xref">Section 6.2</a>).<a href="#section-8-8" class="pilcrow">¶</a></p>
+<p id="section-8-9">Other backchannel errors use the token error response format of Section 5.2 of <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>:<a href="#section-8-9" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8-10.1">
+          <p id="section-8-10.1.1">A malformed request, invalid Client ID Metadata Document, invalid overlay, or unacceptable requested audience results in <code>invalid_request</code> with HTTP status code 400.<a href="#section-8-10.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-10.2">
+          <p id="section-8-10.2.1">Failed client authentication, or a missing, invalid, expired, or insufficient <code>initial_access_token</code> where the authorization server requires one, results in <code>invalid_client</code> with HTTP status code 401.<a href="#section-8-10.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-10.3">
+          <p id="section-8-10.3.1">A request rejected by issuance policy results in <code>access_denied</code> with HTTP status code 400.<a href="#section-8-10.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-10.4">
+          <p id="section-8-10.4.1">A server that does not support the backchannel grant returns <code>unsupported_grant_type</code> with HTTP status code 400.<a href="#section-8-10.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-8-11">These errors are terminal for the submitted request, except that a client receiving <code>deferral_required</code> <span class="bcp14">MAY</span> submit a new request that opts in to deferral. The authorization server <span class="bcp14">MUST</span> include <code>Cache-Control: no-store</code> on every backchannel error response.<a href="#section-8-11" class="pilcrow">¶</a></p>
+<p id="section-8-12">The following is a non-normative example of an initiating backchannel request (line breaks are for display purposes only):<a href="#section-8-12" class="pilcrow">¶</a></p>
+<div class="lang-http sourcecode" id="section-8-13">
 <pre>
 POST /token HTTP/1.1
 Host: server.example.com
 Content-Type: application/x-www-form-urlencoded
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2IiwiandrIjp7Li4ufX0...
 
 grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3A
   software-statement
   &amp;client_id=https%3A%2F%2Fclient.example.org%2Fmetadata.json
   &amp;completion_mode=deferred
-</pre><a href="#section-8-9" class="pilcrow">¶</a>
+  &amp;initial_access_token=iat_2f7e9c1a6d...
+</pre><a href="#section-8-13" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
@@ -1905,7 +1949,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3A
 <a href="#section-9" class="section-number selfRef">9. </a><a href="#name-deferred-processing" class="section-name selfRef">Deferred Processing</a>
       </h2>
 <p id="section-9-1">A deferral originates either from the direct deferred authorization response in <a href="#deferred-authorization-response" class="auto internal xref">Section 6.2</a> or from a deferred token response to a backchannel request (<a href="#backchannel-request" class="auto internal xref">Section 8</a>). In both cases the client polls the token endpoint using the polling grant defined by <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>.<a href="#section-9-1" class="pilcrow">¶</a></p>
-<p id="section-9-2">Approval of a software statement request can take hours or days rather than the seconds typical of user authentication, for example when it involves reviewing the client's policy or compliance documentation. Issuers <span class="bcp14">SHOULD</span> set deferral code lifetimes that reflect their actual approval latency, and clients <span class="bcp14">SHOULD</span> use the callback mechanism of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>, where available, in preference to extended polling.<a href="#section-9-2" class="pilcrow">¶</a></p>
+<p id="section-9-2">Approval of a software statement request can take hours or days rather than the seconds typical of user authentication, for example when it involves reviewing the client's policy or compliance documentation. Issuers <span class="bcp14">SHOULD</span> set deferral code lifetimes that reflect their actual approval latency. A backchannel client with a registered notification endpoint <span class="bcp14">SHOULD</span> use the callback mechanism of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> together with <code>client_notification_token</code>, while continuing to poll as required by <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>. This specification does not enable callbacks for direct authorization endpoint deferrals because their originating authorization request does not establish a <code>client_notification_token</code>.<a href="#section-9-2" class="pilcrow">¶</a></p>
 <div id="first-polling-request">
 <section id="section-9.1">
         <h3 id="name-first-polling-request">
@@ -1934,7 +1978,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3A
 </dl>
 <p id="section-9.1-3">For a deferral that originated from a deferred authorization response, the authorization server <span class="bcp14">MUST</span> verify the <code>code_verifier</code> against the stored PKCE challenge. If verification fails, it <span class="bcp14">MUST</span> return <code>invalid_grant</code> and <span class="bcp14">MUST</span> terminate the deferral. After successful verification, it records that PKCE verification has completed for the deferral state. For a deferral that originated from a backchannel request, the authorization server <span class="bcp14">MUST</span> instead verify that the request presents the client authentication or DPoP key bound at initiation.<a href="#section-9.1-3" class="pilcrow">¶</a></p>
 <p id="section-9.1-4">The client authenticates according to <a href="#client-identity" class="auto internal xref">Section 4</a>. If the deferral is bound to a DPoP key, through <code>dpop_jkt</code> in the redirect flow or the initiating DPoP proof in the backchannel flow, the client <span class="bcp14">MUST</span> send a DPoP proof signed with the corresponding key. The authorization server <span class="bcp14">MUST</span> reject a proof whose key does not match the stored thumbprint.<a href="#section-9.1-4" class="pilcrow">¶</a></p>
-<p id="section-9.1-5">The first polling request <span class="bcp14">MUST NOT</span> contain an intermediate <code>code</code>, <code>redirect_uri</code>, <code>registration</code>, or <code>completion_mode</code> parameter.<a href="#section-9.1-5" class="pilcrow">¶</a></p>
+<p id="section-9.1-5">The first polling request <span class="bcp14">MUST NOT</span> contain an intermediate <code>code</code>, <code>redirect_uri</code>, <code>registration</code>, <code>audience</code>, <code>completion_mode</code>, <code>initial_access_token</code>, or <code>client_notification_token</code> parameter.<a href="#section-9.1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="subsequent-polling-requests">
@@ -1944,7 +1988,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3A
         </h3>
 <p id="section-9.2-1">If the request remains pending, the client continues polling according to <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> using only the polling grant's normal parameters. It <span class="bcp14">MUST NOT</span> re-present the <code>code_verifier</code>. The authorization server preserves the successful PKCE verification in the deferral state.<a href="#section-9.2-1" class="pilcrow">¶</a></p>
 <p id="section-9.2-2">Each subsequent polling request <span class="bcp14">MUST</span> use the client authentication or DPoP sender constraint established for the deferral. In particular, a public client <span class="bcp14">MUST</span> send a DPoP proof on every poll, using the key identified by <code>dpop_jkt</code> in the redirect flow or the key of the initiating DPoP proof in the backchannel flow.<a href="#section-9.2-2" class="pilcrow">¶</a></p>
-<p id="section-9.2-3">Pending, denied, expired, cancelled, callback, and polling-rate behavior follows <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>. A successful first or subsequent polling response is the software statement token response defined in <a href="#software-statement-response" class="auto internal xref">Section 10</a>.<a href="#section-9.2-3" class="pilcrow">¶</a></p>
+<p id="section-9.2-3">Pending, denied, expired, cancelled, and polling-rate behavior follows <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>. Callback behavior follows <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> only for a backchannel request that supplied <code>client_notification_token</code>. A successful first or subsequent polling response is the software statement token response defined in <a href="#software-statement-response" class="auto internal xref">Section 10</a>.<a href="#section-9.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2010,7 +2054,7 @@ Pragma: no-cache
       </h2>
 <p id="section-11-1">The software statement is a compact JWT <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> protected by a digital signature using JWS <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span>. Although <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> also permits a MAC, a statement issued under this specification <span class="bcp14">MUST</span> use an asymmetric digital signature so that it can be validated without distributing an issuer-held symmetric key. The issuer and trusting authorization server <span class="bcp14">MUST</span> follow the algorithm verification guidance in <span>[<a href="#RFC8725" class="cite xref">RFC8725</a>]</span>. The <code>none</code> algorithm and symmetric algorithms <span class="bcp14">MUST NOT</span> be used.<a href="#section-11-1" class="pilcrow">¶</a></p>
 <p id="section-11-2">The JOSE header <span class="bcp14">MUST</span> include a <code>typ</code> (type) header parameter with the value <code>software-statement+jwt</code>, applying the explicit typing recommendation in Section 3.11 of <span>[<a href="#RFC8725" class="cite xref">RFC8725</a>]</span>. As described in Section 4.1.9 of <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span>, this value names the media type <code>application/software-statement+jwt</code> (<a href="#media-type" class="auto internal xref">Section 16.6</a>) with the <code>application/</code> prefix omitted. Explicit typing prevents other JWTs signed by the same issuer, such as JWT access tokens or ID Tokens, from being accepted as software statements.<a href="#section-11-2" class="pilcrow">¶</a></p>
-<p id="section-11-3">The JWT payload <span class="bcp14">MUST</span> contain the following claims in addition to the approved client metadata:<a href="#section-11-3" class="pilcrow">¶</a></p>
+<p id="section-11-3">The JWT payload <span class="bcp14">MUST</span> contain the following claims in addition to the approved client metadata that is eligible for attestation under <a href="#registration-overlay" class="auto internal xref">Section 5.2</a>. It <span class="bcp14">MUST NOT</span> contain any metadata prohibited by that section.<a href="#section-11-3" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-11-4">
         <dt id="section-11-4.1">
 <code>iss</code>:</dt>
@@ -2027,7 +2071,7 @@ Pragma: no-cache
 <dt id="section-11-4.5">
 <code>aud</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-11-4.6">
-          <p id="section-11-4.6.1"><span class="bcp14">REQUIRED</span>. One or more audience identifiers for the authorization servers permitted to accept the statement. Each value <span class="bcp14">SHOULD</span> be an authorization server issuer identifier as defined by <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>. A trusting authorization server <span class="bcp14">MUST</span> reject the statement unless one of its locally configured audience identifiers exactly matches a value in this claim.<a href="#section-11-4.6.1" class="pilcrow">¶</a></p>
+          <p id="section-11-4.6.1"><span class="bcp14">REQUIRED</span>. One or more audience identifiers for the authorization servers permitted to accept the statement. Each value <span class="bcp14">SHOULD</span> be an authorization server issuer identifier as defined by <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>. A trusting authorization server <span class="bcp14">MUST</span> reject the statement unless one of its locally configured audience identifiers exactly matches a value in this claim. When the request contained <code>audience</code> values, every value in this claim <span class="bcp14">MUST</span> have appeared among them.<a href="#section-11-4.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-11-4.7">
@@ -2054,11 +2098,11 @@ Pragma: no-cache
         <dt id="section-11-6.1">
 <code>cimd_digest</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-11-6.2">
-          <p id="section-11-6.2.1">The canonical digest (<a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>) of the Client ID Metadata Document from which the metadata snapshot was derived, encoded with base64url. This claim binds the statement to the exact document content evaluated during issuance and lets any party determine whether the client's currently published metadata still matches what was attested.<a href="#section-11-6.2.1" class="pilcrow">¶</a></p>
+          <p id="section-11-6.2.1">The canonical digest (<a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>) of the Client ID Metadata Document from which the metadata snapshot was derived. This claim binds the statement to the exact document content evaluated during issuance and lets any party determine whether the client's currently published metadata still matches what was attested.<a href="#section-11-6.2.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-11-7">The issuer determines the audience and lifetime according to policy; neither is supplied in the <code>registration</code> overlay. The client metadata claims <span class="bcp14">MUST</span> reflect the metadata snapshot and any further narrowing performed by the issuing authorization server. They <span class="bcp14">MUST NOT</span> contradict or widen the snapshot.<a href="#section-11-7" class="pilcrow">¶</a></p>
+<p id="section-11-7">The issuer determines the audience and lifetime according to policy; neither is supplied in the <code>registration</code> overlay. A client can request an audience using the <code>audience</code> parameter, but the issuer <span class="bcp14">MAY</span> narrow that request and <span class="bcp14">MUST NOT</span> widen it. If the parameter is omitted, the issuer selects an audience entirely according to policy. The client metadata claims <span class="bcp14">MUST</span> reflect the metadata snapshot and any further narrowing performed by the issuing authorization server. They <span class="bcp14">MUST NOT</span> contradict or widen the snapshot.<a href="#section-11-7" class="pilcrow">¶</a></p>
 <p id="section-11-8">The <code>sub</code> claim identifies the client software by its client identifier URL; it does not name the <code>client_id</code> that a trusting authorization server will assign. Registration with the software statement proceeds under <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> and yields an authorization-server-specific <code>client_id</code> that need not be related to <code>sub</code>. A trusting authorization server <span class="bcp14">MAY</span> use <code>sub</code> to correlate registrations of the same client software and to apply per-client policy, such as bounding the number of active registrations (<a href="#multi-instance" class="auto internal xref">Section 12</a>). When the metadata snapshot includes <code>software_id</code>, that value identifies the software as defined by <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span>; this specification does not derive either identifier from the other.<a href="#section-11-8" class="pilcrow">¶</a></p>
 <p id="section-11-9">The following is a non-normative example of the JOSE header and JWT payload of a software statement:<a href="#section-11-9" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-11-10">
@@ -2086,7 +2130,7 @@ Pragma: no-cache
 }
 </pre><a href="#section-11-10" class="pilcrow">¶</a>
 </div>
-<p id="section-11-11">Before accepting the statement, a trusting authorization server <span class="bcp14">MUST</span> verify that the <code>typ</code> header carries the value <code>software-statement+jwt</code>; verify the signature under a key trusted for the exact <code>iss</code> value; validate the presence and type of every required claim; validate <code>iss</code>, <code>aud</code>, <code>iat</code>, and <code>exp</code>; and apply the JWT validation guidance in <span>[<a href="#RFC8725" class="cite xref">RFC8725</a>]</span>. In particular, it <span class="bcp14">MUST</span> reject a statement whose <code>iat</code> is unreasonably far in the future according to its clock-skew policy. Publishing an issuer URL or a JWK Set does not by itself establish trust: signature keys for a trusted issuer are conventionally obtained from the <code>jwks_uri</code> in the issuer's authorization server metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>, but the decision to trust the issuer <span class="bcp14">MUST</span> come from explicit local configuration. When the statement contains <code>cimd_digest</code>, a trusting authorization server <span class="bcp14">MAY</span> retrieve the client's current metadata document and compare canonical digests to learn whether the attested content is still published; a mismatch indicates post-issuance change and is an input to registration policy rather than a validation failure. The trusting authorization server then processes the software statement according to <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> and its local registration policy.<a href="#section-11-11" class="pilcrow">¶</a></p>
+<p id="section-11-11">Before accepting the statement, a trusting authorization server <span class="bcp14">MUST</span> verify that the <code>typ</code> header carries the value <code>software-statement+jwt</code>; verify the signature under a key trusted for the exact <code>iss</code> value; validate the presence and type of every required claim; validate <code>iss</code>, <code>aud</code>, <code>iat</code>, and <code>exp</code>; verify that <code>sub</code> is a Client Identifier URL conforming to <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span>; reject every metadata claim prohibited by <a href="#registration-overlay" class="auto internal xref">Section 5.2</a>; and apply the JWT validation guidance in <span>[<a href="#RFC8725" class="cite xref">RFC8725</a>]</span>. In particular, it <span class="bcp14">MUST</span> reject a statement whose <code>iat</code> is unreasonably far in the future according to its clock-skew policy. Publishing an issuer URL or a JWK Set does not by itself establish trust: signature keys for a trusted issuer are conventionally obtained from the <code>jwks_uri</code> in the issuer's authorization server metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>, but the decision to trust the issuer <span class="bcp14">MUST</span> come from explicit local configuration. When the statement contains <code>cimd_digest</code>, a trusting authorization server <span class="bcp14">MAY</span> retrieve the client's current metadata document and compare canonical digests to learn whether the attested content is still published; if it does so, it <span class="bcp14">MUST</span> also verify that the document's <code>client_id</code> is exactly equal to <code>sub</code> as required by <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span>. A digest mismatch indicates post-issuance change and is an input to registration policy rather than a validation failure. The trusting authorization server then processes the software statement according to <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> and its local registration policy.<a href="#section-11-11" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="multi-instance">
@@ -2096,7 +2140,7 @@ Pragma: no-cache
       </h2>
 <p id="section-12-1">A software statement attests client software, identified by <code>sub</code>; it does not attest or identify the runtime instances of that software. This specification defines no instance identifier, and instances do not obtain per-instance statements.<a href="#section-12-1" class="pilcrow">¶</a></p>
 <p id="section-12-2">A single unexpired statement is therefore intended to be presented more than once: at each trusting authorization server in its audience and, where local policy permits, in more than one registration at the same authorization server, for example one registration per deployment or tenant. A trusting authorization server <span class="bcp14">SHOULD</span> use the statement's <code>sub</code> and <code>jti</code> to inventory the registrations derived from a statement and to enforce any local bound on their number.<a href="#section-12-2" class="pilcrow">¶</a></p>
-<p id="section-12-3">Deployments whose client software runs as many concurrent instances <span class="bcp14">SHOULD</span> register the logical client once per authorization server and differentiate instances at the token endpoint, for example with <span>[<a href="#CLIENT-INSTANCE" class="cite xref">CLIENT-INSTANCE</a>]</span>, rather than minting a registration per instance. Where authorization server policy is keyed on <code>client_id</code> and genuinely requires per-instance registrations, the same statement supports that model: each registration supplies its own instance keys as plain metadata alongside the statement, subject to the software statement precedence rules of <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> and to trusting authorization server policy.<a href="#section-12-3" class="pilcrow">¶</a></p>
+<p id="section-12-3">Deployments whose client software runs as many concurrent instances <span class="bcp14">SHOULD</span> register the logical client once per authorization server and differentiate instances at the token endpoint, for example with <span>[<a href="#CLIENT-INSTANCE" class="cite xref">CLIENT-INSTANCE</a>]</span>, rather than minting a registration per instance. Where authorization server policy is keyed on <code>client_id</code> and genuinely requires per-instance registrations, the same statement can support that model only if it omits <code>jwks</code> and <code>jwks_uri</code>: each registration can then supply its own instance key as plain metadata, subject to trusting authorization server policy. If the statement contains <code>jwks</code> or <code>jwks_uri</code>, that attested value takes precedence under <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> and every registration derived from the statement <span class="bcp14">MUST</span> use the attested key material rather than an instance-supplied replacement.<a href="#section-12-3" class="pilcrow">¶</a></p>
 <div id="attesting-instance-issuers">
 <section id="section-12.1">
         <h3 id="name-attesting-instance-issuers">
@@ -2125,40 +2169,34 @@ Pragma: no-cache
       <h2 id="name-authorization-server-metada">
 <a href="#section-13" class="section-number selfRef">13. </a><a href="#name-authorization-server-metada" class="section-name selfRef">Authorization Server Metadata</a>
       </h2>
-<p id="section-13-1">An authorization server supporting this specification advertises:<a href="#section-13-1" class="pilcrow">¶</a></p>
+<p id="section-13-1">An authorization server that issues software statements under this specification advertises <code>true</code> for <code>client_id_metadata_document_supported</code>, as defined by <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span>, and publishes <code>software_statement_signing_alg_values_supported</code> below.<a href="#section-13-1" class="pilcrow">¶</a></p>
+<p id="section-13-2">An authorization server supporting the redirect flow additionally advertises:<a href="#section-13-2" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-13-2.1">
-          <p id="section-13-2.1.1"><code>software_statement</code> in <code>response_types_supported</code>;<a href="#section-13-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-13-3.1">
+          <p id="section-13-3.1.1"><code>software_statement</code> in <code>response_types_supported</code>;<a href="#section-13-3.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-13-2.2">
-          <p id="section-13-2.2.1"><code>urn:ietf:params:oauth:grant-type:software-statement</code> in <code>grant_types_supported</code>;<a href="#section-13-2.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-13-3.2">
+          <p id="section-13-3.2.1"><code>authorization_code</code> in <code>grant_types_supported</code>, used to redeem intermediate codes (<a href="#code-redemption" class="auto internal xref">Section 7</a>); and<a href="#section-13-3.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-13-2.3">
-          <p id="section-13-2.3.1"><code>true</code> for <code>client_id_metadata_document_supported</code>, as defined by <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span>;<a href="#section-13-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-13-2.4">
-          <p id="section-13-2.4.1"><code>true</code> for <code>authorization_response_iss_parameter_supported</code>, as defined by <span>[<a href="#RFC9207" class="cite xref">RFC9207</a>]</span>;<a href="#section-13-2.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-13-2.5">
-          <p id="section-13-2.5.1"><code>true</code> for both <code>deferred_token_response_supported</code> and <code>deferred_authorization_endpoint_supported</code>, as defined by <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>, if it can defer software statement requests directly at the authorization endpoint; and<a href="#section-13-2.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-13-2.6">
-          <p id="section-13-2.6.1"><code>true</code> for <code>software_statement_backchannel_supported</code> if it accepts backchannel software statement requests (<a href="#backchannel-request" class="auto internal xref">Section 8</a>), together with <code>deferred_token_response_supported</code> if it can defer them.<a href="#section-13-2.6.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-13-3.3">
+          <p id="section-13-3.3.1"><code>true</code> for <code>authorization_response_iss_parameter_supported</code>, as defined by <span>[<a href="#RFC9207" class="cite xref">RFC9207</a>]</span>.<a href="#section-13-3.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-13-3">A client <span class="bcp14">MUST NOT</span> rely on direct authorization endpoint deferral unless both <code>deferred_token_response_supported</code> and <code>deferred_authorization_endpoint_supported</code> are <code>true</code>.<a href="#section-13-3" class="pilcrow">¶</a></p>
-<p id="section-13-4">This specification defines the following additional authorization server metadata members:<a href="#section-13-4" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-13-5">
-        <dt id="section-13-5.1">
-<code>software_statement_backchannel_supported</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-13-5.2">
-          <p id="section-13-5.2.1"><span class="bcp14">OPTIONAL</span>. Boolean value indicating whether the authorization server accepts backchannel software statement requests at the token endpoint (<a href="#backchannel-request" class="auto internal xref">Section 8</a>). If omitted, the default value is <code>false</code>.<a href="#section-13-5.2.1" class="pilcrow">¶</a></p>
+<p id="section-13-4">If it can defer redirect-flow requests directly at the authorization endpoint, it also advertises <code>true</code> for both <code>deferred_token_response_supported</code> and <code>deferred_authorization_endpoint_supported</code>, as defined by <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>.<a href="#section-13-4" class="pilcrow">¶</a></p>
+<p id="section-13-5">An authorization server supporting the backchannel flow advertises <code>urn:ietf:params:oauth:grant-type:software-statement</code> in <code>grant_types_supported</code>. If it can defer backchannel requests, it also advertises <code>true</code> for <code>deferred_token_response_supported</code>. A backchannel-only implementation does not advertise <code>software_statement</code> in <code>response_types_supported</code> and need not advertise <code>authorization_response_iss_parameter_supported</code>.<a href="#section-13-5" class="pilcrow">¶</a></p>
+<p id="section-13-6">A client <span class="bcp14">MUST NOT</span> rely on direct authorization endpoint deferral unless both <code>deferred_token_response_supported</code> and <code>deferred_authorization_endpoint_supported</code> are <code>true</code>.<a href="#section-13-6" class="pilcrow">¶</a></p>
+<p id="section-13-7">This specification defines the following additional authorization server metadata members:<a href="#section-13-7" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-13-8">
+        <dt id="section-13-8.1">
+<code>software_statement_signing_alg_values_supported</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-13-8.2">
+          <p id="section-13-8.2.1"><span class="bcp14">REQUIRED</span> for an authorization server that issues software statements under this specification. A JSON array containing the asymmetric JWS <code>alg</code> values that the authorization server can use to sign software statements. The array <span class="bcp14">MUST NOT</span> contain <code>none</code> or a symmetric algorithm. This member describes the issuing role; an authorization server that only accepts software statements does not publish it.<a href="#section-13-8.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-13-5.3">
-<code>software_statement_signing_alg_values_supported</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-13-5.4">
-          <p id="section-13-5.4.1"><span class="bcp14">REQUIRED</span> for an authorization server that issues software statements under this specification. A JSON array containing the asymmetric JWS <code>alg</code> values that the authorization server can use to sign software statements. The array <span class="bcp14">MUST NOT</span> contain <code>none</code> or a symmetric algorithm. This member describes the issuing role; an authorization server that only accepts software statements does not publish it.<a href="#section-13-5.4.1" class="pilcrow">¶</a></p>
+<dt id="section-13-8.3">
+<code>software_statement_audiences_supported</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-13-8.4">
+          <p id="section-13-8.4.1"><span class="bcp14">OPTIONAL</span>. A JSON array containing authorization server issuer identifiers that the issuer is prepared to place in a software statement's <code>aud</code> claim. Omission means that the complete set is not publicly enumerable; it does not mean that no audience is supported. Publication does not guarantee that every client is eligible for every listed audience.<a href="#section-13-8.4.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2176,7 +2214,7 @@ Pragma: no-cache
         </h3>
 <p id="section-14.1-1">A software statement represents an issuer's attestation to client metadata. It grants no access to a protected resource. In particular, approval of issuance authorizes no user's access: each user's access through a subsequently registered client still requires that user's own authorization at the trusting authorization server. Approving issuance for client software is therefore never a consent decision made on behalf of that software's users. Authorization servers <span class="bcp14">MUST</span> enforce the prohibited-parameter and response-type rules in <a href="#prohibited-parameters" class="auto internal xref">Section 5.1</a>. The successful token response uses the <code>access_token</code> member only as a generic security-token container following <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>; the contained software statement <span class="bcp14">MUST NOT</span> be accepted as an access token at a protected resource.<a href="#section-14.1-1" class="pilcrow">¶</a></p>
 <p id="section-14.1-2">When an approval interface is shown, it <span class="bcp14">MUST</span> clearly describe that the decision concerns attestation to client metadata. It <span class="bcp14">MUST NOT</span> imply that the approver is granting the client access to resources.<a href="#section-14.1-2" class="pilcrow">¶</a></p>
-<p id="section-14.1-3">An erroneous approval is amplified by the statement's audience: every authorization server in the audience will accept the resulting credential until it expires. The approval interface therefore <span class="bcp14">MUST</span> present the client identifier URL and the effective metadata being attested, and <span class="bcp14">SHOULD</span> present the intended audience and lifetime of the statement. Metadata that itself delegates authority deserves particular scrutiny: attesting the <code>instance_issuers</code> member (<a href="#multi-instance" class="auto internal xref">Section 12</a>) endorses the listed authorities to attest runtime instances of the client.<a href="#section-14.1-3" class="pilcrow">¶</a></p>
+<p id="section-14.1-3">An erroneous approval is amplified by the statement's audience: every authorization server in the audience will accept the resulting credential until it expires. The approval interface therefore <span class="bcp14">MUST</span> present the client identifier URL, the effective metadata being attested, and the audience the issuer intends to place in the statement; when the client requested a different or broader audience, the interface <span class="bcp14">SHOULD</span> also make the narrowing visible. It <span class="bcp14">SHOULD</span> present the intended lifetime of the statement. Metadata that itself delegates authority deserves particular scrutiny: attesting the <code>instance_issuers</code> member (<a href="#multi-instance" class="auto internal xref">Section 12</a>) endorses the listed authorities to attest runtime instances of the client.<a href="#section-14.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="what-issuance-attests">
@@ -2224,7 +2262,7 @@ Pragma: no-cache
         </h3>
 <p id="section-14.6-1">All software statement requests made through the authorization endpoint use PKCE. For a direct deferred response, the authorization server stores the PKCE challenge and verifies the corresponding verifier on the first polling request. The verifier <span class="bcp14">MUST NOT</span> be accepted on subsequent polls.<a href="#section-14.6-1" class="pilcrow">¶</a></p>
 <p id="section-14.6-2">After the first poll consumes the verifier, each subsequent poll is protected by client authentication or DPoP as required by <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>. A public client that opts in to deferral is therefore required to supply <code>dpop_jkt</code> in the authorization request and use that key on every poll. This preserves sender-constraint continuity across the authorization response and polling sequence.<a href="#section-14.6-2" class="pilcrow">¶</a></p>
-<p id="section-14.6-3">All additional sender-constraint, polling-rate, replay, cancellation, logging, and callback requirements of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> apply.<a href="#section-14.6-3" class="pilcrow">¶</a></p>
+<p id="section-14.6-3">All additional sender-constraint, polling-rate, replay, cancellation, and logging requirements of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> apply. Callback behavior applies only to backchannel deferrals as described in <a href="#backchannel-request" class="auto internal xref">Section 8</a>; this specification does not establish callback authentication for a direct authorization endpoint deferral.<a href="#section-14.6-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="backchannel-request-considerations">
@@ -2232,9 +2270,10 @@ Pragma: no-cache
         <h3 id="name-backchannel-request-conside">
 <a href="#section-14.7" class="section-number selfRef">14.7. </a><a href="#name-backchannel-request-conside" class="section-name selfRef">Backchannel Request Considerations</a>
         </h3>
-<p id="section-14.7-1">A backchannel request reaches the token endpoint without prior user-agent interaction. An unauthenticated request from a public client can therefore trigger metadata document retrieval and enqueue approval work at little cost to the requester. Authorization servers <span class="bcp14">SHOULD</span> rate-limit backchannel requests, <span class="bcp14">SHOULD</span> cache metadata retrieval results and failures, and <span class="bcp14">MAY</span> restrict the backchannel flow to clients that can authenticate or to requests that carry a valid <code>initial_access_token</code>.<a href="#section-14.7-1" class="pilcrow">¶</a></p>
-<p id="section-14.7-2">The absence of a user agent removes front-channel exposure: neither the deferral code nor any other response parameter transits a browser. It also removes any in-band evidence of user participation. An authorization server <span class="bcp14">MUST NOT</span> treat a backchannel request as implying prior user consent and <span class="bcp14">MUST</span> apply the same issuance and approval policy as for the redirect flow.<a href="#section-14.7-2" class="pilcrow">¶</a></p>
-<p id="section-14.7-3">Sender constraint for a backchannel deferral is established at initiation through client authentication or a DPoP proof. There is no PKCE state, so the <code>code_verifier</code> check in <a href="#first-polling-request" class="auto internal xref">Section 9.1</a> is replaced by verification of the initiating key or credentials on every poll.<a href="#section-14.7-3" class="pilcrow">¶</a></p>
+<p id="section-14.7-1">A backchannel request reaches the token endpoint without prior user-agent interaction. An unauthenticated request from a public client can therefore trigger metadata document retrieval and enqueue approval work at little cost to the requester. Authorization servers <span class="bcp14">SHOULD</span> rate-limit backchannel requests, <span class="bcp14">SHOULD</span> cache metadata retrieval results and failures, and <span class="bcp14">MAY</span> require an <code>initial_access_token</code>; when one is presented, it <span class="bcp14">MUST</span> be validated before client-controlled metadata is retrieved or approval work is enqueued. Client authentication remains mandatory when established by the Client ID Metadata Document.<a href="#section-14.7-1" class="pilcrow">¶</a></p>
+<p id="section-14.7-2">An <code>initial_access_token</code> is an authorization credential, not a client identifier and not a substitute for client authentication when the Client ID Metadata Document establishes an authentication method. It is sent in a form body and is therefore exposed to any component that records request bodies. Authorization servers <span class="bcp14">MUST</span> exclude it from logs, traces, error messages, and audit records; clients and authorization servers <span class="bcp14">MUST</span> protect it as a bearer credential unless its format provides proof of possession. The binding, lifetime, entropy, and replay requirements of <a href="#backchannel-request" class="auto internal xref">Section 8</a> limit the effect of disclosure.<a href="#section-14.7-2" class="pilcrow">¶</a></p>
+<p id="section-14.7-3">The absence of a user agent removes front-channel exposure: neither the deferral code nor any other response parameter transits a browser. It also removes any in-band evidence of user participation. An authorization server <span class="bcp14">MUST NOT</span> treat a backchannel request as implying prior user consent and <span class="bcp14">MUST</span> apply the same issuance and approval policy as for the redirect flow.<a href="#section-14.7-3" class="pilcrow">¶</a></p>
+<p id="section-14.7-4">Sender constraint for a backchannel deferral is established at initiation through client authentication or a DPoP proof. There is no PKCE state, so the <code>code_verifier</code> check in <a href="#first-polling-request" class="auto internal xref">Section 9.1</a> is replaced by verification of the initiating key or credentials on every poll. If a callback is configured, the client uses <code>client_notification_token</code> as defined by <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>; that token authenticates the callback but does not authorize issuance.<a href="#section-14.7-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="statement-validation-and-replay">
@@ -2243,7 +2282,7 @@ Pragma: no-cache
 <a href="#section-14.8" class="section-number selfRef">14.8. </a><a href="#name-statement-validation-and-re" class="section-name selfRef">Statement Validation and Replay</a>
         </h3>
 <p id="section-14.8-1">A software statement is intended to be presented more than once (<a href="#multi-instance" class="auto internal xref">Section 12</a>); until it expires, it can equally be presented by a party that steals it, at every registration endpoint included in its audience. Issuers <span class="bcp14">SHOULD</span> use the narrowest practical audience and lifetime. Trusting authorization servers <span class="bcp14">SHOULD</span> track <code>jti</code> values to inventory the registrations derived from a statement and to enforce any local bound on their number.<a href="#section-14.8-1" class="pilcrow">¶</a></p>
-<p id="section-14.8-2">When the canonical metadata provides <code>jwks</code> or <code>jwks_uri</code>, the issuer <span class="bcp14">SHOULD</span> include it in the attested metadata. A trusting authorization server can then require proof of possession of a corresponding private key during or after registration, which renders a stolen statement unusable to a party that does not also hold the client's key.<a href="#section-14.8-2" class="pilcrow">¶</a></p>
+<p id="section-14.8-2">When registrations derived from a statement are intended to share a client key, and the canonical metadata provides <code>jwks</code> or <code>jwks_uri</code>, the issuer <span class="bcp14">SHOULD</span> include that member in the attested metadata. A trusting authorization server can then require proof of possession of a corresponding private key during or after registration, which renders a stolen statement unusable to a party that does not also hold the client's key. When each registration is expected to supply a distinct instance key, the issuer <span class="bcp14">MUST</span> omit <code>jwks</code> and <code>jwks_uri</code> so that the plain registration metadata can carry that key without conflicting with the precedence rule of <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span>.<a href="#section-14.8-2" class="pilcrow">¶</a></p>
 <p id="section-14.8-3">This specification does not define online revocation of an issued software statement. A deployment that cannot tolerate acceptance of a stolen or mistakenly issued statement for its full lifetime needs short statement lifetimes, a deployment-specific mechanism through which trusting authorization servers obtain revocation status, or both.<a href="#section-14.8-3" class="pilcrow">¶</a></p>
 <p id="section-14.8-4">Trusting authorization servers <span class="bcp14">MUST</span> use an explicit issuer trust configuration and <span class="bcp14">MUST</span> verify the signature and claims described in <a href="#software-statement-format" class="auto internal xref">Section 11</a>. They <span class="bcp14">MUST NOT</span> derive trust solely from attacker-controlled <code>iss</code>, <code>jku</code>, <code>x5u</code>, or other key-location values in the JWT.<a href="#section-14.8-4" class="pilcrow">¶</a></p>
 <p id="section-14.8-5">Issuer trust <span class="bcp14">SHOULD</span> be scoped as well as explicit. A trusting authorization server that accepts an issuer for all values of <code>sub</code> allows that issuer, if compromised or over-broad, to mint acceptable statements about any client software. Trust configuration <span class="bcp14">SHOULD</span> therefore constrain each issuer to the client identifier namespaces it is expected to attest, for example to URLs under the domains of the software publishers it serves, and statements whose <code>sub</code> falls outside that scope <span class="bcp14">SHOULD</span> be rejected. <span>[<a href="#TRUST-FRAMEWORK" class="cite xref">TRUST-FRAMEWORK</a>]</span> generalizes this namespace-authorization check into an open-world policy evaluation.<a href="#section-14.8-5" class="pilcrow">¶</a></p>
@@ -2275,7 +2314,7 @@ Pragma: no-cache
 <a href="#section-15" class="section-number selfRef">15. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
 <p id="section-15-1">The authorization server learns the client identifier URL, the canonical metadata document, the selected overlay, and information about the party interacting with the authorization endpoint. It <span class="bcp14">SHOULD</span> collect and retain only the information required for issuance, security monitoring, and audit obligations.<a href="#section-15-1" class="pilcrow">¶</a></p>
-<p id="section-15-2">A software statement distributes attested client metadata to every authorization server at which the client presents it. Issuers <span class="bcp14">SHOULD</span> omit metadata that is not required by the intended audience and <span class="bcp14">SHOULD</span> choose the narrowest practical audience. Clients <span class="bcp14">SHOULD NOT</span> present statements outside their intended deployment context.<a href="#section-15-2" class="pilcrow">¶</a></p>
+<p id="section-15-2">A software statement distributes attested client metadata to every authorization server at which the client presents it. Issuers <span class="bcp14">SHOULD</span> omit metadata that is not required by the intended audience and <span class="bcp14">SHOULD</span> choose the narrowest practical audience. Clients <span class="bcp14">SHOULD NOT</span> present statements outside their intended deployment context. Requested <code>audience</code> values reveal the authorization servers with which the client plans to establish relationships. A redirect-flow client <span class="bcp14">SHOULD</span> use PAR when that relationship is sensitive, even when no <code>registration</code> overlay is present.<a href="#section-15-2" class="pilcrow">¶</a></p>
 <p id="section-15-3">The <code>registration</code> parameter can reveal request-specific metadata. Requiring PAR prevents that object from appearing directly in the browser-visible authorization request URL, but it does not make the data invisible to the authorization server or its operational logs. Authorization servers <span class="bcp14">SHOULD</span> avoid logging full overlays and issued statements.<a href="#section-15-3" class="pilcrow">¶</a></p>
 <p id="section-15-4">Approval records can link a person to a client and deployment. Such records <span class="bcp14">SHOULD</span> be access-controlled and retained only as long as required.<a href="#section-15-4" class="pilcrow">¶</a></p>
 </section>
@@ -2334,7 +2373,7 @@ Pragma: no-cache
           <dd class="break"></dd>
 <dt id="section-16.2-2.7">Specification Document(s):</dt>
           <dd style="margin-left: 1.5em" id="section-16.2-2.8">
-            <p id="section-16.2-2.8.1">This specification, <a href="#software-statement-grant" class="auto internal xref">Section 7</a><a href="#section-16.2-2.8.1" class="pilcrow">¶</a></p>
+            <p id="section-16.2-2.8.1">This specification, <a href="#backchannel-request" class="auto internal xref">Section 8</a><a href="#section-16.2-2.8.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-16.2-2.9">URN:</dt>
@@ -2366,26 +2405,27 @@ Pragma: no-cache
 <a href="#section-16.3" class="section-number selfRef">16.3. </a><a href="#name-oauth-parameters-registry" class="section-name selfRef">OAuth Parameters Registry</a>
         </h3>
 <p id="section-16.3-1">This specification requests that IANA add this specification, <a href="#registration-overlay" class="auto internal xref">Section 5.2</a> and <a href="#backchannel-request" class="auto internal xref">Section 8</a>, as an additional reference for the existing <code>registration</code> parameter and extend its usage location to include token requests. The parameter name and change controller are unchanged.<a href="#section-16.3-1" class="pilcrow">¶</a></p>
-<p id="section-16.3-2">This specification also requests registration of the following value in the IANA "OAuth Parameters" registry established by <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>:<a href="#section-16.3-2" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-16.3-3">
-          <dt id="section-16.3-3.1">Parameter Name:</dt>
-          <dd style="margin-left: 1.5em" id="section-16.3-3.2">
-            <p id="section-16.3-3.2.1"><code>initial_access_token</code><a href="#section-16.3-3.2.1" class="pilcrow">¶</a></p>
+<p id="section-16.3-2">This specification further requests that IANA add this specification, <a href="#authorization-request" class="auto internal xref">Section 5</a> and <a href="#backchannel-request" class="auto internal xref">Section 8</a>, as an additional reference for the existing <code>audience</code> parameter registered by <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> and extend its usage location to include authorization requests. The parameter name and change controller are unchanged.<a href="#section-16.3-2" class="pilcrow">¶</a></p>
+<p id="section-16.3-3">This specification also requests registration of the following value in the IANA "OAuth Parameters" registry established by <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>:<a href="#section-16.3-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-16.3-4">
+          <dt id="section-16.3-4.1">Parameter Name:</dt>
+          <dd style="margin-left: 1.5em" id="section-16.3-4.2">
+            <p id="section-16.3-4.2.1"><code>initial_access_token</code><a href="#section-16.3-4.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-16.3-3.3">Parameter Usage Location:</dt>
-          <dd style="margin-left: 1.5em" id="section-16.3-3.4">
-            <p id="section-16.3-3.4.1">token request<a href="#section-16.3-3.4.1" class="pilcrow">¶</a></p>
+<dt id="section-16.3-4.3">Parameter Usage Location:</dt>
+          <dd style="margin-left: 1.5em" id="section-16.3-4.4">
+            <p id="section-16.3-4.4.1">token request<a href="#section-16.3-4.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-16.3-3.5">Change Controller:</dt>
-          <dd style="margin-left: 1.5em" id="section-16.3-3.6">
-            <p id="section-16.3-3.6.1">IETF<a href="#section-16.3-3.6.1" class="pilcrow">¶</a></p>
+<dt id="section-16.3-4.5">Change Controller:</dt>
+          <dd style="margin-left: 1.5em" id="section-16.3-4.6">
+            <p id="section-16.3-4.6.1">IETF<a href="#section-16.3-4.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-16.3-3.7">Specification Document(s):</dt>
-          <dd style="margin-left: 1.5em" id="section-16.3-3.8">
-            <p id="section-16.3-3.8.1">This specification, <a href="#backchannel-request" class="auto internal xref">Section 8</a><a href="#section-16.3-3.8.1" class="pilcrow">¶</a></p>
+<dt id="section-16.3-4.7">Specification Document(s):</dt>
+          <dd style="margin-left: 1.5em" id="section-16.3-4.8">
+            <p id="section-16.3-4.8.1">This specification, <a href="#backchannel-request" class="auto internal xref">Section 8</a><a href="#section-16.3-4.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2400,12 +2440,12 @@ Pragma: no-cache
 <span class="break"></span><dl class="dlParallel" id="section-16.4-2">
           <dt id="section-16.4-2.1">Metadata Name:</dt>
           <dd style="margin-left: 1.5em" id="section-16.4-2.2">
-            <p id="section-16.4-2.2.1"><code>software_statement_backchannel_supported</code><a href="#section-16.4-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-16.4-2.2.1"><code>software_statement_signing_alg_values_supported</code><a href="#section-16.4-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-16.4-2.3">Metadata Description:</dt>
           <dd style="margin-left: 1.5em" id="section-16.4-2.4">
-            <p id="section-16.4-2.4.1">Boolean value indicating support for backchannel software statement requests at the token endpoint.<a href="#section-16.4-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-16.4-2.4.1">JSON array containing the asymmetric JWS algorithms supported by the authorization server for signing software statements.<a href="#section-16.4-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-16.4-2.5">Change Controller:</dt>
@@ -2415,17 +2455,17 @@ Pragma: no-cache
           <dd class="break"></dd>
 <dt id="section-16.4-2.7">Specification Document(s):</dt>
           <dd style="margin-left: 1.5em" id="section-16.4-2.8">
-            <p id="section-16.4-2.8.1">This specification, <a href="#backchannel-request" class="auto internal xref">Section 8</a><a href="#section-16.4-2.8.1" class="pilcrow">¶</a></p>
+            <p id="section-16.4-2.8.1">This specification, <a href="#authorization-server-metadata" class="auto internal xref">Section 13</a><a href="#section-16.4-2.8.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-16.4-2.9">Metadata Name:</dt>
           <dd style="margin-left: 1.5em" id="section-16.4-2.10">
-            <p id="section-16.4-2.10.1"><code>software_statement_signing_alg_values_supported</code><a href="#section-16.4-2.10.1" class="pilcrow">¶</a></p>
+            <p id="section-16.4-2.10.1"><code>software_statement_audiences_supported</code><a href="#section-16.4-2.10.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-16.4-2.11">Metadata Description:</dt>
           <dd style="margin-left: 1.5em" id="section-16.4-2.12">
-            <p id="section-16.4-2.12.1">JSON array containing the asymmetric JWS algorithms supported by the authorization server for signing software statements.<a href="#section-16.4-2.12.1" class="pilcrow">¶</a></p>
+            <p id="section-16.4-2.12.1">JSON array containing authorization server issuer identifiers that the issuer is prepared to place in software statement audience claims.<a href="#section-16.4-2.12.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-16.4-2.13">Change Controller:</dt>
@@ -2470,7 +2510,7 @@ Pragma: no-cache
           <dd class="break"></dd>
 <dt id="section-16.5-2.9">Specification Document(s):</dt>
           <dd style="margin-left: 1.5em" id="section-16.5-2.10">
-            <p id="section-16.5-2.10.1">This specification, <a href="#deferred-authorization-response" class="auto internal xref">Section 6.2</a><a href="#section-16.5-2.10.1" class="pilcrow">¶</a></p>
+            <p id="section-16.5-2.10.1">This specification, <a href="#deferred-authorization-response" class="auto internal xref">Section 6.2</a> and <a href="#backchannel-request" class="auto internal xref">Section 8</a><a href="#section-16.5-2.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2580,7 +2620,7 @@ Pragma: no-cache
           <dd class="break"></dd>
 <dt id="section-16.7-2.3">Claim Description:</dt>
           <dd style="margin-left: 1.5em" id="section-16.7-2.4">
-            <p id="section-16.7-2.4.1">Canonical digest of the Client ID Metadata Document evaluated during software statement issuance<a href="#section-16.7-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-16.7-2.4.1">Unpadded base64url-encoded SHA-256 digest of the JCS-serialized Client ID Metadata Document evaluated during software statement issuance<a href="#section-16.7-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-16.7-2.5">Change Controller:</dt>
@@ -2640,6 +2680,10 @@ Pragma: no-cache
 <dt id="RFC6749">[RFC6749]</dt>
         <dd>
 <span class="refAuthor">Hardt, D., Ed.</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework"</span>, <span class="seriesInfo">RFC 6749</span>, <span class="seriesInfo">DOI 10.17487/RFC6749</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6749">https://www.rfc-editor.org/rfc/rfc6749</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6838">[RFC6838]</dt>
+        <dd>
+<span class="refAuthor">Freed, N.</span>, <span class="refAuthor">Klensin, J.</span>, and <span class="refAuthor">T. Hansen</span>, <span class="refTitle">"Media Type Specifications and Registration Procedures"</span>, <span class="seriesInfo">BCP 13</span>, <span class="seriesInfo">RFC 6838</span>, <span class="seriesInfo">DOI 10.17487/RFC6838</span>, <time datetime="2013-01" class="refDate">January 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6838">https://www.rfc-editor.org/rfc/rfc6838</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC7515">[RFC7515]</dt>
         <dd>
@@ -2730,10 +2774,6 @@ Pragma: no-cache
         <dd>
 <span class="refTitle">"OAuth 2.0 Pushed Client Registration"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-richer-oauth-pushed-client-registration">https://datatracker.ietf.org/doc/draft-richer-oauth-pushed-client-registration</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="RFC6838">[RFC6838]</dt>
-        <dd>
-<span class="refAuthor">Freed, N.</span>, <span class="refAuthor">Klensin, J.</span>, and <span class="refAuthor">T. Hansen</span>, <span class="refTitle">"Media Type Specifications and Registration Procedures"</span>, <span class="seriesInfo">BCP 13</span>, <span class="seriesInfo">RFC 6838</span>, <span class="seriesInfo">DOI 10.17487/RFC6838</span>, <time datetime="2013-01" class="refDate">January 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6838">https://www.rfc-editor.org/rfc/rfc6838</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="RFC8628">[RFC8628]</dt>
         <dd>
 <span class="refAuthor">Denniss, W.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Jones, M.</span>, and <span class="refAuthor">H. Tschofenig</span>, <span class="refTitle">"OAuth 2.0 Device Authorization Grant"</span>, <span class="seriesInfo">RFC 8628</span>, <span class="seriesInfo">DOI 10.17487/RFC8628</span>, <time datetime="2019-08" class="refDate">August 2019</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8628">https://www.rfc-editor.org/rfc/rfc8628</a>&gt;</span>. </dd>
@@ -2809,7 +2849,7 @@ Pragma: no-cache
         <h3 id="name-why-use-the-authorization-e">
 <a href="#appendix-A.2" class="section-number selfRef">A.2. </a><a href="#name-why-use-the-authorization-e" class="section-name selfRef">Why Use the Authorization Endpoint</a>
         </h3>
-<p id="appendix-A.2-1">Issuance commonly requires browser-mediated interaction with a user or administrator. The authorization endpoint supplies established redirect URI, request correlation, PKCE, and issuer-identification mechanisms for that interaction. Returning either an intermediate code or a sender-constrained deferral code keeps the software statement itself out of the browser and delivers it over a direct TLS-protected connection. When no in-band interaction is possible, the backchannel flow in <a href="#backchannel-request" class="auto internal xref">Section 8</a> substitutes direct client authentication and out-of-band approval for the front channel.<a href="#appendix-A.2-1" class="pilcrow">¶</a></p>
+<p id="appendix-A.2-1">Issuance commonly requires browser-mediated interaction with a user or administrator. The authorization endpoint supplies established redirect URI, request correlation, PKCE, and issuer-identification mechanisms for that interaction. Returning either an intermediate code or a sender-constrained deferral code keeps the software statement itself out of the browser and delivers it over a direct TLS-protected connection. When no in-band interaction is possible, the backchannel flow in <a href="#backchannel-request" class="auto internal xref">Section 8</a> substitutes direct client authentication, optional pre-authorization through an initial access token, and out-of-band approval for the front channel.<a href="#appendix-A.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="why-not-the-device-authorization-grant">
@@ -2830,12 +2870,13 @@ Pragma: no-cache
 <p id="appendix-A.4-3">The one capability unique to the registration endpoint model, pre-authorization of requests through an out-of-band credential, is available to the backchannel flow through the <code>initial_access_token</code> parameter (<a href="#backchannel-request" class="auto internal xref">Section 8</a>).<a href="#appendix-A.4-3" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="why-a-new-grant-type">
+<div id="why-one-grant-type-and-why-redemption-uses-authorizationcode">
 <section id="appendix-A.5">
-        <h3 id="name-why-a-new-grant-type">
-<a href="#appendix-A.5" class="section-number selfRef">A.5. </a><a href="#name-why-a-new-grant-type" class="section-name selfRef">Why a New Grant Type</a>
+        <h3 id="name-why-one-grant-type-and-why-">
+<a href="#appendix-A.5" class="section-number selfRef">A.5. </a><a href="#name-why-one-grant-type-and-why-" class="section-name selfRef">Why One Grant Type, and Why Redemption Uses <code>authorization_code</code></a>
         </h3>
-<p id="appendix-A.5-1">The intermediate code could have been redeemed with the <code>authorization_code</code> grant type, as OpenID Connect does for ID Tokens. Existing <code>authorization_code</code> processing, however, is built to mint an access token: it attaches access-token <code>token_type</code>, <code>scope</code>, and refresh-token semantics to the result. A distinct extension grant makes the token endpoint's routing explicit, prevents an intermediate code issued for a software statement from being redeemed as an authorization code (and the reverse), and preserves the invariant that a successful <code>authorization_code</code> grant yields an access token.<a href="#appendix-A.5-1" class="pilcrow">¶</a></p>
+<p id="appendix-A.5-1">Only the backchannel request needs a new grant type: it initiates issuance work at the token endpoint, which no existing grant expresses. <code>urn:ietf:params:oauth:grant-type:software-statement</code> therefore means exactly one thing.<a href="#appendix-A.5-1" class="pilcrow">¶</a></p>
+<p id="appendix-A.5-2">Redemption of an intermediate code reuses <code>authorization_code</code>, following the OpenID Connect precedent in which the request that produced a code, not the grant type, determines what its redemption yields. The intermediate code is bound to <code>response_type=software_statement</code>, so redeeming it returns the software statement token response and never an access token, and an authorization code issued for any other response type cannot be redeemed for a statement (<a href="#code-redemption" class="auto internal xref">Section 7</a>). This split also removes two failure modes at once: a malformed redemption missing <code>code</code> is an ordinary <code>authorization_code</code> error and cannot initiate new issuance work, and no special-purpose grant exists whose behavior changes based on which parameters happen to be present.<a href="#appendix-A.5-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="why-use-direct-authorization-endpoint-deferral">
