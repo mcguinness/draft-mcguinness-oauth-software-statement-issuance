@@ -218,7 +218,6 @@ If issuance remains pending and the client opted in to deferral, the authorizati
     | (A) Token request                               |
     |     grant_type=...:software-statement           |
     |     client_id=<metadata document URL>           |
-    |     [initial_access_token],                     |
     |     [registration],                             |
     |     [audience],                                 |
     |     [completion_mode=deferred]                  |
@@ -238,7 +237,7 @@ If issuance remains pending and the client opted in to deferral, the authorizati
     |<------------------------------------------------|
 ~~~
 
-At (A), the client sends the software statement grant request directly to the token endpoint, authenticating according to {{client-identity}} when the Client ID Metadata Document establishes an authentication method, presenting an `initial_access_token` when the authorization server requires one, and optionally including a `registration` overlay in the request body. If issuance completes immediately, the authorization server returns the software statement at (B1). If issuance remains pending and the client opted in to deferral, the authorization server returns the deferred token response of {{DTR}} at (B2), and the client polls at (C) until it receives the final response. {{backchannel-request}} defines this flow.
+At (A), the client sends the software statement grant request directly to the token endpoint, authenticating according to {{client-identity}} when the Client ID Metadata Document establishes an authentication method and optionally including a `registration` overlay in the request body. If issuance completes immediately, the authorization server returns the software statement at (B1). If issuance remains pending and the client opted in to deferral, the authorization server returns the deferred token response of {{DTR}} at (B2), and the client polls at (C) until it receives the final response. {{backchannel-request}} defines this flow.
 
 # Client Identification and Authentication {#client-identity}
 
@@ -452,7 +451,7 @@ Because the intermediate code was issued for `response_type=software_statement`,
 
 # Backchannel Software Statement Request {#backchannel-request}
 
-A client without access to a user agent can request a software statement directly at the token endpoint. An authorization server advertises support for this flow by listing `urn:ietf:params:oauth:grant-type:software-statement` in `grant_types_supported` ({{authorization-server-metadata}}); a client MUST NOT send a backchannel request to an authorization server that does not advertise that value.
+A client without access to a user agent can request a software statement directly at the token endpoint. An authorization server advertises support for this flow by listing `urn:ietf:params:oauth:grant-type:software-statement` in `grant_types_supported` ({{authorization-server-metadata}}); a client MUST NOT send a backchannel request to an authorization server that does not advertise that value. This grant carries no credential beyond client authentication; a client that holds a pre-authorization credential or a prior statement presents it through the token exchange profile ({{token-exchange-profile}}) instead.
 
 The client sends an HTTP `POST` request to the token endpoint using the `application/x-www-form-urlencoded` format with:
 
@@ -471,17 +470,12 @@ The client sends an HTTP `POST` request to the token endpoint using the `applica
 `completion_mode`:
 : OPTIONAL. The client MAY include `deferred` among the values of this parameter to opt in to a deferred token response as defined by {{DTR}}. If the parameter is absent or does not include `deferred`, the authorization server MUST NOT return a deferred token response.
 
-`initial_access_token`:
-: OPTIONAL. An authorization credential issued out of band by the authorization server that pre-authorizes software statement requests, analogous to the initial access token of {{RFC7591}}. An authorization server MAY require this parameter for backchannel requests. The credential is distinct from OAuth client authentication and is used together with client authentication when the Client ID Metadata Document establishes an authentication method. An `initial_access_token` that by itself authorizes issuance can instead be presented as the subject token of a token exchange ({{token-exchange-profile}}).
-
 `client_notification_token`:
 : OPTIONAL. The callback authentication credential defined by {{DTR}}. It MUST be used only when `completion_mode` includes `deferred`. If the client has a `deferred_client_notification_endpoint` and intends to accept callbacks, it SHOULD include this parameter.
 
 The request MUST NOT contain `code`, `redirect_uri`, `code_verifier`, `state`, or `dpop_jkt`. The prohibitions of {{prohibited-parameters}} apply: the request MUST NOT contain `scope`, `resource`, or `authorization_details`.
 
-The client authenticates according to {{client-identity}} when its metadata establishes an authentication method and presents an `initial_access_token` when the authorization server requires one. A public client that opts in to deferral MUST additionally include a DPoP proof {{RFC9449}} for the token endpoint on the initiating request; the authorization server MUST bind any resulting deferral state to the proof's public key. A confidential client MAY additionally use DPoP. A DPoP proof establishes sender constraint but, by itself, does not authorize the presenter to request a statement for the `client_id` URL.
-
-When an `initial_access_token` is presented, the authorization server MUST validate it before retrieving client-controlled metadata or enqueueing approval work. The credential SHOULD be integrity protected, confidential in transit and at rest, limited to the issuing authorization server, time limited, and bound to an exact client identifier URL or an explicitly authorized client identifier namespace; it MAY further restrict audiences, metadata, overlays, or the number of uses. An opaque bearer credential SHOULD contain at least 128 bits of entropy. The authorization server MUST enforce every restriction the credential carries and MUST prevent replay beyond its permitted number of uses.
+The client authenticates according to {{client-identity}} when its metadata establishes an authentication method. A public client that opts in to deferral MUST additionally include a DPoP proof {{RFC9449}} for the token endpoint on the initiating request; the authorization server MUST bind any resulting deferral state to the proof's public key. A confidential client MAY additionally use DPoP. A DPoP proof establishes sender constraint but, by itself, does not authorize the presenter to request a statement for the `client_id` URL.
 
 The authorization server MUST obtain and validate the Client ID Metadata Document and any overlay exactly as in the redirect flow and MUST bind the metadata snapshot ({{metadata-snapshot}}) and the requested audience before returning either the software statement or a deferral code. Because no user agent is present, approval and any verification of the requesting party occur out of band. The authorization server MUST apply the same issuance policy to backchannel requests as to redirect flow requests.
 
@@ -490,7 +484,7 @@ If issuance completes immediately, the authorization server returns the software
 Other backchannel errors use the token error response format of Section 5.2 of {{RFC6749}}:
 
 * A malformed request, invalid Client ID Metadata Document, invalid overlay, or unacceptable requested audience results in `invalid_request` with HTTP status code 400.
-* Failed client authentication, or a missing, invalid, expired, or insufficient `initial_access_token` where the authorization server requires one, results in `invalid_client` with HTTP status code 401.
+* Failed client authentication results in `invalid_client` with HTTP status code 401.
 * A request rejected by issuance policy results in `access_denied` with HTTP status code 400.
 * A server that does not support the backchannel grant returns `unsupported_grant_type` with HTTP status code 400.
 
@@ -508,12 +502,11 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3A
   software-statement
   &client_id=https%3A%2F%2Fclient.example.org%2Fmetadata.json
   &completion_mode=deferred
-  &initial_access_token=iat_2f7e9c1a6d...
 ~~~
 
 # Token Exchange Profile {#token-exchange-profile}
 
-A software statement request asks the authorization server to make an issuance decision that has not yet been made. When the client already holds a token that carries the authority to issue, it MAY instead exchange that token for a software statement using OAuth 2.0 Token Exchange {{RFC8693}}. The rule of thumb: if the client holds the token that authorizes issuance, it exchanges it; if the decision has yet to be made, it requests it.
+A software statement request asks the authorization server to make an issuance decision that has not yet been made. When the client already holds a token that carries the authority to issue, it MAY instead exchange that token for a software statement using OAuth 2.0 Token Exchange {{RFC8693}}. The rule of thumb is wire-visible: a client that holds a token for issuance exchanges it; a client that holds nothing makes a software statement request.
 
 The client sends a token exchange request as defined in Section 2.1 of {{RFC8693}} with:
 
@@ -524,7 +517,7 @@ The client sends a token exchange request as defined in Section 2.1 of {{RFC8693
 : REQUIRED. The value MUST be `urn:ietf:params:oauth:token-type:software-statement`.
 
 `subject_token` and `subject_token_type`:
-: REQUIRED. This profile defines two acceptable subject tokens. The first is an `initial_access_token` whose issuance policy authorizes exchange, presented with a `subject_token_type` of `urn:ietf:params:oauth:token-type:access_token`; the validation requirements of {{backchannel-request}} apply, the credential MUST be bound to the `client_id` of the request, and it is presented here as the subject token rather than as the `initial_access_token` parameter. The second is an unexpired software statement previously issued by this authorization server, presented with a `subject_token_type` of `urn:ietf:params:oauth:token-type:software-statement`; its `sub` MUST exactly equal the `client_id` of the request.
+: REQUIRED. This profile defines two acceptable subject tokens. The first is an initial access token: an authorization credential issued out of band by this authorization server that pre-authorizes software statement issuance, analogous to the initial access token of {{RFC7591}}, presented with a `subject_token_type` of `urn:ietf:params:oauth:token-type:access_token`; the credential MUST be bound to the `client_id` of the request. The second is an unexpired software statement previously issued by this authorization server, presented with a `subject_token_type` of `urn:ietf:params:oauth:token-type:software-statement`; its `sub` MUST exactly equal the `client_id` of the request.
 
 `client_id`:
 : REQUIRED. The client identifier URL described in {{client-identity}}.
@@ -544,9 +537,11 @@ The client authenticates according to {{client-identity}}. A public client that 
 
 The authorization server MUST validate the subject token before retrieving client-controlled metadata or enqueueing any processing. An invalid, expired, or revoked subject token, or one that does not authorize issuance for the presented `client_id`, MUST result in `invalid_grant`. An unacceptable requested audience results in `invalid_target` {{RFC8693}}.
 
+An initial access token presented under this profile SHOULD be integrity protected, confidential in transit and at rest, limited to the issuing authorization server, time limited, and bound to an exact client identifier URL or an explicitly authorized client identifier namespace; it MAY further restrict audiences, metadata, overlays, or the number of uses. An opaque credential SHOULD contain at least 128 bits of entropy. The authorization server MUST enforce every restriction the credential carries and MUST prevent replay beyond its permitted number of uses.
+
 The exchange is evaluated against current metadata, not the subject token's contents. The authorization server MUST obtain and validate the Client ID Metadata Document, bind a fresh metadata snapshot ({{metadata-snapshot}}), and derive the statement's claims from that snapshot; it MUST NOT copy metadata claims from a subject statement. When a subject statement carries `cimd_digest` and the current canonical digest differs, the metadata has changed since the prior issuance; the change is an input to issuance policy and MAY cause the exchange to be deferred or rejected. The issued statement's `aud` MUST NOT contain a value absent from a subject statement's `aud` unless issuance policy independently approves the addition.
 
-Whether an exchange requires new approval is issuer policy; a valid subject token typically substitutes for it. A successful exchange returns the software statement token response ({{software-statement-response}}), which already carries the {{RFC8693}} response members. If processing cannot complete immediately and the request opted in to deferral, the authorization server returns the deferred token response of {{DTR}} and the client polls according to {{deferred-processing}}.
+Whether an exchange completes synchronously or defers for approval is issuance policy: a subject token can pre-authorize only the making of the request, or the issuance itself. A successful exchange returns the software statement token response ({{software-statement-response}}), which already carries the {{RFC8693}} response members. If processing cannot complete immediately and the request opted in to deferral, the authorization server returns the deferred token response of {{DTR}} and the client polls according to {{deferred-processing}}.
 
 # Deferred Processing {#deferred-processing}
 
@@ -571,7 +566,7 @@ For a deferral that originated from a deferred authorization response, the autho
 
 The client authenticates according to {{client-identity}}. If the deferral is bound to a DPoP key, through `dpop_jkt` in the redirect flow or the initiating DPoP proof otherwise, the client MUST send a DPoP proof signed with the corresponding key. The authorization server MUST reject a proof whose key does not match the stored thumbprint.
 
-The first polling request MUST NOT contain an intermediate `code`, `redirect_uri`, `registration`, `audience`, `completion_mode`, `initial_access_token`, or `client_notification_token` parameter.
+The first polling request MUST NOT contain an intermediate `code`, `redirect_uri`, `registration`, `audience`, `completion_mode`, `client_notification_token`, `subject_token`, `subject_token_type`, or `requested_token_type` parameter.
 
 ## Subsequent Polling Requests
 
@@ -782,11 +777,11 @@ After the first poll consumes the verifier, each subsequent poll is protected by
 
 All additional sender-constraint, polling-rate, replay, cancellation, and logging requirements of {{DTR}} apply. Callback behavior applies only to backchannel deferrals as described in {{backchannel-request}}; this specification does not establish callback authentication for a direct authorization endpoint deferral.
 
-## Backchannel Request Considerations
+## Backchannel and Token Exchange Considerations
 
-A backchannel request reaches the token endpoint without prior user-agent interaction. An unauthenticated request from a public client can therefore trigger metadata document retrieval and enqueue approval work at little cost to the requester. Authorization servers SHOULD rate-limit backchannel requests, SHOULD cache metadata retrieval results and failures, and MAY require an `initial_access_token`; when one is presented, it MUST be validated before client-controlled metadata is retrieved or approval work is enqueued. Client authentication remains mandatory when established by the Client ID Metadata Document.
+A backchannel request reaches the token endpoint without prior user-agent interaction. An unauthenticated request from a public client can therefore trigger metadata document retrieval and enqueue approval work at little cost to the requester. Authorization servers SHOULD rate-limit backchannel requests and SHOULD cache metadata retrieval results and failures. An authorization server that requires pre-authorization for token endpoint issuance supports only the token exchange profile ({{token-exchange-profile}}), which places subject token validation in front of any processing. Client authentication remains mandatory when established by the Client ID Metadata Document.
 
-An `initial_access_token` is an authorization credential, not a client identifier and not a substitute for client authentication when the Client ID Metadata Document establishes an authentication method. It is sent in a form body and is therefore exposed to any component that records request bodies. Authorization servers MUST exclude it from logs, traces, error messages, and audit records; clients and authorization servers MUST protect it as a bearer credential unless its format provides proof of possession. The binding, lifetime, entropy, and replay requirements of {{backchannel-request}} limit the effect of disclosure.
+A pre-authorization credential presented as a subject token ({{token-exchange-profile}}) is an authorization credential, not a client identifier and not a substitute for client authentication when the Client ID Metadata Document establishes an authentication method. It is sent in a form body and is therefore exposed to any component that records request bodies. Authorization servers MUST exclude subject tokens from logs, traces, error messages, and audit records; clients and authorization servers MUST protect the credential as a bearer credential unless its format provides proof of possession. The binding, lifetime, entropy, and replay requirements of {{token-exchange-profile}} limit the effect of disclosure.
 
 The absence of a user agent removes front-channel exposure: neither the deferral code nor any other response parameter transits a browser. It also removes any in-band evidence of user participation. An authorization server MUST NOT treat a backchannel request as implying prior user consent and MUST apply the same issuance and approval policy as for the redirect flow.
 
@@ -876,20 +871,6 @@ Specification Document(s):
 This specification requests that IANA add this specification, {{registration-overlay}} and {{backchannel-request}}, as an additional reference for the existing `registration` parameter and extend its usage location to include token requests. The parameter name and change controller are unchanged.
 
 This specification further requests that IANA add this specification, {{authorization-request}} and {{backchannel-request}}, as an additional reference for the existing `audience` parameter registered by {{RFC8693}} and extend its usage location to include authorization requests. The parameter name and change controller are unchanged.
-
-This specification also requests registration of the following value in the IANA "OAuth Parameters" registry established by {{RFC6749}}:
-
-Parameter Name:
-: `initial_access_token`
-
-Parameter Usage Location:
-: token request
-
-Change Controller:
-: IETF
-
-Specification Document(s):
-: This specification, {{backchannel-request}}
 
 ## OAuth Authorization Server Metadata Registry
 
@@ -1026,7 +1007,7 @@ The bilateral mechanisms are not competitors; each composes with a software stat
 
 ## Why Use the Authorization Endpoint
 
-Issuance commonly requires browser-mediated interaction with a user or administrator. The authorization endpoint supplies established redirect URI, request correlation, PKCE, and issuer-identification mechanisms for that interaction. Returning either an intermediate code or a sender-constrained deferral code keeps the software statement itself out of the browser and delivers it over a direct TLS-protected connection. When no in-band interaction is possible, the backchannel flow in {{backchannel-request}} substitutes direct client authentication, optional pre-authorization through an initial access token, and out-of-band approval for the front channel.
+Issuance commonly requires browser-mediated interaction with a user or administrator. The authorization endpoint supplies established redirect URI, request correlation, PKCE, and issuer-identification mechanisms for that interaction. Returning either an intermediate code or a sender-constrained deferral code keeps the software statement itself out of the browser and delivers it over a direct TLS-protected connection. When no in-band interaction is possible, the backchannel flow in {{backchannel-request}} substitutes direct client authentication and out-of-band approval for the front channel, and a pre-authorized client exchanges its credential instead ({{token-exchange-profile}}).
 
 ## Why Not the Device Authorization Grant
 
@@ -1038,7 +1019,7 @@ Two registration-endpoint designs were considered for the backchannel flow. The 
 
 The second design follows the split used by {{CIBA}}: a dedicated initiation endpoint accepts a JSON request and, when issuance is pending, returns a deferral code that the client redeems through the same {{DTR}} polling grant used elsewhere in this specification. That design preserves a single deferral model and could be defined later as a compatible extension. It was not adopted because it introduces a new endpoint, new capability metadata, and a new authentication surface, while the token endpoint already provides the client authentication methods, sender constraint, and deferral behavior the flow requires.
 
-The one capability unique to the registration endpoint model, pre-authorization of requests through an out-of-band credential, is available to the backchannel flow through the `initial_access_token` parameter ({{backchannel-request}}).
+The one capability unique to the registration endpoint model, pre-authorization through an out-of-band credential, is available at the token endpoint as well: the credential is presented as the subject token of a token exchange ({{token-exchange-profile}}).
 
 ## Why One Grant Type, and Why Redemption Uses `authorization_code`
 
@@ -1050,7 +1031,7 @@ Redemption of an intermediate code reuses `authorization_code`, following the Op
 
 Modeling every backchannel request as token exchange fails on the grant's own terms: {{RFC8693}} requires a `subject_token`, and a client approaching an issuer for the first time in an open ecosystem holds no token to exchange. Requiring one would reintroduce the bilateral pre-arrangement this specification exists to remove, and synthesizing one would satisfy the parameter without satisfying its semantics.
 
-The deeper distinction is provenance. Token exchange derives a token's authority from the token presented; a software statement request derives it from an issuance decision, possibly a human approval completed days later. {{token-exchange-profile}} therefore applies exactly where exchange semantics hold: the client already possesses a token that carries the authority to issue, and the exchange records that derivation. If the client holds such a token, it exchanges it; if the decision has yet to be made, it requests it.
+The deeper distinction is provenance. Token exchange derives a token's authority from the token presented; a software statement request derives it from an issuance decision, possibly a human approval completed days later. {{token-exchange-profile}} therefore applies exactly where exchange semantics hold: the client already possesses a token that pre-authorizes issuance, and the exchange records that derivation. The resulting partition is wire-visible: a client that holds such a token exchanges it; a client that holds nothing makes a software statement request.
 
 ## Why Use Direct Authorization Endpoint Deferral
 
