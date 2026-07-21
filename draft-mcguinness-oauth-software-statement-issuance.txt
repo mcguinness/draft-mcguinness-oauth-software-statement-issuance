@@ -128,12 +128,13 @@ Table of Contents
      A.2.  Why Use the Authorization Endpoint
      A.3.  Why Not the Device Authorization Grant
      A.4.  Why the Backchannel Flow Uses the Token Endpoint
-     A.5.  Why One Grant Type, and Why Redemption Uses
-           authorization_code
-     A.6.  Why Token Exchange Is a Profile, Not the Backchannel
-     A.7.  Why Use Direct Authorization Endpoint Deferral
-     A.8.  Why the Response Uses access_token
-     A.9.  Why Reuse the registration Parameter
+     A.5.  Why the Issuer Is an Authorization Server Role
+     A.6.  Why One Grant Type, and Why Redemption Uses
+            authorization_code
+     A.7.  Why Token Exchange Is a Profile, Not the Backchannel
+     A.8.  Why Use Direct Authorization Endpoint Deferral
+     A.9.  Why the Response Uses access_token
+     A.10. Why Reuse the registration Parameter
    Appendix B.  Acknowledgments
    Author's Address
 
@@ -382,7 +383,9 @@ Table of Contents
    issuance.  The backchannel flow uses only the token endpoint and
    serves software without access to a user agent.  In both flows, the
    authorization server either completes the issuance decision
-   synchronously or defers it.
+   synchronously or defers it.  A client that already holds a qualifying
+   credential or a prior statement obtains a statement through token
+   exchange instead (Section 9).
 
 3.1.  Redirect Flow Overview
 
@@ -1027,6 +1030,10 @@ Table of Contents
       the values of this parameter to opt in to a deferred token
       response; the token exchange grant is within the scope of [DTR].
 
+   client_notification_token:  OPTIONAL.  The callback authentication
+      credential defined by [DTR], with the same requirements as in
+      Section 8.
+
    The request MUST NOT contain actor_token or actor_token_type.  The
    prohibitions of Section 5.1 apply: the request MUST NOT contain
    scope, resource, or authorization_details.
@@ -1056,15 +1063,17 @@ Table of Contents
 
    The exchange is evaluated against current metadata, not the subject
    token's contents.  The authorization server MUST obtain and validate
-   the Client ID Metadata Document, bind a fresh metadata snapshot
-   (Section 4.1), and derive the statement's claims from that snapshot;
-   it MUST NOT copy metadata claims from a subject statement.  When a
-   subject statement carries cimd_digest and the current canonical
-   digest differs, the metadata has changed since the prior issuance;
-   the change is an input to issuance policy and MAY cause the exchange
-   to be deferred or rejected.  The issued statement's aud MUST NOT
-   contain a value absent from a subject statement's aud unless issuance
-   policy independently approves the addition.
+   the Client ID Metadata Document and MUST bind a fresh metadata
+   snapshot (Section 4.1) and the requested audience before returning
+   either the software statement or a deferral code.  The statement's
+   claims derive from that snapshot; the authorization server MUST NOT
+   copy metadata claims from a subject statement.  When a subject
+   statement carries cimd_digest and the current canonical digest
+   differs, the metadata has changed since the prior issuance; the
+   change is an input to issuance policy and MAY cause the exchange to
+   be deferred or rejected.  The issued statement's aud MUST NOT contain
+   a value absent from a subject statement's aud unless issuance policy
+   independently approves the addition.
 
    Whether an exchange completes synchronously or defers for approval is
    issuance policy: a subject token can pre-authorize only the making of
@@ -1073,7 +1082,9 @@ Table of Contents
    carries the [RFC8693] response members.  If processing cannot
    complete immediately and the request opted in to deferral, the
    authorization server returns the deferred token response of [DTR] and
-   the client polls according to Section 10.
+   the client polls according to Section 10.  If processing cannot
+   complete immediately and the request did not opt in, the
+   authorization server returns deferral_required as in Section 8.
 
 10.  Deferred Processing
 
@@ -1087,9 +1098,10 @@ Table of Contents
    rather than the seconds typical of user authentication, for example
    when it involves reviewing the client's policy or compliance
    documentation.  Issuers SHOULD set deferral code lifetimes that
-   reflect their actual approval latency.  A backchannel client with a
-   registered notification endpoint SHOULD use the callback mechanism of
-   [DTR] together with client_notification_token, while continuing to
+   reflect their actual approval latency.  A client whose deferral
+   originated from a backchannel request or token exchange and that has
+   a registered notification endpoint SHOULD use the callback mechanism
+   of [DTR] together with client_notification_token, while continuing to
    poll as required by [DTR].  This specification does not enable
    callbacks for direct authorization endpoint deferrals because their
    originating authorization request does not establish a
@@ -1148,8 +1160,8 @@ Table of Contents
    initiating DPoP proof otherwise.
 
    Pending, denied, expired, cancelled, and polling-rate behavior
-   follows [DTR].  Callback behavior follows [DTR] only for a
-   backchannel request that supplied client_notification_token.  A
+   follows [DTR].  Callback behavior follows [DTR] only for a deferral
+   whose initiating request supplied client_notification_token.  A
    successful first or subsequent polling response is the software
    statement token response defined in Section 11.
 
@@ -1398,6 +1410,16 @@ Table of Contents
 
 14.  Authorization Server Metadata
 
+   The issuing authorization server is a role, named the way "trusting
+   authorization server" is: this specification does not require it to
+   be a general-purpose OAuth deployment.  A conforming issuer that
+   offers only the backchannel flow and the token exchange profile
+   consists of a token endpoint, an authorization server metadata
+   document, and signing keys.  It operates no authorization endpoint,
+   never issues access tokens, and serves no protected resources; a
+   deployment can operate such an issuer purely as an attestation
+   service.
+
    An authorization server that issues software statements under this
    specification advertises true for
    client_id_metadata_document_supported, as defined by [CIMD], and
@@ -1587,9 +1609,9 @@ Table of Contents
 
    All additional sender-constraint, polling-rate, replay, cancellation,
    and logging requirements of [DTR] apply.  Callback behavior applies
-   only to backchannel deferrals as described in Section 8; this
-   specification does not establish callback authentication for a direct
-   authorization endpoint deferral.
+   only to deferrals initiated at the token endpoint (Section 8,
+   Section 9); this specification does not establish callback
+   authentication for a direct authorization endpoint deferral.
 
 15.7.  Backchannel and Token Exchange Considerations
 
@@ -1619,16 +1641,16 @@ Table of Contents
    The absence of a user agent removes front-channel exposure: neither
    the deferral code nor any other response parameter transits a
    browser.  It also removes any in-band evidence of user participation.
-   An authorization server MUST NOT treat a backchannel request as
-   implying prior user consent and MUST apply the same issuance and
-   approval policy as for the redirect flow.
+   An authorization server MUST NOT treat a backchannel request or token
+   exchange as implying prior user consent and MUST apply the same
+   issuance and approval policy as for the redirect flow.
 
-   Sender constraint for a backchannel deferral is established at
-   initiation through client authentication or a DPoP proof.  There is
-   no PKCE state, so the code_verifier check in Section 10.1 is replaced
-   by verification of the initiating key or credentials on every poll.
-   If a callback is configured, the client uses
-   client_notification_token as defined by [DTR]; that token
+   Sender constraint for a deferral initiated at the token endpoint is
+   established at initiation through client authentication or a DPoP
+   proof.  There is no PKCE state, so the code_verifier check in
+   Section 10.1 is replaced by verification of the initiating key or
+   credentials on every poll.  If a callback is configured, the client
+   uses client_notification_token as defined by [DTR]; that token
    authenticates the callback but does not authorize issuance.
 
 15.8.  Statement Validation and Replay
@@ -1782,21 +1804,22 @@ Table of Contents
 
    Change Controller:  IETF
 
-   Specification Document(s):  This specification, Section 11
+   Specification Document(s):  This specification, Section 11 and
+      Section 9
 
 17.3.  OAuth Parameters Registry
 
    This specification requests that IANA add this specification,
-   Section 5.2 and Section 8, as an additional reference for the
-   existing registration parameter and extend its usage location to
+   Section 5.2, Section 8, and Section 9, as an additional reference for
+   the existing registration parameter and extend its usage location to
    include token requests.  The parameter name and change controller are
    unchanged.
 
    This specification further requests that IANA add this specification,
-   Section 5 and Section 8, as an additional reference for the existing
-   audience parameter registered by [RFC8693] and extend its usage
-   location to include authorization requests.  The parameter name and
-   change controller are unchanged.
+   Section 5, Section 8, and Section 9, as an additional reference for
+   the existing audience parameter registered by [RFC8693] and extend
+   its usage location to include authorization requests.  The parameter
+   name and change controller are unchanged.
 
 17.4.  OAuth Authorization Server Metadata Registry
 
@@ -1838,8 +1861,8 @@ Table of Contents
 
    Change Controller:  IETF
 
-   Specification Document(s):  This specification, Section 6.2 and
-      Section 8
+   Specification Document(s):  This specification, Section 6.2,
+      Section 8, and Section 9
 
 17.6.  Media Type Registration
 
@@ -2162,7 +2185,43 @@ A.4.  Why the Backchannel Flow Uses the Token Endpoint
    token endpoint as well: the credential is presented as the subject
    token of a token exchange (Section 9).
 
-A.5.  Why One Grant Type, and Why Redemption Uses authorization_code
+A.5.  Why the Issuer Is an Authorization Server Role
+
+   An alternative design defines a standalone statement issuer,
+   analogous to the instance issuer of [CLIENT-INSTANCE]: an identifier,
+   keys, and issuance obligations, with the minting interface out of
+   scope.  That model works for instance attestation because its minting
+   is intra-domain: a platform hands its own workloads their assertions,
+   and interoperability is needed only at presentation.  Software
+   statements invert the situation.  Presentation has been interoperable
+   since [RFC7591], and the minting interface is precisely the gap this
+   specification exists to fill; leaving it out of scope would
+   reconstruct the proprietary portals and manual provisioning described
+   in the introduction.
+
+   Framing the issuer as an authorization server role is what keeps this
+   specification thin.  The token endpoint carries the client
+   authentication methods that [CIMD] metadata already binds to it, the
+   deferral machinery of [DTR], the token exchange grant of [RFC8693],
+   and discovery through [RFC8414].  Each alternative examined in this
+   appendix reinvents some of that machinery to avoid the framing; none
+   of it needs reinventing.  The role is also small in practice
+   (Section 14): an issuer that supports only the backchannel flow and
+   the token exchange profile is a token endpoint, a metadata document,
+   and signing keys.  An existing attestation authority, such as a
+   workload identity provider, a software publisher's portal, or an
+   enrollment service, can front itself with that single endpoint,
+   mirroring the adapter pattern of [CLIENT-INSTANCE] one layer up.
+
+   The instance issuer and the statement issuer remain distinct roles
+   even when one party holds both: they attest different subjects (a
+   runtime versus client software), on different lifetimes, through
+   different decision processes, under differently anchored trust
+   (client-delegated descriptors versus verifier-configured issuers).
+   The explicit typ values of the two artifact formats keep that
+   boundary verifiable.
+
+A.6.  Why One Grant Type, and Why Redemption Uses authorization_code
 
    Only the backchannel request needs a new grant type: it initiates
    issuance work at the token endpoint, which no existing grant
@@ -2182,7 +2241,7 @@ A.5.  Why One Grant Type, and Why Redemption Uses authorization_code
    work, and no special-purpose grant exists whose behavior changes
    based on which parameters happen to be present.
 
-A.6.  Why Token Exchange Is a Profile, Not the Backchannel
+A.7.  Why Token Exchange Is a Profile, Not the Backchannel
 
    Modeling every backchannel request as token exchange fails on the
    grant's own terms: [RFC8693] requires a subject_token, and a client
@@ -2201,7 +2260,7 @@ A.6.  Why Token Exchange Is a Profile, Not the Backchannel
    holds such a token exchanges it; a client that holds nothing makes a
    software statement request.
 
-A.7.  Why Use Direct Authorization Endpoint Deferral
+A.8.  Why Use Direct Authorization Endpoint Deferral
 
    Issuing an intermediate code before approval completes would imply
    that the software statement request had reached its synchronous
@@ -2216,7 +2275,7 @@ A.7.  Why Use Direct Authorization Endpoint Deferral
    preserving the same successful software statement response for both
    paths.
 
-A.8.  Why the Response Uses access_token
+A.9.  Why the Response Uses access_token
 
    OAuth token endpoint infrastructure expects a token response to
    contain access_token and token_type, and [DTR] returns the
@@ -2231,7 +2290,7 @@ A.8.  Why the Response Uses access_token
    unambiguously stating that a software statement grants no resource
    access.
 
-A.9.  Why Reuse the registration Parameter
+A.10.  Why Reuse the registration Parameter
 
    The registration parameter from Section 7.2.1 of [OIDC-CORE] is an
    existing authorization request parameter whose value is a JSON object
