@@ -76,7 +76,8 @@ Copyright Notice
 Table of Contents
 
    1.  Introduction
-     1.1.  Relationship to Other Specifications
+     1.1.  What Pre-Registration Does Not Solve
+     1.2.  Relationship to Other Specifications
    2.  Conventions and Definitions
    3.  Protocol Overview
      3.1.  Redirect Flow Overview
@@ -165,7 +166,8 @@ Table of Contents
    signed issuance decision rather than from the client alone
    (Section 15.2), and one issuance decision is honored at every
    authorization server in the statement's audience rather than being
-   repeated at each (Appendix A.1).
+   repeated at each (Appendix A.1).  Section 1.1 examines the closest of
+   these mechanisms in detail.
 
    The consumption side of this design is already standardized and
    deployed: [RFC7591] registration endpoints have accepted the
@@ -220,7 +222,59 @@ Table of Contents
    from any access-granting transaction and can complete out of band
    over hours or days.
 
-1.1.  Relationship to Other Specifications
+1.1.  What Pre-Registration Does Not Solve
+
+   Pre-registration, as described by [CIMD], lets a client enroll its
+   client identifier URL with an authorization server before its first
+   authorization request: the authorization server fetches the metadata
+   document, applies policy or human review, and records a local
+   decision.  For a client and an authorization server that already know
+   each other, that is the right tool, and this specification does not
+   replace it.
+
+   Pre-registration changes when the trust decision is made.  It does
+   not change anything else about the decision:
+
+   *  The decider is still each consuming authorization server, and its
+      only input is still the client's self-asserted document.  An
+      enrollment reviewed by a human is a human reading the client's own
+      claims about itself; repeating that review at M authorization
+      servers produces M independent judgments of the same self-
+      assertion, by parties with no particular knowledge of the
+      software.
+
+   *  The output is still local state.  Nothing transfers: an approval
+      at one authorization server is invisible to every other, cannot be
+      presented elsewhere, and cannot amortize the cost of a careful
+      review.
+
+   *  The subject of the decision is a URL, not content.  The document
+      behind the URL changes; what exactly was approved, and whether the
+      currently published metadata is still what was reviewed, has no
+      interoperable answer.
+
+   *  Every later evaluation still depends on dereferencing the
+      document, with the availability and retrieval risks that implies.
+
+   A software statement changes each of these properties.  The decision
+   is made once, by a party positioned to evaluate the software (an
+   enterprise identity function, a software publisher's program, an
+   ecosystem operator).  The output is a signed artifact honored at
+   every authorization server in its audience.  The decision is bound to
+   the exact document content evaluated (Section 4.1).  And the artifact
+   verifies offline against issuer keys, with no fetch at acceptance
+   time.  Deployments where each protected service fronts its own small
+   authorization server, none staffed to review client software, are the
+   motivating case: pre-registration asks each of them to operate an
+   approval process, while a statement asks each of them to verify a
+   signature under a configured issuer.
+
+   The two mechanisms compose rather than compete: a pre-registration
+   push that carries a software statement gives the enrolling
+   authorization server an issuer's signed decision to evaluate instead
+   of self-asserted values alone (Appendix A.1).
+
+1.2.  Relationship to Other Specifications
 
    This specification uses the following building blocks:
 
