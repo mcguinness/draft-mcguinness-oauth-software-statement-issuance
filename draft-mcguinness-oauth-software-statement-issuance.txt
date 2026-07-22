@@ -981,6 +981,19 @@ Table of Contents
    backchannel initiation entirely in favor of the token exchange
    profile.
 
+   A client whose metadata establishes attestation-based client
+   authentication [ABCA] is not unauthenticated: its request carries an
+   attestation whose subject is the client identifier URL, signed by an
+   attester vouching that the requester is a genuine instance of that
+   client software holding the attested key.  When the authorization
+   server trusts the attester, the attestation supplies in band the
+   requester-to-software association that the redirect flow demonstrates
+   by delivering its response to a registered redirection endpoint.
+   Whether that evidence alone authorizes issuance, and whether issuance
+   may then complete synchronously, is issuance policy.  Trust in an
+   attester SHOULD be scoped to the client identifier namespaces it is
+   expected to attest, as trust in statement issuers is (Section 15.8).
+
    The authorization server MUST obtain and validate the Client ID
    Metadata Document and any overlay exactly as in the redirect flow and
    MUST bind the metadata snapshot (Section 4.1) and the requested
@@ -1449,13 +1462,14 @@ Table of Contents
    Deployments whose client software runs as many concurrent instances
    SHOULD register the logical client once per authorization server and
    differentiate instances at the token endpoint, for example with
-   [CLIENT-INSTANCE], rather than minting a registration per instance.
-   Where authorization server policy is keyed on client_id and genuinely
-   requires per-instance registrations, the same statement can support
-   that model only if it omits jwks and jwks_uri: each registration can
-   then supply its own instance key as plain metadata, subject to
-   trusting authorization server policy.  Omitting them also forecloses
-   token exchange renewal for a client without an authentication method
+   [CLIENT-INSTANCE] or attestation-based client authentication [ABCA],
+   rather than minting a registration per instance.  Where authorization
+   server policy is keyed on client_id and genuinely requires per-
+   instance registrations, the same statement can support that model
+   only if it omits jwks and jwks_uri: each registration can then supply
+   its own instance key as plain metadata, subject to trusting
+   authorization server policy.  Omitting them also forecloses token
+   exchange renewal for a client without an authentication method
    (Section 9).  If the statement contains jwks or jwks_uri, that
    attested value takes precedence under [RFC7591] and every
    registration derived from the statement MUST use the attested key
@@ -2221,6 +2235,10 @@ Table of Contents
               <https://www.rfc-editor.org/rfc/rfc9700>.
 
 18.2.  Informative References
+
+   [ABCA]     "OAuth 2.0 Attestation-Based Client Authentication", n.d.,
+              <https://datatracker.ietf.org/doc/draft-ietf-oauth-
+              attestation-based-client-auth>.
 
    [APPROVAL-DCR]
               "OAuth 2.0 Approval-Based Dynamic Client Registration",
