@@ -64,12 +64,18 @@ informative:
   APPROVAL-DCR:
     target: https://datatracker.ietf.org/doc/draft-dellaert-oauth-approval-based-dcr
     title: "OAuth 2.0 Approval-Based Dynamic Client Registration"
+  AU-CDR:
+    target: https://consumerdatastandardsaustralia.github.io/standards/
+    title: "Consumer Data Standards (Australia)"
   CIBA:
     target: https://openid.net/specs/openid-client-initiated-backchannel-authentication-core-1_0.html
     title: "OpenID Connect Client-Initiated Backchannel Authentication Flow - Core 1.0"
   CLIENT-INSTANCE:
     target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-client-instance-assertion
     title: "OAuth 2.0 Client Instance Assertion"
+  OID4VCI:
+    target: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html
+    title: "OpenID for Verifiable Credential Issuance 1.0"
   OPENID-FED:
     target: https://openid.net/specs/openid-federation-1_0.html
     title: "OpenID Federation 1.0"
@@ -79,6 +85,9 @@ informative:
   TRUST-FRAMEWORK:
     target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-assertion-framework
     title: "OAuth Identity Assertion Trust Framework"
+  UK-OPEN-BANKING:
+    target: https://openbankinguk.github.io/dcr-docs-pub/v3.3/dynamic-client-registration.html
+    title: "Open Banking UK Dynamic Client Registration Specification v3.3"
 
 --- abstract
 
@@ -94,7 +103,7 @@ A client without access to a user agent can instead send a backchannel software 
 
 Section 2.3 of {{RFC7591}} defines a software statement as a JSON Web Token (JWT) that asserts client metadata. A client can present the software statement to a dynamic client registration endpoint, where the statement's signature enables the authorization server to determine who attested to the metadata. {{RFC7591}} does not define a protocol for obtaining a software statement.
 
-In practice, software statements are commonly issued through manual provisioning, deployment-specific portals, or proprietary federation processes. Those mechanisms do not give clients an interoperable way to request a statement, redirect a user or administrator for interaction, and retrieve the resulting credential without exposing it through the browser.
+In practice, software statements are commonly issued through manual provisioning, deployment-specific portals, or proprietary federation processes. Regulated ecosystems have each built this function independently: the UK Open Banking Directory and the Australian Consumer Data Right Register both operate central authorities that issue software statements, which participants must present to member authorization servers under ecosystem profiles of {{RFC7591}} registration ({{UK-OPEN-BANKING}}, {{AU-CDR}}). Each defined its own issuance interface because no standard one exists. These mechanisms do not give clients an interoperable way to request a statement, redirect a user or administrator for interaction, and retrieve the resulting credential without exposing it through the browser.
 
 The client establishment mechanisms adjacent to this specification are bilateral: pre-registration of a client identifier URL as described by {{CIMD}}, pushed registration of ephemeral clients {{PUSHED-DCR}}, and approval-gated registration {{APPROVAL-DCR}} each establish trust at a single authorization server, and each asks that authorization server to decide on the client's own assertion of its metadata. A software statement changes both properties: the metadata a trusting authorization server evaluates originates from an issuer's signed issuance decision rather than from the client alone ({{what-issuance-attests}}), and one issuance decision is honored at every authorization server in the statement's audience rather than being repeated at each ({{comparison}}). {{beyond-pre-registration}} examines the closest of these mechanisms in detail.
 
@@ -1083,6 +1092,8 @@ Several contemporaneous mechanisms address client establishment. The table summa
 | OpenID Federation ({{OPENID-FED}}) | resolved along a trust chain | entity statements | federation infrastructure |
 
 The bilateral mechanisms are not competitors; each composes with a software statement. A pre-registration or pushed registration that carries a statement presents attested metadata instead of self-asserted values. An approval-based registration that receives a statement gives its approver an issuer's signed decision to evaluate, addressing the long-standing problem that a registration approver otherwise has only the client's word. Where a deployment outgrows pairwise issuer configuration, OpenID Federation provides the trust-chain infrastructure this specification deliberately omits.
+
+OpenID for Verifiable Credential Issuance {{OID4VCI}} shares this specification's issuance shape: an authorization code flow, a pre-authorized path for decisions made in advance, and deferred issuance for decisions that take time. It is nevertheless not an alternative rail for this artifact. {{OID4VCI}} issues credentials to a wallet, ordinarily bound to a key the wallet holds, for later presentation to verifiers; a software statement is deliberately software-level rather than holder-bound, covers every instance of the software, and is consumed not by presentation but by the `software_statement` member of an {{RFC7591}} registration request. A profile of {{OID4VCI}} that issued software statements would still have to define what this specification defines, namely the statement format, the canonical-metadata binding, and the registration-endpoint consumption, while adding credential issuer metadata, proof and nonce handling, and wallet machinery that a registration workflow does not use. The two therefore compose rather than compete: an ecosystem that already operates {{OID4VCI}} infrastructure can carry a software statement as a credential payload, and the payload's meaning at a registration endpoint remains as this specification defines it.
 
 ## Why Use the Authorization Endpoint
 
