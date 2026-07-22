@@ -194,24 +194,18 @@ Table of Contents
    short-lived software statement code that the client redeems at the
    token endpoint; a request whose decision is still pending is deferred
    there under [DTR] and resolved by polling.  A client without access
-   to a user agent instead initiates the request with the software
-   statement grant.  A client that already holds a token carrying
-   issuance authority, such as a qualifying initial access token or an
-   unexpired statement, can instead use OAuth token exchange
-   (Section 9).
+   to a user agent, such as a daemon or command-line tool, instead
+   initiates the request directly at the token endpoint with the
+   software statement grant (Section 8), and any approval completes out
+   of band through deferred processing.  A client that already holds a
+   token carrying issuance authority, such as a qualifying initial
+   access token or an unexpired statement, can instead use OAuth token
+   exchange (Section 9).
 
    The flow concerns client establishment, not authorization to access a
    protected resource.  Consequently, a software statement request
    cannot be combined with scope, resource, authorization_details, or an
    access-token-producing response type.
-
-   The redirect flow requires the client to operate a redirection
-   endpoint and to reach the authorization endpoint through a user
-   agent.  For software without access to a user agent, such as a daemon
-   or command-line tool, this specification defines a backchannel flow
-   (Section 8) in which the client requests the software statement
-   directly at the token endpoint and any approval completes out of band
-   through deferred processing.
 
    Not every client establishment problem calls for a software
    statement.  When the approving party is the resource owner and the
@@ -313,10 +307,7 @@ Table of Contents
    credentials.  This specification instead issues a signed software
    statement that can be presented in a later [RFC7591] registration
    request.  The two specifications address different deployment models,
-   do not depend on each other, and compose: an approval-gated
-   registration whose request carries a software statement gives its
-   approver an issuer's signed decision to evaluate instead of only
-   client-asserted values.
+   do not depend on each other, and compose (Appendix B.1).
 
    [PUSHED-DCR] explores pushing client registration alongside the start
    of an authorization flow at the same authorization server.  A
@@ -371,6 +362,12 @@ Table of Contents
    server and an external approval system.  It also does not require a
    trusting authorization server to accept any particular issuer.
    Acceptance policy and trust establishment remain deployment-specific.
+   Issuer discovery is likewise out of scope: how client software learns
+   where to obtain a statement is deployment knowledge today.  A natural
+   future home for that association is the client's own metadata
+   document, where a member naming the issuers that attest software
+   under the publisher's namespace would double as the namespace-
+   delegation evidence that [TRUST-FRAMEWORK] evaluates.
 
 2.  Conventions and Definitions
 
@@ -681,11 +678,14 @@ Table of Contents
 5.2.  Registration Overlay
 
    The registration parameter syntax is defined in Section 7.2.1 of
-   [OIDC-CORE].  Its value is a JSON object.  In this specification,
-   each member MUST be client metadata registered in the IANA "OAuth
-   Dynamic Client Registration Metadata" registry, recognized by the
-   authorization server, and eligible for attestation under this
-   section.
+   [OIDC-CORE].  Its value is a JSON object.  The parameter is reused
+   rather than newly defined because its established meaning, request-
+   supplied client metadata carried in an authorization request, is
+   exactly what an overlay is; this specification only constrains it to
+   selection (Appendix B.10).  In this specification, each member MUST
+   be client metadata registered in the IANA "OAuth Dynamic Client
+   Registration Metadata" registry, recognized by the authorization
+   server, and eligible for attestation under this section.
 
    The following authorization-server-assigned, credential, and
    recursive metadata members are not eligible for attestation and MUST
@@ -979,9 +979,14 @@ Table of Contents
    instead exchange that token for a software statement using OAuth 2.0
    Token Exchange [RFC8693].  The rule of thumb is wire-visible: a
    client that holds a token for issuance exchanges it; a client that
-   holds nothing makes a software statement request.  An authorization
-   server advertises support for this profile through
-   software_statement_subject_token_types_supported (Section 14).
+   holds nothing makes a software statement request.  This path is not
+   peripheral: in the ecosystems that operate central statement issuers
+   today, the prevailing pattern is precisely a participant credentialed
+   once at onboarding that fetches statements repeatedly thereafter
+   ([UK-OPEN-BANKING], [AU-CDR]), and this profile is that pattern's
+   interoperable form.  An authorization server advertises support for
+   this profile through software_statement_subject_token_types_supported
+   (Section 14).
 
    The client sends a token exchange request as defined in Section 2.1
    of [RFC8693] with:
@@ -1222,7 +1227,12 @@ Table of Contents
    application/software-statement+jwt (Section 17.5) with the
    application/ prefix omitted.  Explicit typing prevents other JWTs
    signed by the same issuer, such as JWT access tokens or ID Tokens,
-   from being accepted as software statements.
+   from being accepted as software statements.  The type value also
+   anchors format evolution: extensions add claims, which are additive
+   under standard JWT processing, while an incompatible future revision
+   would define a new type value rather than change the meaning of this
+   one.  Signing algorithm agility is negotiated through
+   software_statement_signing_alg_values_supported (Section 14).
 
    The JWT payload MUST contain the following claims in addition to the
    approved client metadata that is eligible for attestation under
@@ -1683,11 +1693,21 @@ Table of Contents
    applies to the exchange as it does to registration.
 
    This specification does not define online revocation of an issued
-   software statement.  A deployment that cannot tolerate acceptance of
-   a stolen or mistakenly issued statement for its full lifetime needs
-   short statement lifetimes, a deployment-specific mechanism through
-   which trusting authorization servers obtain revocation status, or
-   both.
+   software statement.  The primary control is lifetime: issuance is
+   decoupled from use, renewal is inexpensive (Section 9), and a short
+   exp bounds the exposure window; the Australian Consumer Data Right
+   Register, for example, issues statements that expire after ten
+   minutes ([AU-CDR]).  A deployment that needs acceptance-time status
+   beyond expiration can compose existing mechanisms without change to
+   this protocol: an issuer can include a status claim referencing a
+   Token Status List [STATUS-LIST], giving trusting authorization
+   servers a standardized status check when a statement is presented,
+   and the scoped issuer trust configuration described above supports
+   emergency removal of a compromised issuer or namespace.  Revoking a
+   statement does not undo registrations already derived from it;
+   responding to client software found to be malicious after
+   registration is client lifecycle management at each trusting
+   authorization server, outside this protocol.
 
    Trusting authorization servers MUST use an explicit issuer trust
    configuration and MUST verify the signature and claims described in
@@ -2094,6 +2114,11 @@ Table of Contents
               "OAuth 2.0 Device Authorization Grant", RFC 8628,
               DOI 10.17487/RFC8628, August 2019,
               <https://www.rfc-editor.org/rfc/rfc8628>.
+
+   [STATUS-LIST]
+              "Token Status List", n.d.,
+              <https://datatracker.ietf.org/doc/draft-ietf-oauth-status-
+              list>.
 
    [TRUST-FRAMEWORK]
               "OAuth Identity Assertion Trust Framework", n.d.,
