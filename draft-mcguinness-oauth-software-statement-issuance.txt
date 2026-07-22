@@ -975,7 +975,11 @@ Table of Contents
    key.  The redirect flow needs no such rule because its response is
    delivered to a redirection endpoint registered in the client's own
    metadata document, which demonstrates the requester's association
-   with the client software.
+   with the client software.  Accepting unauthenticated initiations
+   consumes retrieval, queue, and deferral resources; Section 15.7
+   describes the exposure and the mitigations, including declining
+   backchannel initiation entirely in favor of the token exchange
+   profile.
 
    The authorization server MUST obtain and validate the Client ID
    Metadata Document and any overlay exactly as in the redirect flow and
@@ -1450,10 +1454,17 @@ Table of Contents
    requires per-instance registrations, the same statement can support
    that model only if it omits jwks and jwks_uri: each registration can
    then supply its own instance key as plain metadata, subject to
-   trusting authorization server policy.  If the statement contains jwks
-   or jwks_uri, that attested value takes precedence under [RFC7591] and
-   every registration derived from the statement MUST use the attested
-   key material rather than an instance-supplied replacement.
+   trusting authorization server policy.  Omitting them also forecloses
+   token exchange renewal for a client without an authentication method
+   (Section 9).  If the statement contains jwks or jwks_uri, that
+   attested value takes precedence under [RFC7591] and every
+   registration derived from the statement MUST use the attested key
+   material rather than an instance-supplied replacement.  A third model
+   combines attestation with per-instance keys: the statement omits key
+   material but attests the instance_issuers delegation (Section 13.1),
+   so that instance keys are endorsed by an attested authority at the
+   token endpoint instead of appearing unattested in registration
+   metadata.
 
 13.1.  Attesting Instance Issuers
 
@@ -1712,17 +1723,22 @@ Table of Contents
    can therefore trigger metadata document retrieval and enqueue
    approval work at little cost to the requester.  Authorization servers
    SHOULD rate-limit backchannel requests and SHOULD cache metadata
-   retrieval results and failures.  An unauthenticated public-client
-   request can never complete synchronously (Section 8): issuance to an
-   anonymous requester would deliver a bearer attestation for someone
-   else's software identity, so the out-of-band verification of the
-   requester's authority is the gate that replaces the redirect flow's
-   delivery to a registered redirection endpoint.  An authorization
-   server that requires pre-authorization for token endpoint issuance
-   supports only the token exchange profile (Section 9), which places
-   subject token validation in front of any processing.  Client
-   authentication remains mandatory when established by the Client ID
-   Metadata Document.
+   retrieval results and failures.  Deferral state is a further
+   consumable resource: an authorization server SHOULD bound the pending
+   deferrals it holds per client identifier, per client identifier
+   namespace, and per requester, and MAY expire a deferral whose out-of-
+   band verification has not begun, or has failed, well before the
+   lifetime it would grant an authenticated deferral.  An
+   unauthenticated public-client request can never complete
+   synchronously (Section 8): issuance to an anonymous requester would
+   deliver a bearer attestation for someone else's software identity, so
+   the out-of-band verification of the requester's authority is the gate
+   that replaces the redirect flow's delivery to a registered
+   redirection endpoint.  An authorization server that requires pre-
+   authorization for token endpoint issuance supports only the token
+   exchange profile (Section 9), which places subject token validation
+   in front of any processing.  Client authentication remains mandatory
+   when established by the Client ID Metadata Document.
 
    A pre-authorization credential presented as a subject token
    (Section 9) is an authorization credential, not a client identifier
@@ -1775,9 +1791,12 @@ Table of Contents
    Renewal through Section 9 would otherwise let an unexpired stolen
    statement be exchanged for a fresh one, outliving its intended
    lifetime.  That profile therefore requires holder binding for
-   statement subjects, and a statement without usable key binding cannot
-   be renewed at all; the issuer-scoping guidance of this section
-   applies to the exchange as it does to registration.
+   statement subjects: the presenter must authenticate as the client or
+   prove possession of a key the statement attests.  A statement that
+   attests no usable key material and belongs to a client without an
+   authentication method cannot be renewed at all; the issuer-scoping
+   guidance of this section applies to the exchange as it does to
+   registration.
 
    This specification does not define online revocation of an issued
    software statement.  The primary control is lifetime: issuance is
@@ -1820,7 +1839,10 @@ Table of Contents
    relationships and SHOULD support controlled key rotation.  Trusting
    authorization servers MUST restrict algorithms to those allowed for
    the issuer and MUST follow [RFC8725] when selecting keys and
-   validating JWTs.
+   validating JWTs.  Issuers SHOULD prefer signature algorithms with
+   modern security properties, such as PS256, ES256, or EdDSA, over
+   RSASSA-PKCS1-v1_5 (RS256); ecosystem profiles that consume software
+   statements commonly restrict signing to such algorithms.
 
 15.10.  Approver Identity and Audit
 
