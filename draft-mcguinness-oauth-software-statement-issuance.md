@@ -106,7 +106,7 @@ The flow concerns client establishment, not authorization to access a protected 
 
 The redirect flow requires the client to operate a redirection endpoint and to reach the authorization endpoint through a user agent. For software without access to a user agent, such as a daemon or command-line tool, this specification defines a backchannel flow ({{backchannel-request}}) in which the client requests the software statement directly at the token endpoint and any approval completes out of band through deferred processing.
 
-Not every client establishment problem calls for a software statement. When the approving party is the resource owner and the client needs only the authorization server that resource owner uses, the approval is the OAuth authorization grant itself, and identifying the client by its metadata document {{CIMD}} suffices. A software statement earns its cost when the trust decision is made by a party other than the user in a transaction, must be made before any transaction exists, or must be made once and honored at many authorization servers. Issuance is therefore deliberately decoupled from any access-granting transaction and can complete out of band over hours or days.
+Not every client establishment problem calls for a software statement. When the approving party is the resource owner and the client needs only the authorization server that resource owner uses, the approval is the OAuth authorization grant itself, and identifying the client by its metadata document {{CIMD}} suffices. A software statement earns its cost when the trust decision is made by a party other than the user in a transaction, must be made before any transaction exists, or must be made once and honored at many authorization servers. Issuance is therefore deliberately decoupled from any access-granting transaction and can complete out of band over hours or days. {{deployment-examples}} illustrates these boundaries with end-to-end scenarios.
 
 ## What Pre-Registration Does Not Solve {#beyond-pre-registration}
 
@@ -303,7 +303,7 @@ The client sends an authorization request as described in Section 4.1.1 of {{RFC
 : OPTIONAL. A JSON object containing the registration overlay described in {{registration-overlay}}. A request containing this parameter MUST be submitted using PAR {{RFC9126}}.
 
 `audience`:
-: OPTIONAL. A target service at which the client intends to use the issued software statement, with the semantics of the `audience` parameter defined in Section 2.1 of {{RFC8693}}. The parameter MAY be repeated to request multiple audiences. Each value MUST be an authorization server issuer identifier as defined by {{RFC8414}}, values MUST NOT be repeated, and order is not significant. The authorization server determines the final audience according to policy, but when this parameter is present every value in the statement's `aud` claim MUST have appeared in the request. If none of the requested audiences is acceptable, the authorization server MUST reject the request with `invalid_target` {{RFC8693}}. Some deployments use a proprietary `audience` authorization request parameter to select an API for access tokens; the semantics defined here apply only to software statement requests.
+: OPTIONAL. A target service at which the client intends to use the issued software statement, with the semantics of the `audience` parameter defined in Section 2.1 of {{RFC8693}}. The parameter MAY be repeated to request multiple audiences. Each value MUST be an authorization server issuer identifier as defined by {{RFC8414}}, values MUST NOT be repeated, and order is not significant. The authorization server determines the final audience according to policy, but when this parameter is present every value in the statement's `aud` claim MUST have appeared in the request. If none of the requested audiences is acceptable, the authorization server MUST reject the request with `invalid_target`, defined by {{RFC8693}} and used on authorization requests following the precedent of {{RFC8707}}. Some deployments use a proprietary `audience` authorization request parameter to select an API for access tokens; the semantics defined here apply only to software statement requests.
 
 `completion_mode`:
 : OPTIONAL. The client MAY include `deferred` among the values of this parameter to opt in to direct authorization endpoint deferral as defined by {{DTR}}. If the parameter is absent or does not include `deferred`, the authorization server MUST NOT return a direct deferred response.
@@ -319,7 +319,7 @@ The following is a non-normative example of an authorization request (line break
 GET /authorize?response_type=software_statement
   &client_id=https%3A%2F%2Fclient.example.org%2Fmetadata.json
   &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb
-  &state=af0ifjsldkj
+  &state=4L7xQ2mN9pR6sT1vW8yZ3aB5cD0fG2hJ
   &code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
   &code_challenge_method=S256 HTTP/1.1
 Host: server.example.com
@@ -406,28 +406,17 @@ If issuance remains pending and the request included `deferred` in `completion_m
 `iss`:
 : REQUIRED. The authorization server issuer identification parameter defined by {{RFC9207}}.
 
-The deferred response MUST NOT contain `code` or any other parameter that indicates synchronous completion. Because a deferral code is longer-lived than an intermediate code, a client that opts in to deferral SHOULD request the `form_post` response mode {{FORM-POST}}, which delivers the response parameters in the body of an HTTP POST rather than in a URL, and an authorization server that supports deferral SHOULD support that response mode. The fragment response mode SHOULD NOT be used, because scripts at the redirection endpoint can access the fragment; the default query response mode exposes the deferral code to URL-based logging, browser history, and Referer headers.
+The deferred response MUST NOT contain `code` or any other parameter that indicates synchronous completion. Although a deferral code is longer-lived than an intermediate code, possession of one confers nothing by itself: the first polling request requires the PKCE verifier, and every polling request requires the client authentication or DPoP key bound at the authorization request ({{deferred-processing}}). The default query response mode is therefore acceptable for the deferred response, exactly as it is for authorization codes. The fragment response mode SHOULD NOT be used, because scripts at the redirection endpoint can access the fragment for no benefit. A client MAY request the `form_post` response mode {{FORM-POST}} to keep the deferral code out of URLs, browser history, and Referer headers where logging hygiene warrants it.
 
-For example, using the form_post response mode:
+For example, using the default query response mode (line breaks are for display purposes only):
 
 ~~~ http
-HTTP/1.1 200 OK
-Content-Type: text/html;charset=UTF-8
-Cache-Control: no-store
-
-<html>
- <body onload="javascript:document.forms[0].submit()">
-  <form method="post" action="https://client.example.org/cb">
-   <input type="hidden" name="deferral_code"
-          value="8d67dc78-7faa-4d41-aabd-67707b374255"/>
-   <input type="hidden" name="state" value="af0ifjsldkj"/>
-   <input type="hidden" name="expires_in" value="900"/>
-   <input type="hidden" name="interval" value="30"/>
-   <input type="hidden" name="iss"
-          value="https://server.example.com"/>
-  </form>
- </body>
-</html>
+HTTP/1.1 302 Found
+Location: https://client.example.org/cb?
+  deferral_code=V7e1gP8zT2mN4qR6sW9xY3aB5cD7fH0jK2pL4uQ6vX8&
+  state=4L7xQ2mN9pR6sT1vW8yZ3aB5cD0fG2hJ&
+  expires_in=900&interval=30&
+  iss=https%3A%2F%2Fserver.example.com
 ~~~
 
 If the authorization server cannot complete synchronously and cannot or will not use direct deferral, it returns an authorization error response as described in Section 4.1.2.1 of {{RFC6749}}. When issuance could have been deferred had the client opted in, the error code SHOULD be `deferral_required`:
@@ -462,7 +451,7 @@ The client authenticates according to {{client-identity}}. When `dpop_jkt` was i
 
 The authorization server MUST validate the code and all of its bindings before processing the request. An invalid, expired, previously used, or incorrectly bound code MUST result in an `invalid_grant` error. A PKCE or DPoP binding failure is handled according to {{RFC7636}} or {{RFC9449}}, respectively.
 
-Because the intermediate code was issued for `response_type=software_statement`, a valid redemption returns the software statement response in {{software-statement-response}}; it MUST NOT return an access token or refresh token. Conversely, an authorization code issued for any other response type MUST NOT be redeemed for a software statement. Because the synchronous authorization response indicates that issuance has already been approved, redemption of an intermediate code never returns a deferred response.
+Because the intermediate code was issued for `response_type=software_statement`, a valid redemption returns the software statement response in {{software-statement-response}}; it MUST NOT return an access token or refresh token. Conversely, an authorization code issued for any other response type MUST NOT be redeemed for a software statement. Because the synchronous authorization response indicates that issuance has already been approved, redemption of an intermediate code never returns a deferred response. Per {{DTR}}, an authorization server MUST NOT reject a redemption request merely because it carries a `completion_mode` parameter; the parameter has no effect on redemption.
 
 # Backchannel Software Statement Request {#backchannel-request}
 
@@ -621,7 +610,8 @@ Cache-Control: no-store
 Pragma: no-cache
 
 {
-  "access_token": "eyJhbGciOiJFUzI1NiIsImtpZCI6IjEyMyJ9...",
+  "access_token":
+    "eyJ0eXAiOiJzb2Z0d2FyZS1zdGF0ZW1lbnQrand0...",
   "issued_token_type":
     "urn:ietf:params:oauth:token-type:software-statement",
   "token_type": "N_A",
@@ -787,7 +777,7 @@ The software statement is a signed credential and can contain sensitive deployme
 
 Before using either a code or deferral code, the client MUST verify `state` and MUST validate the authorization response `iss` parameter according to {{RFC9207}}. Although PKCE with `S256` already provides the cross-site request forgery protection described in {{RFC9700}}, this specification requires `state` because a client that opts in to deferral must correlate a response that can arrive on either the synchronous or the deferred path with its originating request before deciding how to redeem it.
 
-A direct deferred response returned in a URL exposes the deferral code to browser history, referrer fields, redirection-target logs, and other front-channel observers, and deferral codes can remain valid substantially longer than intermediate codes. The `form_post` response mode {{FORM-POST}} keeps the deferral code out of URLs and SHOULD be used for deferred responses as described in {{deferred-authorization-response}}; the fragment response mode SHOULD NOT be used.
+A deferral code returned in a URL is visible to browser history, referrer fields, redirection-target logs, and other front-channel observers for a validity period substantially longer than an intermediate code's. That exposure is contained by design: a stolen deferral code cannot be redeemed without the PKCE verifier consumed on the first poll and the client authentication or DPoP key required on every poll, so its disclosure reveals the existence of a pending request rather than a usable credential. The residual risk is cancellation: {{DTR}} cancels deferral codes through the revocation endpoint, and for a public client, which cannot authenticate at the revocation endpoint, a stolen code may allow an attacker to cancel a pending approval as a denial of service. Deployments sensitive to either residual can use the `form_post` response mode {{FORM-POST}} as described in {{deferred-authorization-response}}; the fragment response mode SHOULD NOT be used.
 
 ## Direct Deferral Sender Constraint
 
@@ -1008,6 +998,97 @@ Specification Document(s):
 : This specification, {{software-statement-format}}
 
 --- back
+
+# Deployment Examples {#deployment-examples}
+
+The scenarios in this appendix are non-normative. The first two connect the flows of this specification end to end and reference the normative sections that govern each step; the third marks the boundary where this specification deliberately does not apply.
+
+## Publisher Program: One Review, Many Customer Authorization Servers {#example-publisher}
+
+A developer builds TaskFlow, a workflow client used by customers of a marketplace. TaskFlow publishes its Client ID Metadata Document at `https://taskflow.example/oauth/metadata.json`; the document contains its production redirect URI and establishes `private_key_jwt` client authentication using a published `jwks_uri`. The marketplace operates a publisher program whose issuing authorization server is `https://issuer.marketplace.example`. Two participating customers operate authorization servers with issuer identifiers `https://as.customer-a.example` and `https://as.customer-b.example`. Each customer configures the publisher program as a trusted statement issuer, scoped to TaskFlow's client identifier namespace.
+
+1. TaskFlow's publisher tooling submits an authorization request through PAR ({{RFC9126}}). The request uses `response_type=software_statement`, requests both customer issuer identifiers by repeating `audience`, and includes `completion_mode=deferred`. Its `registration` overlay selects the production redirect URI and only the metadata needed for the reviewed deployment. The tooling then opens the resulting authorization request in the developer's user agent ({{authorization-request}}).
+2. The developer authenticates to the publisher program, which records the developer's identity in its audit trail. Because the compliance review takes two days, the authorization endpoint returns a direct deferred response ({{deferred-authorization-response}}). The tooling validates `state` and `iss`, presents the PKCE verifier on its first poll, and authenticates with `private_key_jwt` on every poll ({{deferred-processing}}).
+3. On approval, polling returns the software statement token response. The statement's `sub` is the TaskFlow metadata URL, its `aud` array contains the two requested authorization server issuer identifiers, and its `cimd_digest` binds the review to the exact metadata document evaluated.
+4. TaskFlow presents the statement in an {{RFC7591}} registration request at each customer authorization server. Each server verifies the `typ` header, signature, issuer, audience, lifetime, and other claims ({{software-statement-format}}), then assigns its own local `client_id`. Because the statement attests TaskFlow's `jwks_uri`, each registration uses the same attested client key material ({{multi-instance}}). One review is thereby honored at both authorization servers without weakening audience validation.
+5. Before the statement expires, TaskFlow's release pipeline renews it with an authenticated token exchange ({{token-exchange-profile}}), presenting the unexpired statement as the subject token and requesting the same audiences. Line breaks and indentation in the form body are for display only:
+
+~~~ http
+POST /token HTTP/1.1
+Host: issuer.marketplace.example
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3A
+  token-exchange
+  &requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3A
+  token-type%3Asoftware-statement
+  &subject_token=eyJ0eXAiOiJzb2Z0d2FyZS1zdGF0ZW1lbnQrand0...
+  &subject_token_type=urn%3Aietf%3Aparams%3Aoauth%3A
+  token-type%3Asoftware-statement
+  &client_id=https%3A%2F%2Ftaskflow.example%2Foauth%2F
+  metadata.json
+  &audience=https%3A%2F%2Fas.customer-a.example
+  &audience=https%3A%2F%2Fas.customer-b.example
+  &client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3A
+  client-assertion-type%3Ajwt-bearer
+  &client_assertion=eyJhbGciOiJFUzI1NiIsImtpZCI6InRhc2tmbG93LTEifQ...
+~~~
+
+Under the marketplace's renewal policy, the matching canonical digest and unchanged audience allow the exchange to complete synchronously without a new review. The policy decision, rather than the digest match alone, determines that result.
+
+## Enterprise Deployment of a Third-Party Agent {#example-enterprise}
+
+A vendor, ACME, ships an AI agent whose installations all share the client identifier URL `https://acme.example/agent`; the document at that URL describes the logical client software, so no per-installation metadata document exists. An enterprise deploys the agent for its workforce. Internal services each front a small authorization server, none staffed to review client software. The enterprise's identity platform, `https://idp.enterprise.example`, acts as the issuing authorization server in the attestation-service role of {{authorization-server-metadata}}: a token endpoint, metadata, and signing keys. The internal authorization servers `https://tools-as.enterprise.example` and `https://data-as.enterprise.example` each configure it as a trusted issuer for the ACME agent.
+
+1. The agent is a public client. The enterprise's platform tooling, a daemon with no user agent, sends a backchannel request ({{backchannel-request}}) with `client_id=https://acme.example/agent`, a `registration` overlay selecting a subset of ACME's canonical metadata, both internal authorization server issuer identifiers as repeated `audience` parameters, and `completion_mode=deferred`. It includes a DPoP proof and retains the private key for every polling request. The proof sender-constrains any resulting deferral code; it does not by itself authorize issuance for ACME's client identifier.
+2. The identity platform accepts the request for review and returns a DTR deferred response with a three-day lifetime. The tooling waits for the advertised interval, then polls with the deferred grant, the deferral code, and a fresh DPoP proof signed by the same key. It does not send a PKCE verifier because the deferral originated at the token endpoint ({{first-polling-request}}). The security team reviews the vendor assessment out of band; responses to pending polls repeat neither the deferral code nor the interval.
+3. On approval, the final poll returns the software statement token response. The tooling registers the agent once at each internal authorization server, supplying the statement together with plain registration metadata naming the enterprise's own instance issuer ({{multi-instance}}). At runtime, each agent instance proves itself at the token endpoints through assertions from that instance issuer ({{CLIENT-INSTANCE}}), so every installation shares one registration per server while tokens carry per-instance identity.
+
+The deferred response in step 2 is shown below. The HTTP 400 status and `authorization_pending` error indicate a successfully established deferral, not rejection:
+
+~~~ http
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "error": "authorization_pending",
+  "deferral_code":
+    "m9K2pL4uQ6vX8cD0fG2hJ5nR7sT1wY3aB6eP8zN4qV0",
+  "expires_in": 259200,
+  "interval": 300
+}
+~~~
+
+The registration request at the tools authorization server in step 3 is:
+
+~~~ http
+POST /register HTTP/1.1
+Host: tools-as.enterprise.example
+Content-Type: application/json
+
+{
+  "software_statement": "eyJ0eXAiOiJzb2Z0d2FyZS1zdGF0ZW1l...",
+  "instance_issuers": [
+    {
+      "issuer": "https://workload.enterprise.example",
+      "jwks_uri": "https://workload.enterprise.example/jwks.json"
+    }
+  ]
+}
+~~~
+
+Because the statement does not contain `instance_issuers`, the locally supplied value does not conflict with the precedence rule of {{RFC7591}}; it is not covered by the issuer's attestation, and accepting it is the registering server's policy.
+
+Finally, before the statement expires, the tooling submits a renewal exchange with the statement as subject token, the same two audiences, and `completion_mode=deferred`. When ACME has shipped an update that changes the canonical metadata document, the identity platform computes a current canonical digest that no longer matches the subject statement's `cimd_digest` ({{token-exchange-profile}}). Its issuance policy therefore defers the exchange for a fresh security review instead of copying claims from the old statement or renewing it silently.
+
+## The Resource Owner as Approver: A Case This Specification Does Not Serve {#example-resource-owner}
+
+Consider the same ACME agent in a different setting: an individual user runs an installation against the user's own authorization server, and the goal is to bind that installation to that user. The approving party is the resource owner. This is the case the applicability guidance in the Introduction deliberately excludes, and it is instructive to see why no software statement appears in its solution.
+
+The user's approval is the OAuth authorization grant itself: when the agent initiates an authorization code flow, the resource owner authenticates and consents, which is precisely the decision that a registration-time or issuance-time approval ceremony would duplicate. In a deployment that accepts Client ID Metadata Document identifiers without pre-registration, the agent can be identified directly by its generic client identifier URL {{CIMD}}. The per-installation binding lives in the tokens rather than in establishment state: the instance proves itself at the token endpoint through an instance assertion ({{CLIENT-INSTANCE}}), and the issued tokens carry the user as subject and the instance as actor, sender-constrained to a key that installation holds.
+
+A software statement would add nothing here. There is no second authorization server that needs to honor the decision, no approver other than the user already present in the transaction, and no review whose cost needs amortizing. The statement earns its place only when those conditions invert, as in {{example-enterprise}}, where the same agent software is approved once, by a party other than its users, for use across many authorization servers whose operators never review clients.
 
 # Design Rationale
 
