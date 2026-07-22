@@ -150,10 +150,16 @@ Table of Contents
 
    In practice, software statements are commonly issued through manual
    provisioning, deployment-specific portals, or proprietary federation
-   processes.  Those mechanisms do not give clients an interoperable way
-   to request a statement, redirect a user or administrator for
-   interaction, and retrieve the resulting credential without exposing
-   it through the browser.
+   processes.  Regulated ecosystems have each built this function
+   independently: the UK Open Banking Directory and the Australian
+   Consumer Data Right Register both operate central authorities that
+   issue software statements, which participants must present to member
+   authorization servers under ecosystem profiles of [RFC7591]
+   registration ([UK-OPEN-BANKING], [AU-CDR]).  Each defined its own
+   issuance interface because no standard one exists.  These mechanisms
+   do not give clients an interoperable way to request a statement,
+   redirect a user or administrator for interaction, and retrieve the
+   resulting credential without exposing it through the browser.
 
    The client establishment mechanisms adjacent to this specification
    are bilateral: pre-registration of a client identifier URL as
@@ -2057,6 +2063,10 @@ Table of Contents
               n.d., <https://datatracker.ietf.org/doc/draft-dellaert-
               oauth-approval-based-dcr>.
 
+   [AU-CDR]   "Consumer Data Standards (Australia)", n.d.,
+              <https://consumerdatastandardsaustralia.github.io/
+              standards/>.
+
    [CIBA]     "OpenID Connect Client-Initiated Backchannel
               Authentication Flow - Core 1.0", n.d.,
               <https://openid.net/specs/openid-client-initiated-
@@ -2066,6 +2076,10 @@ Table of Contents
               "OAuth 2.0 Client Instance Assertion", n.d.,
               <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
               client-instance-assertion>.
+
+   [OID4VCI]  "OpenID for Verifiable Credential Issuance 1.0", n.d.,
+              <https://openid.net/specs/openid-4-verifiable-credential-
+              issuance-1_0.html>.
 
    [OPENID-FED]
               "OpenID Federation 1.0", n.d.,
@@ -2085,6 +2099,11 @@ Table of Contents
               "OAuth Identity Assertion Trust Framework", n.d.,
               <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
               id-assertion-framework>.
+
+   [UK-OPEN-BANKING]
+              "Open Banking UK Dynamic Client Registration Specification
+              v3.3", n.d., <https://openbankinguk.github.io/dcr-docs-
+              pub/v3.3/dynamic-client-registration.html>.
 
 Appendix A.  Deployment Examples
 
@@ -2344,6 +2363,26 @@ B.1.  Comparison with Related Establishment Mechanisms
    otherwise has only the client's word.  Where a deployment outgrows
    pairwise issuer configuration, OpenID Federation provides the trust-
    chain infrastructure this specification deliberately omits.
+
+   OpenID for Verifiable Credential Issuance [OID4VCI] shares this
+   specification's issuance shape: an authorization code flow, a pre-
+   authorized path for decisions made in advance, and deferred issuance
+   for decisions that take time.  It is nevertheless not an alternative
+   rail for this artifact.  [OID4VCI] issues credentials to a wallet,
+   ordinarily bound to a key the wallet holds, for later presentation to
+   verifiers; a software statement is deliberately software-level rather
+   than holder-bound, covers every instance of the software, and is
+   consumed not by presentation but by the software_statement member of
+   an [RFC7591] registration request.  A profile of [OID4VCI] that
+   issued software statements would still have to define what this
+   specification defines, namely the statement format, the canonical-
+   metadata binding, and the registration-endpoint consumption, while
+   adding credential issuer metadata, proof and nonce handling, and
+   wallet machinery that a registration workflow does not use.  The two
+   therefore compose rather than compete: an ecosystem that already
+   operates [OID4VCI] infrastructure can carry a software statement as a
+   credential payload, and the payload's meaning at a registration
+   endpoint remains as this specification defines it.
 
 B.2.  Why Use the Authorization Endpoint
 
