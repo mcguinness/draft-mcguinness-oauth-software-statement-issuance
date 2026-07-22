@@ -61,6 +61,9 @@ normative:
 
 informative:
   RFC8628:
+  ABCA:
+    target: https://datatracker.ietf.org/doc/draft-ietf-oauth-attestation-based-client-auth
+    title: "OAuth 2.0 Attestation-Based Client Authentication"
   APPROVAL-DCR:
     target: https://datatracker.ietf.org/doc/draft-dellaert-oauth-approval-based-dcr
     title: "OAuth 2.0 Approval-Based Dynamic Client Registration"
@@ -486,6 +489,8 @@ The client authenticates according to {{client-identity}} when its metadata esta
 
 A backchannel request from a public client is unauthenticated, and a DPoP proof does not change that. Such a request MUST NOT complete synchronously: the authorization server MUST defer it and MUST NOT issue the statement until it has verified out of band that the requesting party is authorized to act for the client identifier. That verification MUST be bound to the specific request and its DPoP key. The redirect flow needs no such rule because its response is delivered to a redirection endpoint registered in the client's own metadata document, which demonstrates the requester's association with the client software. Accepting unauthenticated initiations consumes retrieval, queue, and deferral resources; {{backchannel-te-considerations}} describes the exposure and the mitigations, including declining backchannel initiation entirely in favor of the token exchange profile.
 
+A client whose metadata establishes attestation-based client authentication {{ABCA}} is not unauthenticated: its request carries an attestation whose subject is the client identifier URL, signed by an attester vouching that the requester is a genuine instance of that client software holding the attested key. When the authorization server trusts the attester, the attestation supplies in band the requester-to-software association that the redirect flow demonstrates by delivering its response to a registered redirection endpoint. Whether that evidence alone authorizes issuance, and whether issuance may then complete synchronously, is issuance policy. Trust in an attester SHOULD be scoped to the client identifier namespaces it is expected to attest, as trust in statement issuers is ({{statement-validation}}).
+
 The authorization server MUST obtain and validate the Client ID Metadata Document and any overlay exactly as in the redirect flow and MUST bind the metadata snapshot ({{metadata-snapshot}}) and the requested audience before returning either the software statement or a deferral code. Because no user agent is present, approval and any verification of the requesting party occur out of band. The authorization server MUST apply the same issuance policy to backchannel requests as to redirect flow requests.
 
 If issuance completes immediately, the authorization server returns the software statement token response ({{software-statement-response}}). If issuance remains pending, the authorization server returns the deferred token response defined by {{DTR}}, and the client polls according to {{deferred-processing}}.
@@ -703,7 +708,7 @@ A software statement attests client software, identified by `sub`; it does not a
 
 A single unexpired statement is therefore intended to be presented more than once: at each trusting authorization server in its audience and, where local policy permits, in more than one registration at the same authorization server, for example one registration per deployment or tenant. A trusting authorization server SHOULD use the statement's `sub` and `jti` to inventory the registrations derived from a statement and to enforce any local bound on their number.
 
-Deployments whose client software runs as many concurrent instances SHOULD register the logical client once per authorization server and differentiate instances at the token endpoint, for example with {{CLIENT-INSTANCE}}, rather than minting a registration per instance. Where authorization server policy is keyed on `client_id` and genuinely requires per-instance registrations, the same statement can support that model only if it omits `jwks` and `jwks_uri`: each registration can then supply its own instance key as plain metadata, subject to trusting authorization server policy. Omitting them also forecloses token exchange renewal for a client without an authentication method ({{token-exchange-profile}}). If the statement contains `jwks` or `jwks_uri`, that attested value takes precedence under {{RFC7591}} and every registration derived from the statement MUST use the attested key material rather than an instance-supplied replacement. A third model combines attestation with per-instance keys: the statement omits key material but attests the `instance_issuers` delegation ({{attesting-instance-issuers}}), so that instance keys are endorsed by an attested authority at the token endpoint instead of appearing unattested in registration metadata.
+Deployments whose client software runs as many concurrent instances SHOULD register the logical client once per authorization server and differentiate instances at the token endpoint, for example with {{CLIENT-INSTANCE}} or attestation-based client authentication {{ABCA}}, rather than minting a registration per instance. Where authorization server policy is keyed on `client_id` and genuinely requires per-instance registrations, the same statement can support that model only if it omits `jwks` and `jwks_uri`: each registration can then supply its own instance key as plain metadata, subject to trusting authorization server policy. Omitting them also forecloses token exchange renewal for a client without an authentication method ({{token-exchange-profile}}). If the statement contains `jwks` or `jwks_uri`, that attested value takes precedence under {{RFC7591}} and every registration derived from the statement MUST use the attested key material rather than an instance-supplied replacement. A third model combines attestation with per-instance keys: the statement omits key material but attests the `instance_issuers` delegation ({{attesting-instance-issuers}}), so that instance keys are endorsed by an attested authority at the token endpoint instead of appearing unattested in registration metadata.
 
 ## Attesting Instance Issuers {#attesting-instance-issuers}
 
@@ -811,7 +816,7 @@ The absence of a user agent removes front-channel exposure: neither the deferral
 
 Sender constraint for every deferral is established at its originating token request through client authentication or a DPoP proof; polling carries no PKCE state, the redirect flow's `code_verifier` having been consumed at redemption ({{software-statement-code-redemption}}). If a callback is configured, the client uses `client_notification_token` as defined by {{DTR}}; that token authenticates the callback but does not authorize issuance.
 
-## Statement Validation and Replay
+## Statement Validation and Replay {#statement-validation}
 
 A software statement is intended to be presented more than once ({{multi-instance}}); until it expires, it can equally be presented by a party that steals it, at every registration endpoint included in its audience. Issuers SHOULD use the narrowest practical audience and lifetime. Trusting authorization servers SHOULD track `jti` values to inventory the registrations derived from a statement and to enforce any local bound on their number.
 
