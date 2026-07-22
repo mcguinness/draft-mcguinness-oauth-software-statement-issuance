@@ -92,6 +92,7 @@ Table of Contents
      10.1.  First Polling Request
      10.2.  Subsequent Polling Requests
    11. Software Statement Token Response
+     11.1.  Terminal Denial
    12. Software Statement Format
    13. Multi-Instance Client Software
      13.1.  Attesting Instance Issuers
@@ -112,9 +113,10 @@ Table of Contents
      17.1.  OAuth Authorization Endpoint Response Types Registry
      17.2.  OAuth URI Registry
      17.3.  OAuth Parameters Registry
-     17.4.  OAuth Authorization Server Metadata Registry
-     17.5.  Media Type Registration
-     17.6.  JSON Web Token Claims Registry
+     17.4.  OAuth Extensions Error Registry
+     17.5.  OAuth Authorization Server Metadata Registry
+     17.6.  Media Type Registration
+     17.7.  JSON Web Token Claims Registry
    18. References
      18.1.  Normative References
      18.2.  Informative References
@@ -639,7 +641,8 @@ Table of Contents
    dpop_jkt.
 
    The following is a non-normative example of an authorization request
-   (line breaks are for display purposes only):
+   from a confidential client; a public client would additionally
+   include dpop_jkt (line breaks are for display purposes only):
 
    GET /authorize?response_type=software_statement_code
      &client_id=https%3A%2F%2Fclient.example.org%2Fmetadata.json
@@ -825,6 +828,10 @@ Table of Contents
    code_verifier:  REQUIRED.  The PKCE verifier corresponding to the
       code_challenge in the authorization request.
 
+   completion_mode:  REQUIRED.  A value that includes deferred, as
+      defined by [DTR], signaling that the client accepts a deferred
+      token response (Section 8).
+
    client_notification_token:  OPTIONAL.  The callback authentication
       credential defined by [DTR], with the same requirements as in
       Section 8.
@@ -841,13 +848,16 @@ Table of Contents
    invalid_grant error; a PKCE or DPoP binding failure is handled
    according to [RFC7636] or [RFC9449], respectively.
 
-   If the issuance decision has completed, the authorization server
-   returns the software statement token response (Section 11).  If it
-   remains pending, the authorization server defers the redemption with
-   the deferred token response of [DTR], binding the deferral state to
-   the same client identifier, metadata snapshot, requested audience,
-   and client authentication or DPoP key as the software statement code,
-   and the client polls according to Section 10.
+   If the issuance decision has completed with approval, the
+   authorization server returns the software statement token response
+   (Section 11).  If it has completed with denial, the authorization
+   server returns the terminal denial of Section 11.1 and the software
+   statement code is consumed.  If it remains pending, the authorization
+   server defers the redemption with the deferred token response of
+   [DTR], binding the deferral state to the same client identifier,
+   metadata snapshot, requested audience, and client authentication or
+   DPoP key as the software statement code, and the client polls
+   according to Section 10.
 
 8.  Backchannel Software Statement Request
 
@@ -864,13 +874,23 @@ Table of Contents
    token exchange profile (Section 9) instead.
 
    Every request under this grant, whether a backchannel initiation or a
-   software statement code redemption (Section 7), is deferral-willing
-   by definition: sending it constitutes the client opt-in that [DTR]
-   requires, and a client implementing this specification MUST support
-   the polling grant of Section 10.  The completion_mode parameter of
-   [DTR] is not used: a client MUST NOT send it, and an authorization
-   server MUST ignore it if present, which preserves [DTR]'s requirement
-   that the parameter never cause rejection.
+   software statement code redemption (Section 7), MUST include the
+   completion_mode parameter of [DTR] with a value that includes
+   deferred.  Issuance routinely completes out of band, so this profile
+   makes [DTR]'s opt-in mandatory rather than implicit: a client that
+   requires synchronous handling cannot use this grant, and a client
+   implementing this specification MUST support the polling grant of
+   Section 10.  The authorization server MUST reject a request under
+   this grant whose completion_mode does not include deferred with
+   invalid_request; requiring the parameter keeps this profile within
+   the unmodified deferral model of [DTR], under which a server does not
+   defer a request that has not opted in.
+
+   The presence of software_statement_code selects redemption and its
+   absence selects initiation.  The authorization server MUST reject
+   with invalid_request a request that combines the parameters of one
+   operation with the other, rather than ignoring the extraneous
+   parameters.
 
    The client sends an HTTP POST request to the token endpoint using the
    application/x-www-form-urlencoded format with:
@@ -885,6 +905,10 @@ Table of Contents
       overlay described in Section 5.2, subject to the same validation
       rules.  Rule 6 does not apply, because the request uses no
       redirect_uri.
+
+   completion_mode:  REQUIRED.  A value that includes deferred, as
+      defined by [DTR], signaling that the client accepts a deferred
+      token response.
 
    audience:  OPTIONAL.  The requested audience described in Section 5.
       The same syntax, validation, and narrowing rules apply.
@@ -947,8 +971,8 @@ Table of Contents
    *  Failed client authentication results in invalid_client with HTTP
       status code 401.
 
-   *  A request rejected by issuance policy results in access_denied
-      with HTTP status code 400.
+   *  A request denied by issuance policy results in the terminal denial
+      of Section 11.1: access_denied with HTTP status code 400.
 
    *  A server that does not support the grant at all returns
       unsupported_grant_type; one that supports it only for redemption
@@ -970,6 +994,7 @@ Table of Contents
    grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3A
      software-statement
      &client_id=https%3A%2F%2Fclient.example.org%2Fmetadata.json
+     &completion_mode=deferred
 
 9.  Token Exchange Profile
 
@@ -1020,6 +1045,10 @@ Table of Contents
       overlay described in Section 5.2, subject to the same validation
       rules.  Rule 6 does not apply.
 
+   completion_mode:  REQUIRED.  A value that includes deferred, as
+      defined by [DTR], signaling that the client accepts a deferred
+      token response.
+
    client_notification_token:  OPTIONAL.  The callback authentication
       credential defined by [DTR], with the same requirements as in
       Section 8.
@@ -1027,11 +1056,13 @@ Table of Contents
    The request MUST NOT contain actor_token or actor_token_type.  The
    prohibitions of Section 5.1 apply: the request MUST NOT contain
    scope, resource, or authorization_details.  An exchange requesting
-   urn:ietf:params:oauth:token-type:software-statement is deferral-
-   willing by definition, constituting the client opt-in that [DTR]
-   requires; the token exchange grant is within [DTR]'s scope, and the
-   completion_mode parameter is not used: a client MUST NOT send it, and
-   it MUST be ignored if present.
+   urn:ietf:params:oauth:token-type:software-statement MUST include the
+   completion_mode parameter of [DTR] with a value that includes
+   deferred: the token exchange grant is within [DTR]'s scope, and
+   issuance policy can defer any exchange, so a client that requires
+   synchronous handling cannot use this profile.  The authorization
+   server MUST reject an exchange for this token type that does not opt
+   in to deferral with invalid_request.
 
    The client authenticates according to Section 4.  A public client
    MUST include a DPoP proof [RFC9449] on the exchange request; the
@@ -1085,6 +1116,8 @@ Table of Contents
    carries the [RFC8693] response members.  If processing cannot
    complete immediately, the authorization server returns the deferred
    token response of [DTR] and the client polls according to Section 10.
+   An exchange denied by issuance policy returns the terminal denial of
+   Section 11.1.
 
 10.  Deferred Processing
 
@@ -1209,6 +1242,26 @@ Table of Contents
    Whether replacement requires new approval is determined by issuer
    policy.
 
+11.1.  Terminal Denial
+
+   When the authorization server decides not to issue the requested
+   software statement, whether that decision is already complete when
+   the originating request arrives or completes during deferred
+   processing, it returns a token error response per Section 5.2 of
+   [RFC6749] with the error code access_denied and HTTP status code 400,
+   and MUST include the Cache-Control: no-store response header field.
+   The same rule applies to all three originating requests: a software
+   statement code redemption (Section 7), a backchannel initiation
+   (Section 8), and a token exchange (Section 9).  A decision that
+   completes as a denial during deferred processing is delivered in
+   response to a polling request (Section 10).
+
+   The denial is terminal for the request: a software statement code
+   presented with a denied redemption is consumed, and any deferral
+   state is closed, after which its deferral code MUST be treated as an
+   unrecognized token per [DTR].  A denial does not preclude a later
+   software statement request; whether to accept one is issuance policy.
+
 12.  Software Statement Format
 
    The software statement is a compact JWT [RFC7519] protected by a
@@ -1224,14 +1277,14 @@ Table of Contents
    value software-statement+jwt, applying the explicit typing
    recommendation in Section 3.11 of [RFC8725].  As described in
    Section 4.1.9 of [RFC7515], this value names the media type
-   application/software-statement+jwt (Section 17.5) with the
+   application/software-statement+jwt (Section 17.6) with the
    application/ prefix omitted.  Explicit typing prevents other JWTs
    signed by the same issuer, such as JWT access tokens or ID Tokens,
    from being accepted as software statements.  The type value also
    anchors format evolution: extensions add claims, which are additive
    under standard JWT processing, while an incompatible future revision
    would define a new type value rather than change the meaning of this
-   one.  Signing algorithm agility is negotiated through
+   one.  Supported signing algorithms are published in
    software_statement_signing_alg_values_supported (Section 14).
 
    The JWT payload MUST contain the following claims in addition to the
@@ -1833,7 +1886,10 @@ Table of Contents
    Section 5.2, Section 8, and Section 9, as an additional reference for
    the existing registration parameter and extend its usage location to
    include token requests.  The parameter name and change controller are
-   unchanged.
+   unchanged.  Because the registered change controller for registration
+   is the OpenID Foundation Artifact Binding working group, this usage-
+   location extension requires that change controller's agreement, and
+   IANA is asked to effect the update in coordination with it.
 
    This specification further requests that IANA add this specification,
    Section 5, Section 8, and Section 9, as an additional reference for
@@ -1853,7 +1909,39 @@ Table of Contents
    Specification Document(s):  This specification, Section 6.1 and
       Section 7
 
-17.4.  OAuth Authorization Server Metadata Registry
+17.4.  OAuth Extensions Error Registry
+
+   This specification requests registration of the following error usage
+   in the IANA "OAuth Extensions Error Registry" established by
+   [RFC6749]:
+
+   Error name:  access_denied
+
+   Error usage location:  token error response
+
+   Related protocol extension:  The software statement grant (Section 8)
+      and token exchange profile (Section 9) of this specification
+
+   Change controller:  IETF
+
+   Specification document(s):  This specification, Section 11.1
+
+   It further requests registration of the following error usage:
+
+   Error name:  invalid_target
+
+   Error usage location:  authorization error response, token error
+      response
+
+   Related protocol extension:  The software_statement_code response
+      type and the audience parameter usage of this specification
+
+   Change controller:  IETF
+
+   Specification document(s):  This specification, Section 5 and
+      Section 8
+
+17.5.  OAuth Authorization Server Metadata Registry
 
    This specification requests registration of the following values in
    the IANA "OAuth Authorization Server Metadata" registry established
@@ -1900,7 +1988,7 @@ Table of Contents
    Specification Document(s):  This specification, Section 14 and
       Section 9
 
-17.5.  Media Type Registration
+17.6.  Media Type Registration
 
    This specification requests registration of the application/software-
    statement+jwt media type in the IANA "Media Types" registry
@@ -1945,7 +2033,7 @@ Table of Contents
 
    Change controller:  IETF
 
-17.6.  JSON Web Token Claims Registry
+17.7.  JSON Web Token Claims Registry
 
    This specification requests registration of the following value in
    the IANA "JSON Web Token Claims" registry established by [RFC7519]:
@@ -2205,6 +2293,7 @@ A.1.  Publisher Program: One Review, Many Customer Authorization Servers
      metadata.json
      &audience=https%3A%2F%2Fas.customer-a.example
      &audience=https%3A%2F%2Fas.customer-b.example
+     &completion_mode=deferred
      &client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3A
      client-assertion-type%3Ajwt-bearer
      &client_assertion=eyJhbGciOiJFUzI1NiIsImtpZCI6InRhc2tmbG93LTEifQ...
@@ -2506,11 +2595,15 @@ B.6.  Why One Grant Type, and Why the Software Statement Code Is Not an
       Authorization Code
 
    One new grant type suffices for both of this specification's token
-   endpoint operations: a request that carries an
-   software_statement_code completes a redirect flow, and one that does
-   not initiates a backchannel request.  The ambiguity a shared grant
-   once implied is gone, because an initiation from an unauthenticated
-   public client can no longer mint anything synchronously (Section 8).
+   endpoint operations, dispatched by the presence of
+   software_statement_code: a request that carries one completes a
+   redirect flow, and one that does not initiates a backchannel request.
+   The two request shapes share no distinguishing optional parameters,
+   and a request that mixes them is rejected (Section 8), so dispatch is
+   deterministic even though it rests on a parameter rather than the
+   grant type value.  The security question a shared grant might raise
+   is settled separately: an initiation from an unauthenticated public
+   client can never mint anything synchronously (Section 8).
 
    The software statement code is deliberately not an authorization
    code.  Reusing authorization_code for redemption would contradict
