@@ -434,6 +434,40 @@ Table of Contents
    statement obtains a statement through token exchange instead
    (Section 9).
 
+   Four elements interact across every flow.  The client is identified
+   by its Client ID Metadata Document [CIMD]: an HTTPS URL, used as
+   client_id, whose content is the canonical client metadata.  The
+   issuing authorization server fetches that document, snapshots it
+   (Section 4.1), makes the issuance decision, and signs the software
+   statement.  The client then presents the statement, potentially many
+   times, in [RFC7591] registration requests at the trusting
+   authorization servers in its audience.  One issuance decision serves
+   M registrations; that portability is what distinguishes a statement
+   from per-server establishment (Appendix B.1).
+
+                   +--------------------------+
+                   | Client ID Metadata       |
+                   | Document (client_id URL) |
+                   +--------------------------+
+                     ^                      ^
+               hosts |                      | fetches and
+                     |                      |   snapshots
+   +----------+      |                      |      +---------------+
+   |          +------+                      +------+    Issuing    |
+   |  Client  |                                    | Authorization |
+   |          |--(1) software statement request -->|    Server     |
+   |          |<-(2) software statement -----------|   (approval)  |
+   +----------+      (signed JWT)                  +---------------+
+        |
+        | (3) RFC 7591 registration request
+        |     carrying the software statement
+        v
+   +---------------+  +---------------+       +---------------+
+   |   Trusting    |  |   Trusting    |  ...  |   Trusting    |
+   | Authorization |  | Authorization |       | Authorization |
+   |   Server 1    |  |   Server 2    |       |   Server M    |
+   +---------------+  +---------------+       +---------------+
+
 3.1.  Redirect Flow Overview
 
    +--------+                                  +----------------------+

@@ -1491,6 +1491,33 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <a href="#section-3" class="section-number selfRef">3. </a><a href="#name-protocol-overview" class="section-name selfRef">Protocol Overview</a>
       </h2>
 <p id="section-3-1">A client initiates a software statement request through one of two flows. The redirect flow uses the authorization endpoint and a user agent and supports interactive authentication or consent during issuance. The backchannel flow uses only the token endpoint and serves software without access to a user agent. In every flow, the authorization server either completes the issuance decision synchronously or defers it at the token endpoint under <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>. A client that already holds a qualifying credential or a prior statement obtains a statement through token exchange instead (<a href="#token-exchange-profile" class="auto internal xref">Section 9</a>).<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">Four elements interact across every flow. The client is identified by its Client ID Metadata Document <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span>: an HTTPS URL, used as <code>client_id</code>, whose content is the canonical client metadata. The issuing authorization server fetches that document, snapshots it (<a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>), makes the issuance decision, and signs the software statement. The client then presents the statement, potentially many times, in <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> registration requests at the trusting authorization servers in its audience. One issuance decision serves M registrations; that portability is what distinguishes a statement from per-server establishment (<a href="#comparison" class="auto internal xref">Appendix B.1</a>).<a href="#section-3-2" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-3-3">
+<pre>
+                +--------------------------+
+                | Client ID Metadata       |
+                | Document (client_id URL) |
+                +--------------------------+
+                  ^                      ^
+            hosts |                      | fetches and
+                  |                      |   snapshots
++----------+      |                      |      +---------------+
+|          +------+                      +------+    Issuing    |
+|  Client  |                                    | Authorization |
+|          |--(1) software statement request --&gt;|    Server     |
+|          |&lt;-(2) software statement -----------|   (approval)  |
++----------+      (signed JWT)                  +---------------+
+     |
+     | (3) RFC 7591 registration request
+     |     carrying the software statement
+     v
++---------------+  +---------------+       +---------------+
+|   Trusting    |  |   Trusting    |  ...  |   Trusting    |
+| Authorization |  | Authorization |       | Authorization |
+|   Server 1    |  |   Server 2    |       |   Server M    |
++---------------+  +---------------+       +---------------+
+</pre><a href="#section-3-3" class="pilcrow">¶</a>
+</div>
 <div id="redirect-flow-overview">
 <section id="section-3.1">
         <h3 id="name-redirect-flow-overview">
