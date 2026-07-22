@@ -154,7 +154,7 @@ OAuth terminology is defined by {{RFC6749}}. Client metadata and software statem
 This specification additionally defines the following terms:
 
 Software Statement Request:
-: A request in which a client asks an authorization server to issue a software statement, sent either as an authorization request with `response_type=software_statement_code` (the redirect flow) or as a `urn:ietf:params:oauth:grant-type:software-statement` grant request to the token endpoint (the backchannel flow).
+: A request in which a client asks an authorization server to issue a software statement, sent either as an authorization request with `response_type=software_statement_code` (the redirect flow) or as a `urn:ietf:params:oauth:grant-type:software-statement` grant request without a `software_statement_code` (the backchannel flow).
 
 Issuing Authorization Server:
 : The authorization server that processes a software statement request and signs the resulting software statement.
@@ -242,7 +242,7 @@ At (C), the client redeems the `software_statement_code` at the token endpoint w
     |<------------------------------------------------|
 ~~~
 
-At (A), the client sends the software statement grant request directly to the token endpoint, authenticating according to {{client-identity}} when the Client ID Metadata Document establishes an authentication method and optionally including a `registration` overlay in the request body. If issuance completes immediately, the authorization server returns the software statement at (B1). If issuance remains pending and the client opted in to deferral, the authorization server returns the deferred token response of {{DTR}} at (B2), and the client polls at (C) until it receives the final response. {{backchannel-request}} defines this flow.
+At (A), the client sends the software statement grant request directly to the token endpoint, authenticating according to {{client-identity}} when the Client ID Metadata Document establishes an authentication method and optionally including a `registration` overlay in the request body. If issuance completes immediately, the authorization server returns the software statement at (B1). If issuance remains pending, the authorization server returns the deferred token response of {{DTR}} at (B2), and the client polls at (C) until it receives the final response. {{backchannel-request}} defines this flow.
 
 # Client Identification and Authentication {#client-identity}
 
@@ -256,7 +256,7 @@ A public client using the redirect flow MUST include `dpop_jkt` in the authoriza
 
 ## Metadata Snapshot {#metadata-snapshot}
 
-Client metadata documents can change while a request is pending. Before returning an software statement code or a deferral code, the authorization server MUST bind it to the validated canonical metadata and registration overlay. The bound values constitute the metadata snapshot for the request.
+Client metadata documents can change while a request is pending. Before returning a software statement code or a deferral code, the authorization server MUST bind it to the validated canonical metadata and registration overlay. The bound values constitute the metadata snapshot for the request.
 
 The authorization server MAY retrieve the document again before issuing the software statement. If it does so and detects a security-relevant change (for example, a change to `jwks`, `jwks_uri`, `redirect_uris`, `token_endpoint_auth_method`, or any metadata selected by the overlay), it MUST either re-evaluate the request under the new metadata or reject the request. It MUST NOT silently combine values from different document versions.
 
@@ -370,7 +370,7 @@ The authorization server returns the following parameters to the client's redire
 `iss`:
 : REQUIRED. The authorization server issuer identification parameter defined by {{RFC9207}}.
 
-An software statement code is not an authorization code and MUST NOT be redeemable as one. Possession of one confers nothing by itself: redemption requires the PKCE verifier and, for a public client, a DPoP proof with the `dpop_jkt` key, so the default query response mode is acceptable exactly as it is for authorization codes. The fragment response mode SHOULD NOT be used, because scripts at the redirection endpoint can access the fragment for no benefit. A client MAY request the `form_post` response mode {{FORM-POST}} to keep the code out of URLs, browser history, and Referer headers where logging hygiene warrants it.
+A software statement code is not an authorization code and MUST NOT be redeemable as one. Possession of one confers nothing by itself: redemption requires the PKCE verifier and, for a public client, a DPoP proof with the `dpop_jkt` key, so the default query response mode is acceptable exactly as it is for authorization codes. The fragment response mode SHOULD NOT be used, because scripts at the redirection endpoint can access the fragment for no benefit. A client MAY request the `form_post` response mode {{FORM-POST}} to keep the code out of URLs, browser history, and Referer headers where logging hygiene warrants it.
 
 For example, using the default query response mode (line breaks are for display purposes only):
 
@@ -386,7 +386,7 @@ Errors follow Section 4.1.2.1 of {{RFC6749}}.
 
 # Software Statement Code Redemption {#software-statement-code-redemption}
 
-The client redeems an software statement code by sending an HTTP `POST` request to the token endpoint using the `application/x-www-form-urlencoded` format with:
+The client redeems a software statement code by sending an HTTP `POST` request to the token endpoint using the `application/x-www-form-urlencoded` format with:
 
 `grant_type`:
 : REQUIRED. The value MUST be `urn:ietf:params:oauth:grant-type:software-statement`.
@@ -414,9 +414,9 @@ If the issuance decision has completed, the authorization server returns the sof
 
 # Backchannel Software Statement Request {#backchannel-request}
 
-A client without access to a user agent can request a software statement directly at the token endpoint. An authorization server advertises support for this flow by listing `urn:ietf:params:oauth:grant-type:software-statement` in `grant_types_supported` ({{authorization-server-metadata}}); a client MUST NOT send a backchannel request to an authorization server that does not advertise that value. This grant carries no credential beyond client authentication; a client that holds a pre-authorization credential or a prior statement presents it through the token exchange profile ({{token-exchange-profile}}) instead.
+A client without access to a user agent can request a software statement directly at the token endpoint. An authorization server advertises support for this flow with the `software_statement_backchannel_supported` metadata member ({{authorization-server-metadata}}); advertising the grant alone does not signal initiation support, because the same grant redeems software statement codes. A client MUST NOT send a backchannel initiation to an authorization server that does not advertise support. This grant carries no credential beyond client authentication; a client that holds a pre-authorization credential or a prior statement presents it through the token exchange profile ({{token-exchange-profile}}) instead.
 
-Every request under this grant, whether a backchannel initiation or an software statement code redemption ({{software-statement-code-redemption}}), is deferral-willing by definition: sending it constitutes the client opt-in that {{DTR}} requires, and a client implementing this specification MUST support the polling grant of {{deferred-processing}}. The `completion_mode` parameter of {{DTR}} is not used and MUST be ignored if present.
+Every request under this grant, whether a backchannel initiation or a software statement code redemption ({{software-statement-code-redemption}}), is deferral-willing by definition: sending it constitutes the client opt-in that {{DTR}} requires, and a client implementing this specification MUST support the polling grant of {{deferred-processing}}. The `completion_mode` parameter of {{DTR}} is not used: a client MUST NOT send it, and an authorization server MUST ignore it if present, which preserves {{DTR}}'s requirement that the parameter never cause rejection.
 
 The client sends an HTTP `POST` request to the token endpoint using the `application/x-www-form-urlencoded` format with:
 
@@ -451,7 +451,7 @@ Other backchannel errors use the token error response format of Section 5.2 of {
 * An unacceptable requested audience results in `invalid_target` {{RFC8693}} with HTTP status code 400.
 * Failed client authentication results in `invalid_client` with HTTP status code 401.
 * A request rejected by issuance policy results in `access_denied` with HTTP status code 400.
-* A server that does not support the backchannel grant returns `unsupported_grant_type` with HTTP status code 400.
+* A server that does not support the grant at all returns `unsupported_grant_type`; one that supports it only for redemption rejects an initiation with `invalid_request`. Both use HTTP status code 400.
 
 These errors are terminal for the submitted request. The authorization server MUST include `Cache-Control: no-store` on every backchannel error response.
 
@@ -495,7 +495,7 @@ The client sends a token exchange request as defined in Section 2.1 of {{RFC8693
 `client_notification_token`:
 : OPTIONAL. The callback authentication credential defined by {{DTR}}, with the same requirements as in {{backchannel-request}}.
 
-The request MUST NOT contain `actor_token` or `actor_token_type`. The prohibitions of {{prohibited-parameters}} apply: the request MUST NOT contain `scope`, `resource`, or `authorization_details`. An exchange requesting `urn:ietf:params:oauth:token-type:software-statement` is deferral-willing by definition, constituting the client opt-in that {{DTR}} requires; the token exchange grant is within {{DTR}}'s scope, and the `completion_mode` parameter is not used.
+The request MUST NOT contain `actor_token` or `actor_token_type`. The prohibitions of {{prohibited-parameters}} apply: the request MUST NOT contain `scope`, `resource`, or `authorization_details`. An exchange requesting `urn:ietf:params:oauth:token-type:software-statement` is deferral-willing by definition, constituting the client opt-in that {{DTR}} requires; the token exchange grant is within {{DTR}}'s scope, and the `completion_mode` parameter is not used: a client MUST NOT send it, and it MUST be ignored if present.
 
 The client authenticates according to {{client-identity}}. A public client MUST include a DPoP proof {{RFC9449}} on the exchange request; the authorization server MUST bind any resulting deferral state to the proof's public key, and the polling rules of {{deferred-processing}} apply as for a backchannel deferral.
 
@@ -511,7 +511,7 @@ Whether an exchange completes synchronously or defers for approval is issuance p
 
 # Deferred Processing {#deferred-processing}
 
-Every deferral originates from a deferred token response of {{DTR}}, issued for an software statement code redemption ({{software-statement-code-redemption}}), a backchannel request ({{backchannel-request}}), or a token exchange ({{token-exchange-profile}}). The client polls the token endpoint using the polling grant defined by {{DTR}}.
+Every deferral originates from a deferred token response of {{DTR}}, issued for a software statement code redemption ({{software-statement-code-redemption}}), a backchannel request ({{backchannel-request}}), or a token exchange ({{token-exchange-profile}}). The client polls the token endpoint using the polling grant defined by {{DTR}}.
 
 Approval of a software statement request can take hours or days rather than the seconds typical of user authentication, for example when it involves reviewing the client's policy or compliance documentation. Issuers SHOULD set deferral code lifetimes that reflect their actual approval latency. A client with a registered notification endpoint SHOULD use the callback mechanism of {{DTR}} together with `client_notification_token` on the originating token request, while continuing to poll as required by {{DTR}}.
 
@@ -529,7 +529,7 @@ The polling request carries no PKCE parameter: for a redirect-flow deferral, the
 
 The client authenticates according to {{client-identity}}. If the deferral is bound to a DPoP key, through `dpop_jkt` in the redirect flow or the initiating DPoP proof otherwise, the client MUST send a DPoP proof signed with the corresponding key. The authorization server MUST reject a proof whose key does not match the stored thumbprint.
 
-The first polling request MUST NOT contain an `software_statement_code`, `code_verifier`, `redirect_uri`, `registration`, `audience`, `client_notification_token`, `subject_token`, `subject_token_type`, or `requested_token_type` parameter.
+The first polling request MUST NOT contain a `software_statement_code`, `code_verifier`, `redirect_uri`, `registration`, `audience`, `client_notification_token`, `subject_token`, `subject_token_type`, or `requested_token_type` parameter.
 
 ## Subsequent Polling Requests
 
@@ -675,7 +675,7 @@ The issuing authorization server is a role, named the way "trusting authorizatio
 
 An authorization server that issues software statements under this specification advertises `true` for `client_id_metadata_document_supported`, as defined by {{CIMD}}, and publishes `software_statement_signing_alg_values_supported` below.
 
-Every issuer advertises `urn:ietf:params:oauth:grant-type:software-statement` in `grant_types_supported` and `true` for `deferred_token_response_supported`, as defined by {{DTR}}: the grant serves both software statement code redemption and backchannel initiation, and deferred processing is integral to every flow.
+Every issuer advertises `urn:ietf:params:oauth:grant-type:software-statement` in `grant_types_supported` and `true` for `deferred_token_response_supported`, as defined by {{DTR}}: the grant serves both software statement code redemption and backchannel initiation, and deferred processing is integral to every flow. An authorization server that accepts backchannel initiations additionally advertises `true` for `software_statement_backchannel_supported` below.
 
 An authorization server supporting the redirect flow additionally advertises:
 
@@ -689,6 +689,9 @@ An authorization server supporting the token exchange profile ({{token-exchange-
 A client MUST NOT send a software statement request to an authorization server that does not advertise `deferred_token_response_supported` as `true`.
 
 This specification defines the following additional authorization server metadata members:
+
+`software_statement_backchannel_supported`:
+: OPTIONAL. Boolean value indicating whether the authorization server accepts backchannel initiations of the software statement grant ({{backchannel-request}}). If omitted, the default value is `false`.
 
 `software_statement_signing_alg_values_supported`:
 : REQUIRED for an authorization server that issues software statements under this specification. A JSON array containing the asymmetric JWS `alg` values that the authorization server can use to sign software statements. The array MUST NOT contain `none` or a symmetric algorithm. This member describes the issuing role; an authorization server that only accepts software statements does not publish it.
@@ -733,9 +736,9 @@ Because the overlay can contain client metadata that should not traverse the bro
 
 The software statement is a signed credential and can contain sensitive deployment information. It MUST NOT be returned through the authorization endpoint. The software statement code response applies exact redirect URI matching, PKCE with `S256`, and the other applicable authorization response protections in {{RFC9700}}.
 
-Before redeeming an software statement code, the client MUST verify `state` and MUST validate the authorization response `iss` parameter according to {{RFC9207}}. Although PKCE with `S256` already provides the cross-site request forgery protection described in {{RFC9700}}, this specification requires `state` so that a client running concurrent software statement requests can correlate each authorization response with its originating request before redemption.
+Before redeeming a software statement code, the client MUST verify `state` and MUST validate the authorization response `iss` parameter according to {{RFC9207}}. Although PKCE with `S256` already provides the cross-site request forgery protection described in {{RFC9700}}, this specification requires `state` so that a client running concurrent software statement requests can correlate each authorization response with its originating request before redemption.
 
-An software statement code returned in a URL is visible to browser history, referrer fields, redirection-target logs, and other front-channel observers, like an authorization code, and is protected the same way: it is short lived, single use, and unredeemable without the PKCE verifier and, for a public client, the `dpop_jkt` key. Deferral codes never transit the front channel under this specification; they are issued only in deferred token responses over the direct TLS connection, and their theft is contained by sender-constrained polling and cancellation ({{deferred-processing}}). Deployments sensitive to URL disclosure of the software statement code can use the `form_post` response mode {{FORM-POST}} as described in {{software-statement-code-response}}; the fragment response mode SHOULD NOT be used.
+A software statement code returned in a URL is visible to browser history, referrer fields, redirection-target logs, and other front-channel observers, like an authorization code, and is protected the same way: it is short lived, single use, and unredeemable without the PKCE verifier and, for a public client, the `dpop_jkt` key. Deferral codes never transit the front channel under this specification; they are issued only in deferred token responses over the direct TLS connection, and their theft is contained by sender-constrained polling and cancellation ({{deferred-processing}}). Deployments sensitive to URL disclosure of the software statement code can use the `form_post` response mode {{FORM-POST}} as described in {{software-statement-code-response}}; the fragment response mode SHOULD NOT be used.
 
 ## Deferral Sender Constraint
 
@@ -838,9 +841,35 @@ This specification requests that IANA add this specification, {{registration-ove
 
 This specification further requests that IANA add this specification, {{authorization-request}}, {{backchannel-request}}, and {{token-exchange-profile}}, as an additional reference for the existing `audience` parameter registered by {{RFC8693}} and extend its usage location to include authorization requests. The parameter name and change controller are unchanged.
 
+This specification also requests registration of the following value in the IANA "OAuth Parameters" registry established by {{RFC6749}}:
+
+Parameter Name:
+: `software_statement_code`
+
+Parameter Usage Location:
+: authorization response, token request
+
+Change Controller:
+: IETF
+
+Specification Document(s):
+: This specification, {{software-statement-code-response}} and {{software-statement-code-redemption}}
+
 ## OAuth Authorization Server Metadata Registry
 
 This specification requests registration of the following values in the IANA "OAuth Authorization Server Metadata" registry established by {{RFC8414}}:
+
+Metadata Name:
+: `software_statement_backchannel_supported`
+
+Metadata Description:
+: Boolean value indicating whether the authorization server accepts backchannel initiations of the software statement grant.
+
+Change Controller:
+: IESG
+
+Specification Document(s):
+: This specification, {{backchannel-request}}
 
 Metadata Name:
 : `software_statement_signing_alg_values_supported`
