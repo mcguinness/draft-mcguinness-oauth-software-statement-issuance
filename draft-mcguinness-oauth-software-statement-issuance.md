@@ -188,6 +188,33 @@ Canonical Digest:
 
 A client initiates a software statement request through one of two flows. The redirect flow uses the authorization endpoint and a user agent and supports interactive authentication or consent during issuance. The backchannel flow uses only the token endpoint and serves software without access to a user agent. In every flow, the authorization server either completes the issuance decision synchronously or defers it at the token endpoint under {{DTR}}. A client that already holds a qualifying credential or a prior statement obtains a statement through token exchange instead ({{token-exchange-profile}}).
 
+Four elements interact across every flow. The client is identified by its Client ID Metadata Document {{CIMD}}: an HTTPS URL, used as `client_id`, whose content is the canonical client metadata. The issuing authorization server fetches that document, snapshots it ({{metadata-snapshot}}), makes the issuance decision, and signs the software statement. The client then presents the statement, potentially many times, in {{RFC7591}} registration requests at the trusting authorization servers in its audience. One issuance decision serves M registrations; that portability is what distinguishes a statement from per-server establishment ({{comparison}}).
+
+~~~
+                +--------------------------+
+                | Client ID Metadata       |
+                | Document (client_id URL) |
+                +--------------------------+
+                  ^                      ^
+            hosts |                      | fetches and
+                  |                      |   snapshots
++----------+      |                      |      +---------------+
+|          +------+                      +------+    Issuing    |
+|  Client  |                                    | Authorization |
+|          |--(1) software statement request -->|    Server     |
+|          |<-(2) software statement -----------|   (approval)  |
++----------+      (signed JWT)                  +---------------+
+     |
+     | (3) RFC 7591 registration request
+     |     carrying the software statement
+     v
++---------------+  +---------------+       +---------------+
+|   Trusting    |  |   Trusting    |  ...  |   Trusting    |
+| Authorization |  | Authorization |       | Authorization |
+|   Server 1    |  |   Server 2    |       |   Server M    |
++---------------+  +---------------+       +---------------+
+~~~
+
 ## Redirect Flow Overview
 
 ~~~
