@@ -101,8 +101,9 @@ Table of Contents
      14.5.  Deferral Sender Constraint
      14.6.  Token Exchange Considerations
      14.7.  Statement Validation and Replay
-     14.8.  Signing Keys and Algorithms
-     14.9.  Approver Identity and Audit
+     14.8.  Registration Fraud and Impersonation
+     14.9.  Signing Keys and Algorithms
+     14.10. Approver Identity and Audit
    15. Privacy Considerations
    16. IANA Considerations
      16.1.  OAuth Authorization Endpoint Response Types Registry
@@ -121,18 +122,19 @@ Table of Contents
      A.2.  Enterprise Deployment of a Third-Party Agent
      A.3.  The Resource Owner as Approver: A Case This Specification
            Does Not Serve
-   Appendix B.  Design Rationale
-     B.1.  Comparison with Related Establishment Mechanisms
-     B.2.  Why Use the Authorization Endpoint
-     B.3.  Why Not the Device Authorization Grant
-     B.4.  Why the Issuer Is an Authorization Server Role
-     B.5.  Why the Software Statement Code Is Not an Authorization
+   Appendix B.  Issuance Across the Software Delivery Lifecycle
+   Appendix C.  Design Rationale
+     C.1.  Comparison with Related Establishment Mechanisms
+     C.2.  Why Use the Authorization Endpoint
+     C.3.  Why Not the Device Authorization Grant
+     C.4.  Why the Issuer Is an Authorization Server Role
+     C.5.  Why the Software Statement Code Is Not an Authorization
            Code
-     B.6.  Why Token Exchange Is a Profile, Not the Only Flow
-     B.7.  Why Deferral Happens Only at the Token Endpoint
-     B.8.  Why the Response Uses access_token
-     B.9.  Deliberately Deferred Capabilities
-   Appendix C.  Acknowledgments
+     C.6.  Why Token Exchange Is a Profile, Not the Only Flow
+     C.7.  Why Deferral Happens Only at the Token Endpoint
+     C.8.  Why the Response Uses access_token
+     C.9.  Deliberately Deferred Capabilities
+   Appendix D.  Acknowledgments
    Author's Address
 
 1.  Introduction
@@ -190,7 +192,7 @@ Table of Contents
    signed issuance decision rather than from the client alone
    (Section 14.2), and one issuance decision is honored at every
    authorization server in the statement's audience rather than being
-   repeated at each (Appendix B.1).  What the statement makes portable
+   repeated at each (Appendix C.1).  What the statement makes portable
    is thus the issuance decision itself, not merely the metadata: a
    party positioned to review the software, such as a publisher program,
    an enterprise security function, or an ecosystem operator, reviews it
@@ -234,15 +236,19 @@ Table of Contents
    access-token-producing response type.
 
    Not every client establishment problem calls for a software
-   statement, and two boundaries mark where simpler tools suffice.  When
-   the approving party is the resource owner, the ordinary OAuth grant
-   is the approval, and identifying the client by its metadata document
-   [CIMD] suffices.  When the trust decision is local to a single
-   authorization server, mechanisms that decide at that server serve
-   well without a portable artifact: an initial access token of
-   [RFC7591] pre-authorizes registration, pre-registration under [CIMD]
-   applies review before first use, and approval-based registration
-   [APPROVAL-DCR] runs the approval alongside the registration itself.
+   statement, and three boundaries mark where other mechanisms serve
+   instead.  When the approving party is the resource owner, the
+   ordinary OAuth grant is the approval, and identifying the client by
+   its metadata document [CIMD] suffices.  When the trust decision is
+   local to a single authorization server, mechanisms that decide at
+   that server serve well without a portable artifact: an initial access
+   token of [RFC7591] pre-authorizes registration, pre-registration
+   under [CIMD] applies review before first use, and approval-based
+   registration [APPROVAL-DCR] runs the approval alongside the
+   registration itself.  And when the client cannot host a metadata
+   document at an HTTPS URL, the identity model of this specification
+   does not apply (Section 4); such clients register under [RFC7591]
+   with an initial access token or through approval-based registration.
 
    A software statement earns its cost beyond those boundaries, when one
    or more of the following holds:
@@ -315,7 +321,7 @@ Table of Contents
    The two mechanisms compose rather than compete: a pre-registration
    push that carries a software statement gives the enrolling
    authorization server an issuer's signed decision to evaluate instead
-   of self-asserted values alone (Appendix B.1).
+   of self-asserted values alone (Appendix C.1).
 
 1.2.  Relationship to Other Specifications
 
@@ -347,7 +353,7 @@ Table of Contents
    credentials.  This specification instead issues a signed software
    statement that can be presented in a later [RFC7591] registration
    request.  The two specifications address different deployment models,
-   do not depend on each other, and compose (Appendix B.1).
+   do not depend on each other, and compose (Appendix C.1).
 
    [PUSHED-DCR] explores pushing client registration alongside the start
    of an authorization flow at the same authorization server.  A
@@ -469,14 +475,17 @@ Table of Contents
 
    Four elements interact across every flow.  The client is identified
    by its Client ID Metadata Document [CIMD]: an HTTPS URL, used as
-   client_id, whose content is the canonical client metadata.  The
-   issuing authorization server fetches that document, snapshots it
-   (Section 4.1), makes the issuance decision, and signs the software
-   statement.  The client then presents the statement, potentially many
-   times, in [RFC7591] registration requests at the trusting
-   authorization servers in its audience.  One issuance decision serves
-   M registrations; that portability is what distinguishes a statement
-   from per-server establishment (Appendix B.1).
+   client_id, whose content is the canonical client metadata.  The URL
+   is the client's stable identity and the document content is its
+   current description: updating the document changes the client's trust
+   state, never its identifier.  The issuing authorization server
+   fetches that document, snapshots it (Section 4.1), makes the issuance
+   decision, and signs the software statement.  The client then presents
+   the statement, potentially many times, in [RFC7591] registration
+   requests at the trusting authorization servers in its audience.  One
+   issuance decision serves M registrations; that portability is what
+   distinguishes a statement from per-server establishment
+   (Appendix C.1).
 
                    +--------------------------+
                    | Client ID Metadata       |
@@ -611,11 +620,14 @@ Table of Contents
    applying [RFC8785] to the complete document.  Two retrievals with the
    same canonical digest contain the same metadata for purposes of this
    specification; a changed digest is the concrete signal for the re-
-   evaluation requirement above.  The canonical digest also serves the
-   cimd_digest claim (Section 11) and the audit guidance in Section 14.
-   Deployments MAY use other deterministic encodings internally for
-   change detection, but interoperable uses of the canonical digest MUST
-   use the form defined here.
+   evaluation requirement above.  A changed digest marks a new trust
+   state for an unchanged identity: the client identifier URL persists
+   across document revisions, so decisions attach to content through the
+   digest rather than to the identifier.  The canonical digest also
+   serves the cimd_digest claim (Section 11) and the audit guidance in
+   Section 14.  Deployments MAY use other deterministic encodings
+   internally for change detection, but interoperable uses of the
+   canonical digest MUST use the form defined here.
 
 5.  Software Statement Authorization Request
 
@@ -1151,10 +1163,12 @@ Table of Contents
    client_id that need not be related to sub.  A trusting authorization
    server MAY use sub to correlate registrations of the same client
    software and to apply per-client policy, such as bounding the number
-   of active registrations (Section 12).  When the metadata snapshot
-   includes software_id, that value identifies the software as defined
-   by [RFC7591]; this specification does not derive either identifier
-   from the other.
+   of active registrations (Section 12).  Because sub is stable across
+   releases of the software, that correlation spans document revisions;
+   the cimd_digest of each statement distinguishes the content that was
+   reviewed.  When the metadata snapshot includes software_id, that
+   value identifies the software as defined by [RFC7591]; this
+   specification does not derive either identifier from the other.
 
    The following is a non-normative example of the JOSE header and JWT
    payload of a software statement:
@@ -1448,6 +1462,18 @@ Table of Contents
    software statement requests can correlate each authorization response
    with its originating request before redemption.
 
+   Delivery through the redirection endpoint also establishes who can
+   complete a request.  The redirect_uri must exactly match the client's
+   own metadata document, so the software statement code is only ever
+   delivered to an endpoint the client software's publisher named.  A
+   party initiating a request for another party's client_id gains
+   nothing: its own endpoint is not registered, so the request fails
+   before any redirect, while a request aimed at the genuine registered
+   endpoint delivers a code whose PKCE verifier the recipient does not
+   hold.  Completing the flow therefore demonstrates the requester's
+   association with the client software; whether that association merits
+   issuance remains an approval-policy decision.
+
    A software statement code returned in a URL is visible to browser
    history, referrer fields, redirection-target logs, and other front-
    channel observers, like an authorization code, and is protected the
@@ -1577,7 +1603,30 @@ Table of Contents
    this namespace-authorization check into an open-world policy
    evaluation.
 
-14.8.  Signing Keys and Algorithms
+14.8.  Registration Fraud and Impersonation
+
+   Open registration lets any party register a client whose client_name,
+   logo_uri, and client_uri imitate software the user trusts, and the
+   consent screen then renders the imitation.  A trusting authorization
+   server that requires a software statement from a trusted issuer
+   before accepting such metadata replaces the self-asserted claim with
+   an issuer's reviewed one.  Servers that render registration-supplied
+   values on consent screens SHOULD prefer attested values and SHOULD
+   apply heightened scrutiny to unattested registrations that claim
+   user-visible branding.
+
+   Statement-gated registration also re-prices identity-rotation abuse.
+   Where registration is open, an abusive client discarded under one
+   identity returns under another at no cost; where registration
+   requires a statement, each identity costs an issuance decision at an
+   issuer positioned to review it, and the sub and jti tracking of
+   Section 12 bounds the registrations any one statement or piece of
+   software can create.  Neither control makes attested metadata true
+   (Section 14.2): a client that misleads the issuer's review obtains a
+   genuine statement for fraudulent metadata, and the issuer's
+   verification depth remains the limiting factor.
+
+14.9.  Signing Keys and Algorithms
 
    Compromise of a software-statement signing key enables an attacker to
    mint statements for every audience that trusts that key.  Issuers
@@ -1590,7 +1639,7 @@ Table of Contents
    RSASSA-PKCS1-v1_5 (RS256); ecosystem profiles that consume software
    statements commonly restrict signing to such algorithms.
 
-14.9.  Approver Identity and Audit
+14.10.  Approver Identity and Audit
 
    The software statement attests to metadata; it does not identify the
    human or system that approved issuance.  Deployments that require
@@ -2200,9 +2249,78 @@ A.3.  The Resource Owner as Approver: A Case This Specification Does Not
    across many authorization servers whose operators never review
    clients.
 
-Appendix B.  Design Rationale
+Appendix B.  Issuance Across the Software Delivery Lifecycle
 
-B.1.  Comparison with Related Establishment Mechanisms
+   This appendix is non-normative.  It maps the protocol onto the
+   delivery lifecycle of client software, using the deployment of an AI
+   agent as the running example; the same mapping applies to any client
+   software distributed beyond its publisher.  The lifecycle events this
+   specification standardizes, review, attestation, renewal, and expiry,
+   are administrative: they sit between the supply-chain layer that
+   attests how software was built and the runtime layers that identify
+   instances and grant access.
+
+   Release:  Each release updates the client's canonical metadata
+      document, including the software_version and software_id members
+      of [RFC7591] where used.  Because cimd_digest is REQUIRED, a
+      statement functions as a signed, expiring release-approval
+      artifact: exactly this metadata, for exactly this version,
+      reviewed and attested for these audiences.  A release pipeline
+      obtains it without human interaction through the token exchange
+      profile, presenting the credential issued at publisher onboarding
+      (Section 8).  The client identifier does not change with a
+      release: updates change the document behind the stable client
+      identifier URL, creating a new trust state for the same identity,
+      and each statement binds the same sub to the digest of the content
+      actually reviewed.
+
+   Distribution:  A publisher program or marketplace reviews the
+      software once and issues a statement whose audience covers the
+      participating authorization servers (Appendix A.1).  Ecosystems
+      that identify clients by metadata document gain a machine-
+      verifiable approval artifact in place of directories and manually
+      maintained allowlists.
+
+   Deployment:  An organization adopting third-party software runs its
+      own review through deferred processing, which tolerates the days
+      such a review takes (Section 9), and receives a statement scoped
+      to its internal authorization servers (Appendix A.2).  Deployment
+      tooling then registers the software everywhere the statement is
+      audienced, and no internal server operates an approval process of
+      its own.
+
+   Upgrade:  Renewal makes the upgrade protocol-visible.  When a new
+      version changes the metadata document, the current canonical
+      digest no longer matches the subject statement's cimd_digest, and
+      issuance policy must decide explicitly whether the prior
+      endorsement carries forward or the review re-runs (Section 8).
+      The audit guidance in Section 14 binds that decision to the
+      digests involved, so "was the new version re-approved or
+      inherited" has a recorded answer.
+
+   Fleet operation:  The statement attests the software, not its
+      instances.  Concurrent instances share one registration per
+      authorization server and differentiate at the token endpoint, and
+      the statement's key material selects the registration model,
+      including attestation of the instance_issuers delegation itself
+      (Section 12, Section 12.1).
+
+   Retirement:  Sunset is the absence of renewal: when the publisher or
+      deploying organization stops renewing, statements age out and no
+      further registrations can be derived (Section 14.7).  Faster
+      reaction composes through a status claim and issuer or namespace
+      de-trust.  Registrations already derived from a statement remain
+      each trusting authorization server's client lifecycle to manage.
+
+   This mapping has deliberate limits: the statement does not attest
+   binaries or build provenance, does not identify running instances
+   ([CLIENT-INSTANCE], [ABCA]), and grants no access.  It standardizes
+   the vouching layer of delivery, which no other layer of the stack
+   defines.
+
+Appendix C.  Design Rationale
+
+C.1.  Comparison with Related Establishment Mechanisms
 
    Several contemporaneous mechanisms address client establishment.  The
    table summarizes where each makes its trust decision, what input that
@@ -2275,7 +2393,7 @@ B.1.  Comparison with Related Establishment Mechanisms
    credential payload, and the payload's meaning at a registration
    endpoint remains as this specification defines it.
 
-B.2.  Why Use the Authorization Endpoint
+C.2.  Why Use the Authorization Endpoint
 
    Issuance commonly requires browser-mediated interaction with a user
    or administrator.  The authorization endpoint supplies established
@@ -2287,7 +2405,7 @@ B.2.  Why Use the Authorization Endpoint
    authorized client exchanges its credential directly at the token
    endpoint instead (Section 8).
 
-B.3.  Why Not the Device Authorization Grant
+C.3.  Why Not the Device Authorization Grant
 
    The device authorization grant [RFC8628] serves an interactive user
    who is co-present with a constrained device and can transcribe a
@@ -2299,7 +2417,7 @@ B.3.  Why Not the Device Authorization Grant
    verification URI or user code, while the redirect flow covers
    issuance that does require interactive authentication or consent.
 
-B.4.  Why the Issuer Is an Authorization Server Role
+C.4.  Why the Issuer Is an Authorization Server Role
 
    An alternative design defines a standalone statement issuer,
    analogous to the instance issuer of [CLIENT-INSTANCE]: an identifier,
@@ -2335,7 +2453,7 @@ B.4.  Why the Issuer Is an Authorization Server Role
    The explicit typ values of the two artifact formats keep that
    boundary verifiable.
 
-B.5.  Why the Software Statement Code Is Not an Authorization Code
+C.5.  Why the Software Statement Code Is Not an Authorization Code
 
    The software statement code is deliberately not an authorization
    code.  Reusing authorization_code for redemption would contradict
@@ -2350,7 +2468,7 @@ B.5.  Why the Software Statement Code Is Not an Authorization Code
    code-shaped front channel, named and defined here, while keeping
    deferral exclusively at the token endpoint on [DTR]'s base mechanism.
 
-B.6.  Why Token Exchange Is a Profile, Not the Only Flow
+C.6.  Why Token Exchange Is a Profile, Not the Only Flow
 
    Modeling every software statement request as token exchange fails on
    the grant's own terms: [RFC8693] requires a subject_token, and a
@@ -2370,7 +2488,7 @@ B.6.  Why Token Exchange Is a Profile, Not the Only Flow
    holds such a token exchanges it; a client that holds nothing makes a
    software statement request.
 
-B.7.  Why Deferral Happens Only at the Token Endpoint
+C.7.  Why Deferral Happens Only at the Token Endpoint
 
    Neither the software statement nor any long-lived credential should
    transit the front channel, and a pending decision must not imply a
@@ -2383,7 +2501,7 @@ B.7.  Why Deferral Happens Only at the Token Endpoint
    special first poll, and no extension to [DTR]'s authorization
    endpoint behavior is required.
 
-B.8.  Why the Response Uses access_token
+C.8.  Why the Response Uses access_token
 
    OAuth token endpoint infrastructure expects a token response to
    contain access_token and token_type, and [DTR] returns the
@@ -2398,7 +2516,7 @@ B.8.  Why the Response Uses access_token
    unambiguously stating that a software statement grants no resource
    access.
 
-B.9.  Deliberately Deferred Capabilities
+C.9.  Deliberately Deferred Capabilities
 
    This version deliberately omits three capabilities so that the
    initial protocol surface stays small; each leaves an extension seam
@@ -2420,7 +2538,7 @@ B.9.  Deliberately Deferred Capabilities
       The callback mechanism of [DTR] can be adopted by a future
       profile; nothing in this specification conflicts with it.
 
-Appendix C.  Acknowledgments
+Appendix D.  Acknowledgments
 
    This specification builds on [DTR], [CIMD], and [APPROVAL-DCR].  The
    author thanks the authors and contributors to those specifications
