@@ -115,15 +115,17 @@ The protocol introduces `response_type=software_statement_code` at the authoriza
 
 The flow concerns client establishment, not authorization to access a protected resource. Consequently, a software statement request cannot be combined with `scope`, `resource`, `authorization_details`, or an access-token-producing response type.
 
-Not every client establishment problem calls for a software statement. A software statement earns its cost when one or more of the following holds:
+Not every client establishment problem calls for a software statement, and two boundaries mark where simpler tools suffice. When the approving party is the resource owner, the ordinary OAuth grant is the approval, and identifying the client by its metadata document {{CIMD}} suffices. When the trust decision is local to a single authorization server, mechanisms that decide at that server serve well without a portable artifact: an initial access token of {{RFC7591}} pre-authorizes registration, pre-registration under {{CIMD}} applies review before first use, and approval-based registration {{APPROVAL-DCR}} runs the approval alongside the registration itself.
 
-1. The party approving the software is not the resource owner in a transaction.
-2. Approval must exist before any authorization transaction does.
-3. Approval requires asynchronous review that outlives a single protocol exchange.
-4. One approval must be honored at many authorization servers.
+A software statement earns its cost beyond those boundaries, when one or more of the following holds:
+
+1. One approval must be honored at many authorization servers.
+2. The party approving the software is not the resource owner in a transaction.
+3. Approval must exist before any authorization transaction does.
+4. Approval requires asynchronous review that outlives a single protocol exchange.
 5. Issuance and renewal must be automated rather than performed through a portal.
 
-Where none of these conditions applies, the resource owner's ordinary OAuth grant is the relevant approval and identifying the client by its metadata document {{CIMD}} suffices. Issuance under this specification is therefore deliberately decoupled from any access-granting transaction and can complete out of band over hours or days. {{deployment-examples}} illustrates these boundaries with end-to-end scenarios.
+Where none of these applies, issuance under this specification is unnecessary. It is therefore deliberately decoupled from any access-granting transaction and can complete out of band over hours or days. {{deployment-examples}} illustrates these boundaries with end-to-end scenarios.
 
 ## What Pre-Registration Does Not Solve {#beyond-pre-registration}
 
@@ -1053,7 +1055,7 @@ Several contemporaneous mechanisms address client establishment. The table summa
 | This specification | the issuing authorization server | canonical metadata document | one issuance decision, M policy evaluations of an attested artifact |
 | OpenID Federation ({{OPENID-FED}}) | resolved along a trust chain | entity statements | federation infrastructure |
 
-The bilateral mechanisms are not competitors; each composes with a software statement. A pre-registration or pushed registration that carries a statement presents attested metadata instead of self-asserted values. An approval-based registration that receives a statement gives its approver an issuer's signed decision to evaluate, addressing the long-standing problem that a registration approver otherwise has only the client's word. Where a deployment outgrows pairwise issuer configuration, OpenID Federation provides the trust-chain infrastructure this specification deliberately omits.
+The bilateral mechanisms are not competitors; each composes with a software statement. A pre-registration or pushed registration that carries a statement presents attested metadata instead of self-asserted values. An approval-based registration that receives a statement gives its approver an issuer's signed decision to evaluate, addressing the long-standing problem that a registration approver otherwise has only the client's word. Within a single authorization server, the bilateral mechanisms are also sufficient on their own: the cost of issuance is justified by the decision's portability, not by the existence of an approval step. Where a deployment outgrows pairwise issuer configuration, OpenID Federation provides the trust-chain infrastructure this specification deliberately omits.
 
 OpenID for Verifiable Credential Issuance {{OID4VCI}} shares this specification's issuance shape: an authorization code flow, a pre-authorized path for decisions made in advance, and deferred issuance for decisions that take time. It is nevertheless not an alternative rail for this artifact. {{OID4VCI}} issues credentials to a wallet, ordinarily bound to a key the wallet holds, for later presentation to verifiers; a software statement is deliberately software-level rather than holder-bound, covers every instance of the software, and is consumed not by presentation but by the `software_statement` member of an {{RFC7591}} registration request. A profile of {{OID4VCI}} that issued software statements would still have to define what this specification defines, namely the statement format, the canonical-metadata binding, and the registration-endpoint consumption, while adding credential issuer metadata, proof and nonce handling, and wallet machinery that a registration workflow does not use. The two therefore compose rather than compete: an ecosystem that already operates {{OID4VCI}} infrastructure can carry a software statement as a credential payload, and the payload's meaning at a registration endpoint remains as this specification defines it.
 
