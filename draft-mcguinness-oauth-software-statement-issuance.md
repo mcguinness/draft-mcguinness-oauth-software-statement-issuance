@@ -173,7 +173,7 @@ Software Statement Request:
 : A request in which a client asks an authorization server to issue a software statement, sent as an authorization request with `response_type=software_statement_code`.
 
 Issuing Authorization Server:
-: The authorization server that processes a software statement request and signs the resulting software statement.
+: The authorization server that makes the issuance decision and signs the software statement.
 
 Trusting Authorization Server:
 : An authorization server that accepts the issued software statement in a dynamic client registration request.
@@ -255,16 +255,16 @@ At (C), the client redeems the `software_statement_code` at the token endpoint w
 
 # Client Identification and Authentication {#client-identity}
 
-The `client_id` in a software statement request MUST be a client identifier URL conforming to {{CIMD}}. The authorization server MUST obtain and validate the corresponding Client ID Metadata Document according to {{CIMD}}. A non-URL identifier issued by the authorization server is not supported by this specification.
+The `client_id` in every request defined by this specification MUST be a client identifier URL conforming to {{CIMD}}. The authorization server MUST obtain and validate the corresponding Client ID Metadata Document according to {{CIMD}}. A non-URL identifier issued by the authorization server is not supported by this specification.
 
 In the redirect flow, the authorization server MUST compare the `redirect_uri` in the request with the `redirect_uris` in the Client ID Metadata Document according to {{CIMD}} and {{RFC9700}}. The authorization server MUST NOT redirect the user agent when the client identifier or redirect URI is missing or invalid.
 
-The client uses the `token_endpoint_auth_method` and related key metadata in its Client ID Metadata Document when authenticating to the PAR and token endpoints. If the metadata does not establish a client authentication method usable at the authorization server, the client is treated as a public client.
+The client uses the `token_endpoint_auth_method` and related key metadata in its Client ID Metadata Document when authenticating to the token endpoint. If the metadata does not establish a client authentication method usable at the authorization server, the client is treated as a public client.
 
 Sender constraint is established per flow:
 
 * A public client using the redirect flow MUST include `dpop_jkt` in the authorization request and MUST present a DPoP proof signed with the corresponding key at redemption and on every polling request.
-* A public client initiating at the token endpoint through the token exchange profile ({{token-exchange-profile}}) MUST instead include a DPoP proof on the initiating request. The authorization server MUST bind any resulting deferral state to that proof's key, and the client MUST use the same key on every polling request.
+* A public client using the token exchange profile ({{token-exchange-profile}}) MUST instead include a DPoP proof on the exchange request. The authorization server MUST bind any resulting deferral state to that proof's key, and the client MUST use the same key on every polling request.
 * A confidential client MAY use DPoP in addition to its client authentication method.
 
 All uses of DPoP MUST follow {{RFC9449}} and {{DTR}}.
@@ -419,7 +419,7 @@ The client sends a token exchange request as defined in Section 2.1 of {{RFC8693
 `completion_mode`:
 : REQUIRED. A value that includes `deferred`, per the deferral opt-in rule of {{deferred-processing}}.
 
-The request MUST NOT contain `actor_token` or `actor_token_type`. The prohibitions of {{prohibited-parameters}} apply. The token exchange grant is within {{DTR}}'s scope and issuance policy can defer any exchange, so the deferral opt-in rule of {{deferred-processing}} applies to an exchange requesting `urn:ietf:params:oauth:token-type:software-statement`.
+The request MUST NOT contain `actor_token` or `actor_token_type`. The prohibitions of {{prohibited-parameters}} apply; the token exchange grant is within {{DTR}}'s scope and issuance policy can defer any exchange, so the deferral opt-in rule of {{deferred-processing}} applies as well.
 
 The client authenticates according to {{client-identity}}, whose sender-constraint rules apply to the exchange; the polling rules of {{deferred-processing}} govern any resulting deferral.
 
@@ -448,7 +448,7 @@ Every deferral originates from a deferred token response of {{DTR}}, issued for 
 
 Each of those originating requests MUST include the `completion_mode` parameter of {{DTR}} with a value that includes `deferred`, and the authorization server MUST reject a request that lacks that opt-in with `invalid_request`. Issuance routinely completes out of band, so this specification makes {{DTR}}'s opt-in mandatory rather than implicit: a client that requires synchronous handling cannot use these flows. Requiring the parameter keeps the profile within the unmodified deferral model of {{DTR}}, under which a server does not defer a request that has not opted in. A client implementing this specification MUST support the polling grant.
 
-Approval of a software statement request can take hours or days rather than the seconds typical of user authentication, for example when it involves reviewing the client's policy or compliance documentation. Issuers SHOULD set deferral code lifetimes that reflect their actual approval latency.
+Approval of software statement issuance can take hours or days rather than the seconds typical of user authentication, for example when it involves reviewing the client's policy or compliance documentation. Issuers SHOULD set deferral code lifetimes that reflect their actual approval latency.
 
 ## First Polling Request {#first-polling-request}
 
@@ -462,7 +462,7 @@ The first polling request is an HTTP `POST` request to the token endpoint using 
 
 The polling request carries no PKCE parameter: for a redirect-flow deferral, the verifier was consumed when the software statement code was redeemed ({{software-statement-code-redemption}}). It MUST NOT contain a `software_statement_code`, `code_verifier`, `redirect_uri`, `audience`, `subject_token`, `subject_token_type`, or `requested_token_type` parameter.
 
-On this and every subsequent polling request, the client authenticates according to {{client-identity}} and, when the deferral is bound to a DPoP key (through `dpop_jkt` in the redirect flow or the initiating proof otherwise), MUST send a DPoP proof signed with that key. The authorization server MUST verify on every poll that the request presents the client authentication or key bound at origination, and MUST reject a proof whose key does not match the stored thumbprint.
+On this and every subsequent polling request, the client authenticates according to {{client-identity}} and, when the deferral is bound to a DPoP key (through `dpop_jkt` in the redirect flow or the originating request's DPoP proof otherwise), MUST send a DPoP proof signed with that key. The authorization server MUST verify on every poll that the request presents the client authentication or key bound at origination, and MUST reject a proof whose key does not match the stored thumbprint.
 
 ## Subsequent Polling Requests
 
@@ -470,7 +470,7 @@ If the request remains pending, the client continues polling according to {{DTR}
 
 Pending, denied, expired, cancelled, and polling-rate behavior follows {{DTR}}. A successful first or subsequent polling response is the software statement token response defined in {{software-statement-response}}.
 
-Cancellation of a deferral follows the revocation mechanism of {{DTR}}. For a deferral created under this specification, the authorization server MUST require the deferral's sender constraint on the revocation request: client authentication where the deferral is bound to client authentication, or a DPoP proof with the initiation-bound key otherwise. A revocation request that does not present the bound constraint MUST be treated as presenting an unrecognized token per {{DTR}}.
+Cancellation of a deferral follows the revocation mechanism of {{DTR}}. For a deferral created under this specification, the authorization server MUST require the deferral's sender constraint on the revocation request: client authentication where the deferral is bound to client authentication, or a DPoP proof with the origination-bound key otherwise. A revocation request that does not present the bound constraint MUST be treated as presenting an unrecognized token per {{DTR}}.
 
 # Software Statement Token Response {#software-statement-response}
 
@@ -526,7 +526,7 @@ The JOSE header MUST include a `typ` (type) header parameter with the value `sof
 
 The type value also anchors format evolution: extensions add claims, which are additive under standard JWT processing, while an incompatible future revision would define a new type value rather than change the meaning of this one. Supported signing algorithms are published in `software_statement_signing_alg_values_supported` ({{authorization-server-metadata}}).
 
-The JWT payload MUST contain the following claims in addition to the approved client metadata. Each metadata claim MUST be client metadata registered in the IANA "OAuth Dynamic Client Registration Metadata" registry and recognized by the authorization server. The following authorization-server-assigned, credential, and recursive metadata members are not eligible for attestation and MUST NOT appear in a software statement issued under this specification: `client_id`, `client_secret`, `client_id_issued_at`, `client_secret_expires_at`, `registration_access_token`, `registration_client_uri`, and `software_statement`. An authorization server MAY exclude additional metadata according to policy. The `client_id` member required in the Client ID Metadata Document by {{CIMD}} identifies the canonical document during issuance; the statement represents that identifier in `sub` and MUST NOT copy it as client metadata.
+The JWT payload MUST contain the following claims in addition to the approved client metadata.
 
 `iss`:
 : REQUIRED. The issuer identifier of the issuing authorization server, as defined by {{RFC8414}}.
@@ -548,6 +548,8 @@ The JWT payload MUST contain the following claims in addition to the approved cl
 
 `cimd_digest`:
 : REQUIRED. The canonical digest ({{metadata-snapshot}}) of the Client ID Metadata Document from which the metadata snapshot was derived. This claim binds the statement to the exact document content evaluated during issuance and lets any party determine whether the client's currently published metadata still matches what was attested.
+
+Each metadata claim MUST be client metadata registered in the IANA "OAuth Dynamic Client Registration Metadata" registry and recognized by the authorization server. The following authorization-server-assigned, credential, and recursive metadata members are not eligible for attestation and MUST NOT appear in a software statement issued under this specification: `client_id`, `client_secret`, `client_id_issued_at`, `client_secret_expires_at`, `registration_access_token`, `registration_client_uri`, and `software_statement`. An authorization server MAY exclude additional metadata according to policy. The `client_id` member required in the Client ID Metadata Document by {{CIMD}} identifies the canonical document during issuance; the statement represents that identifier in `sub` and MUST NOT copy it as client metadata.
 
 The issuer determines the audience and lifetime according to policy. A client can request an audience using the `audience` parameter, but the issuer MAY narrow that request and MUST NOT widen it. If the parameter is omitted, the issuer selects an audience entirely according to policy. The client metadata claims MUST reflect the metadata snapshot and any further narrowing performed by the issuing authorization server. They MUST NOT contradict or widen the snapshot.
 
@@ -637,7 +639,7 @@ An authorization server supporting the redirect flow advertises:
 
 An authorization server supporting the token exchange profile ({{token-exchange-profile}}) advertises `urn:ietf:params:oauth:grant-type:token-exchange` in `grant_types_supported` and publishes `software_statement_subject_token_types_supported` below; general token exchange support does not by itself imply support for this profile. An implementation supporting only that profile advertises neither the software statement grant nor the `software_statement_code` response type.
 
-A client MUST NOT send a software statement request to an authorization server that does not advertise `deferred_token_response_supported` as `true`.
+A client MUST NOT send a software statement request, or a token exchange requesting `urn:ietf:params:oauth:token-type:software-statement`, to an authorization server that does not advertise `deferred_token_response_supported` as `true`.
 
 This specification defines the following additional authorization server metadata members:
 
