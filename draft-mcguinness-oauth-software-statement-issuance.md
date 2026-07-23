@@ -263,7 +263,7 @@ The `client_id` in every request defined by this specification MUST be a client 
 
 In the redirect flow, the authorization server MUST compare the `redirect_uri` in the request with the `redirect_uris` in the Client ID Metadata Document according to {{CIMD}} and {{RFC9700}}. The authorization server MUST NOT redirect the user agent when the client identifier or redirect URI is missing or invalid.
 
-The client uses the `token_endpoint_auth_method` and related key metadata in its Client ID Metadata Document when authenticating to the token endpoint. If the metadata does not establish a client authentication method usable at the authorization server, the client is treated as a public client.
+The client uses the `token_endpoint_auth_method` and related key metadata in its Client ID Metadata Document when authenticating to the token endpoint. Only an explicit `token_endpoint_auth_method` value of `none` establishes a public client. Any other declared method establishes a confidential client, and the authorization server MUST require exactly that method, as {{CIMD}} requires; a declared method the authorization server does not support MUST cause rejection of the request rather than treatment of the client as public. A metadata document that omits `token_endpoint_auth_method` establishes neither: the {{RFC7591}} default is a symmetric-secret method that {{CIMD}} prohibits and that an unregistered client cannot satisfy, so a software statement request for such a client MUST be rejected.
 
 Sender constraint is established per flow:
 
@@ -429,16 +429,16 @@ The client authenticates according to {{client-identity}}, whose sender-constrai
 
 The authorization server MUST validate the subject token before retrieving client-controlled metadata or enqueueing any processing. An invalid, expired, or revoked subject token, or one that does not authorize issuance for the presented `client_id`, MUST result in `invalid_grant`. An unacceptable requested audience results in `invalid_target` {{RFC8693}}.
 
-When the subject token is a software statement, the request MUST be holder-bound: the client MUST authenticate according to {{client-identity}}, or present a DPoP proof whose key is attested by the statement (present in its `jwks` or resolvable through its attested `jwks_uri`). A statement that attests no usable key material and belongs to a client without an authentication method MUST NOT be accepted for renewal; such a client performs a new software statement request instead.
+When the subject token is a software statement, the request MUST be holder-bound against current metadata. When the current metadata snapshot establishes a client authentication method, the client MUST authenticate with that method; a key attested only by the subject statement MUST NOT substitute for current client authentication. When the current metadata establishes a public client, the client MUST present a DPoP proof whose key is authorized by both the subject statement and the current metadata snapshot, present in or resolvable through the `jwks` or `jwks_uri` of each. A statement whose subject can satisfy neither requirement cannot be renewed; such a client performs a new software statement request or presents an onboarding credential instead.
 
-An initial access token presented under this profile SHOULD be:
+An initial access token presented under this profile MUST be:
 
-* integrity protected, and confidential in transit and at rest;
-* limited to the issuing authorization server and time limited;
+* time limited;
+* limited to the issuing authorization server;
 * bound to an exact client identifier URL or an explicitly authorized client identifier namespace; and
 * of at least 128 bits of entropy, when opaque.
 
-It MAY further restrict audiences, metadata, or the number of uses. The authorization server MUST enforce every restriction the credential carries and MUST prevent replay beyond its permitted number of uses.
+It SHOULD be sender-constrained or limited in its number of uses, and SHOULD be integrity protected and kept confidential in transit and at rest. It MAY further restrict audiences or metadata. The authorization server MUST enforce every restriction the credential carries and MUST prevent replay beyond its permitted number of uses. A DPoP proof on the exchange sender-constrains the resulting deferral; it neither authenticates the presenter nor protects a bearer credential (Section 3 of {{RFC9449}}), so a stolen bearer credential remains presentable, under any key, until it expires or exhausts its permitted uses.
 
 The exchange is evaluated against current metadata, not the subject token's contents. The authorization server MUST obtain and validate the Client ID Metadata Document and MUST bind a fresh metadata snapshot ({{metadata-snapshot}}) and the requested audience before returning either the software statement or a deferral code. The statement's claims derive from that snapshot; the authorization server MUST NOT copy metadata claims from a subject statement.
 
@@ -720,7 +720,7 @@ A software statement is intended to be presented more than once ({{multi-instanc
 
 When registrations derived from a statement are intended to share a client key, and the canonical metadata provides `jwks` or `jwks_uri`, the issuer SHOULD include that member in the attested metadata. A trusting authorization server can then require proof of possession of a corresponding private key during or after registration, which renders a stolen statement unusable to a party that does not also hold the client's key. When each registration is expected to supply a distinct instance key, the issuer MUST omit `jwks` and `jwks_uri` so that the plain registration metadata can carry that key without conflicting with the precedence rule of {{RFC7591}}.
 
-Renewal through {{token-exchange-profile}} would otherwise let an unexpired stolen statement be exchanged for a fresh one, outliving its intended lifetime. That profile therefore requires holder binding for statement subjects: the presenter must authenticate as the client or prove possession of a key the statement attests. A statement that attests no usable key material and belongs to a client without an authentication method cannot be renewed at all; the issuer-scoping guidance of this section applies to the exchange as it does to registration.
+Renewal through {{token-exchange-profile}} would otherwise let an unexpired stolen statement be exchanged for a fresh one, outliving its intended lifetime. That profile therefore requires holder binding for statement subjects against current metadata: the presenter must authenticate under the client's current authentication method or, for a public client, prove possession of a key that both the statement and the current metadata authorize. A statement whose subject can do neither cannot be renewed at all; the issuer-scoping guidance of this section applies to the exchange as it does to registration.
 
 This specification does not define online revocation of an issued software statement. The primary control is lifetime: issuance is decoupled from use, renewal is inexpensive ({{token-exchange-profile}}), and a short `exp` bounds the exposure window; the Australian Consumer Data Right Register, for example, issues statements that expire after ten minutes ({{AU-CDR}}). A deployment that needs acceptance-time status beyond expiration can compose existing mechanisms without change to this protocol: an issuer can include a `status` claim referencing a Token Status List {{STATUS-LIST}}, giving trusting authorization servers a standardized status check when a statement is presented, and the scoped issuer trust configuration described above supports emergency removal of a compromised issuer or namespace. Revoking a statement does not undo registrations already derived from it; responding to client software found to be malicious after registration is client lifecycle management at each trusting authorization server, outside this protocol.
 
@@ -1043,7 +1043,7 @@ Content-Type: application/json
 
 Because the statement does not contain `instance_issuers`, the locally supplied value does not conflict with the precedence rule of {{RFC7591}}; it is not covered by the issuer's attestation, and accepting it is the registering server's policy.
 
-Finally, before the statement expires, the tooling submits a renewal exchange with the statement as subject token and the same two audiences. When ACME has shipped an update that changes the canonical metadata document, the identity platform computes a current canonical digest that no longer matches the subject statement's `cimd_digest` ({{token-exchange-profile}}). Its issuance policy therefore defers the exchange for a fresh security review instead of copying claims from the old statement or renewing it silently.
+Finally, before the statement expires, the tooling submits a fresh exchange with the same initial access token as subject token and the same two audiences; renewal with the prior statement as subject token is unavailable to this client, which is public and holds a statement that attests no key material ({{token-exchange-profile}}). When ACME has shipped an update that changes the canonical metadata document, the identity platform's fresh snapshot yields a canonical digest that differs from the one in the statement it previously issued. Its issuance policy therefore defers the exchange for a new security review instead of issuing silently against changed metadata.
 
 ## The Resource Owner as Approver: A Case This Specification Does Not Serve {#example-resource-owner}
 
