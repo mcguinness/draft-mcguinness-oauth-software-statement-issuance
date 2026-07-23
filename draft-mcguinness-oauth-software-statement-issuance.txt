@@ -615,16 +615,24 @@ Table of Contents
    client authentication method usable at the authorization server, the
    client is treated as a public client.
 
-   A public client using the redirect flow MUST include dpop_jkt in the
-   authorization request and MUST present a DPoP proof signed with the
-   corresponding key at redemption and on every polling request.  A
-   public client using the backchannel flow (Section 8) MUST instead
-   include a DPoP proof on the initiating token request; the
-   authorization server MUST bind any resulting deferral state to that
-   proof's key, and the client MUST use the same key on every polling
-   request.  A confidential client MAY use dpop_jkt in addition to its
-   client authentication method.  All uses of DPoP MUST follow [RFC9449]
-   and [DTR].
+   Sender constraint is established per flow:
+
+   *  A public client using the redirect flow MUST include dpop_jkt in
+      the authorization request and MUST present a DPoP proof signed
+      with the corresponding key at redemption and on every polling
+      request.
+
+   *  A public client initiating at the token endpoint, through the
+      backchannel flow (Section 8) or the token exchange profile
+      (Section 9), MUST instead include a DPoP proof on the initiating
+      request.  The authorization server MUST bind any resulting
+      deferral state to that proof's key, and the client MUST use the
+      same key on every polling request.
+
+   *  A confidential client MAY use DPoP in addition to its client
+      authentication method.
+
+   All uses of DPoP MUST follow [RFC9449] and [DTR].
 
 4.1.  Metadata Snapshot
 
@@ -705,10 +713,9 @@ Table of Contents
       request.  If none of the requested audiences is acceptable, the
       authorization server MUST reject the request with invalid_target,
       defined by [RFC8693] and used on authorization requests following
-      the precedent of [RFC8707].  Some deployments use a proprietary
-      audience authorization request parameter to select an API for
-      access tokens; the semantics defined here apply only to software
-      statement requests.
+      the precedent of [RFC8707].  Deployments that use a proprietary
+      audience parameter for access token targeting are unaffected: the
+      semantics defined here apply only to software statement requests.
 
    dpop_jkt:  REQUIRED for a public client and OPTIONAL for a
       confidential client.  The parameter has the semantics defined in
@@ -851,11 +858,11 @@ Table of Contents
       artifact redeemed at the token endpoint (Section 7).  It MUST be
       bound to the client identifier, redirect URI, PKCE challenge,
       metadata snapshot (which incorporates any accepted registration
-      overlay), and requested audience.  If dpop_jkt was present, it
-      MUST also be bound to that JWK thumbprint.  The value MUST contain
-      at least 128 bits of entropy from a cryptographically secure
-      random source, MUST be opaque to the client, MUST expire shortly
-      after issuance, and MUST NOT be accepted more than once.
+      overlay), requested audience, and, when dpop_jkt was present, that
+      JWK thumbprint.  The value MUST contain at least 128 bits of
+      entropy from a cryptographically secure random source, MUST be
+      opaque to the client, MUST expire shortly after issuance, and MUST
+      NOT be accepted more than once.
 
    state:  REQUIRED.  The exact value received in the authorization
       request.
@@ -908,9 +915,8 @@ Table of Contents
    code_verifier:  REQUIRED.  The PKCE verifier corresponding to the
       code_challenge in the authorization request.
 
-   completion_mode:  REQUIRED.  A value that includes deferred, as
-      defined by [DTR], signaling that the client accepts a deferred
-      token response (Section 8).
+   completion_mode:  REQUIRED.  A value that includes deferred, per the
+      deferral opt-in rule of Section 10.
 
    client_notification_token:  OPTIONAL.  The callback authentication
       credential defined by [DTR], with the same requirements as in
@@ -953,19 +959,6 @@ Table of Contents
    authorization credential or a prior statement presents it through the
    token exchange profile (Section 9) instead.
 
-   Every request under this grant, whether a backchannel initiation or a
-   software statement code redemption (Section 7), MUST include the
-   completion_mode parameter of [DTR] with a value that includes
-   deferred.  Issuance routinely completes out of band, so this profile
-   makes [DTR]'s opt-in mandatory rather than implicit: a client that
-   requires synchronous handling cannot use this grant, and a client
-   implementing this specification MUST support the polling grant of
-   Section 10.  The authorization server MUST reject a request under
-   this grant whose completion_mode does not include deferred with
-   invalid_request; requiring the parameter keeps this profile within
-   the unmodified deferral model of [DTR], under which a server does not
-   defer a request that has not opted in.
-
    The presence of software_statement_code selects redemption and its
    absence selects initiation.  The authorization server MUST reject
    with invalid_request a request that combines the parameters of one
@@ -986,9 +979,8 @@ Table of Contents
       rules.  Rule 6 does not apply, because the request uses no
       redirect_uri.
 
-   completion_mode:  REQUIRED.  A value that includes deferred, as
-      defined by [DTR], signaling that the client accepts a deferred
-      token response.
+   completion_mode:  REQUIRED.  A value that includes deferred, per the
+      deferral opt-in rule of Section 10.
 
    audience:  OPTIONAL.  The requested audience described in Section 5.
       The same syntax, validation, and narrowing rules apply.
@@ -1000,17 +992,13 @@ Table of Contents
 
    The request MUST NOT contain software_statement_code, redirect_uri,
    code_verifier, state, or dpop_jkt.  The prohibitions of Section 5.1
-   apply: the request MUST NOT contain scope, resource, or
-   authorization_details.
+   apply.
 
    The client authenticates according to Section 4 when its metadata
-   establishes an authentication method.  A public client MUST
-   additionally include a DPoP proof [RFC9449] for the token endpoint on
-   the initiating request; the authorization server MUST bind any
-   resulting deferral state to the proof's public key.  A confidential
-   client MAY additionally use DPoP.  A DPoP proof establishes sender
-   constraint but, by itself, does not authorize the presenter to
-   request a statement for the client_id URL.
+   establishes an authentication method, and the sender-constraint rules
+   of Section 4 apply.  A DPoP proof establishes sender constraint but,
+   by itself, does not authorize the presenter to request a statement
+   for the client_id URL.
 
    A backchannel request from a public client is unauthenticated, and a
    DPoP proof does not change that.  Such a request MUST NOT complete
@@ -1018,7 +1006,9 @@ Table of Contents
    issue the statement until it has verified out of band that the
    requesting party is authorized to act for the client identifier.
    That verification MUST be bound to the specific request and its DPoP
-   key.  The redirect flow needs no such rule because its response is
+   key.
+
+   The redirect flow needs no such rule because its response is
    delivered to a redirection endpoint registered in the client's own
    metadata document, which demonstrates the requester's association
    with the client software.  Accepting unauthenticated initiations
@@ -1142,30 +1132,23 @@ Table of Contents
       overlay described in Section 5.2, subject to the same validation
       rules.  Rule 6 does not apply.
 
-   completion_mode:  REQUIRED.  A value that includes deferred, as
-      defined by [DTR], signaling that the client accepts a deferred
-      token response.
+   completion_mode:  REQUIRED.  A value that includes deferred, per the
+      deferral opt-in rule of Section 10.
 
    client_notification_token:  OPTIONAL.  The callback authentication
       credential defined by [DTR], with the same requirements as in
       Section 8.
 
    The request MUST NOT contain actor_token or actor_token_type.  The
-   prohibitions of Section 5.1 apply: the request MUST NOT contain
-   scope, resource, or authorization_details.  An exchange requesting
-   urn:ietf:params:oauth:token-type:software-statement MUST include the
-   completion_mode parameter of [DTR] with a value that includes
-   deferred: the token exchange grant is within [DTR]'s scope, and
-   issuance policy can defer any exchange, so a client that requires
-   synchronous handling cannot use this profile.  The authorization
-   server MUST reject an exchange for this token type that does not opt
-   in to deferral with invalid_request.
+   prohibitions of Section 5.1 apply.  The token exchange grant is
+   within [DTR]'s scope and issuance policy can defer any exchange, so
+   the deferral opt-in rule of Section 10 applies to an exchange
+   requesting urn:ietf:params:oauth:token-type:software-statement.
 
-   The client authenticates according to Section 4.  A public client
-   MUST include a DPoP proof [RFC9449] on the exchange request; the
-   authorization server MUST bind any resulting deferral state to the
-   proof's public key, and the polling rules of Section 10 apply as for
-   a backchannel deferral.
+   The client authenticates according to Section 4, whose sender-
+   constraint rules apply to the exchange as to a backchannel
+   initiation; the polling rules of Section 10 govern any resulting
+   deferral.
 
    The authorization server MUST validate the subject token before
    retrieving client-controlled metadata or enqueueing any processing.
@@ -1182,15 +1165,21 @@ Table of Contents
    without an authentication method MUST NOT be accepted for renewal;
    such a client performs a new software statement request instead.
 
-   An initial access token presented under this profile SHOULD be
-   integrity protected, confidential in transit and at rest, limited to
-   the issuing authorization server, time limited, and bound to an exact
-   client identifier URL or an explicitly authorized client identifier
-   namespace; it MAY further restrict audiences, metadata, overlays, or
-   the number of uses.  An opaque credential SHOULD contain at least 128
-   bits of entropy.  The authorization server MUST enforce every
-   restriction the credential carries and MUST prevent replay beyond its
-   permitted number of uses.
+   An initial access token presented under this profile SHOULD be:
+
+   *  integrity protected, and confidential in transit and at rest;
+
+   *  limited to the issuing authorization server and time limited;
+
+   *  bound to an exact client identifier URL or an explicitly
+      authorized client identifier namespace; and
+
+   *  of at least 128 bits of entropy, when opaque.
+
+   It MAY further restrict audiences, metadata, overlays, or the number
+   of uses.  The authorization server MUST enforce every restriction the
+   credential carries and MUST prevent replay beyond its permitted
+   number of uses.
 
    The exchange is evaluated against current metadata, not the subject
    token's contents.  The authorization server MUST obtain and validate
@@ -1198,13 +1187,14 @@ Table of Contents
    snapshot (Section 4.1) and the requested audience before returning
    either the software statement or a deferral code.  The statement's
    claims derive from that snapshot; the authorization server MUST NOT
-   copy metadata claims from a subject statement.  When the current
-   canonical digest differs from a subject statement's cimd_digest, the
-   metadata has changed since the prior issuance; the change is an input
-   to issuance policy and MAY cause the exchange to be deferred or
-   rejected.  The issued statement's aud MUST NOT contain a value absent
-   from a subject statement's aud unless issuance policy independently
-   approves the addition.
+   copy metadata claims from a subject statement.
+
+   When the current canonical digest differs from a subject statement's
+   cimd_digest, the metadata has changed since the prior issuance; the
+   change is an input to issuance policy and MAY cause the exchange to
+   be deferred or rejected.  The issued statement's aud MUST NOT contain
+   a value absent from a subject statement's aud unless issuance policy
+   independently approves the addition.
 
    Whether an exchange completes synchronously or defers for approval is
    issuance policy: a subject token can pre-authorize only the making of
@@ -1223,6 +1213,17 @@ Table of Contents
    backchannel request (Section 8), or a token exchange (Section 9).
    The client polls the token endpoint using the polling grant defined
    by [DTR].
+
+   Each of those originating requests MUST include the completion_mode
+   parameter of [DTR] with a value that includes deferred, and the
+   authorization server MUST reject a request that lacks that opt-in
+   with invalid_request.  Issuance routinely completes out of band, so
+   this specification makes [DTR]'s opt-in mandatory rather than
+   implicit: a client that requires synchronous handling cannot use
+   these flows.  Requiring the parameter keeps the profile within the
+   unmodified deferral model of [DTR], under which a server does not
+   defer a request that has not opted in.  A client implementing this
+   specification MUST support the polling grant.
 
    Approval of a software statement request can take hours or days
    rather than the seconds typical of user authentication, for example
@@ -1247,31 +1248,25 @@ Table of Contents
 
    The polling request carries no PKCE parameter: for a redirect-flow
    deferral, the verifier was consumed when the software statement code
-   was redeemed (Section 7).  On every polling request the authorization
-   server MUST verify that the request presents the client
-   authentication or DPoP key bound to the deferral at its origination.
+   was redeemed (Section 7).  It MUST NOT contain a
+   software_statement_code, code_verifier, redirect_uri, registration,
+   audience, client_notification_token, subject_token,
+   subject_token_type, or requested_token_type parameter.
 
-   The client authenticates according to Section 4.  If the deferral is
-   bound to a DPoP key, through dpop_jkt in the redirect flow or the
-   initiating DPoP proof otherwise, the client MUST send a DPoP proof
-   signed with the corresponding key.  The authorization server MUST
-   reject a proof whose key does not match the stored thumbprint.
-
-   The first polling request MUST NOT contain a software_statement_code,
-   code_verifier, redirect_uri, registration, audience,
-   client_notification_token, subject_token, subject_token_type, or
-   requested_token_type parameter.
+   On this and every subsequent polling request, the client
+   authenticates according to Section 4 and, when the deferral is bound
+   to a DPoP key (through dpop_jkt in the redirect flow or the
+   initiating proof otherwise), MUST send a DPoP proof signed with that
+   key.  The authorization server MUST verify on every poll that the
+   request presents the client authentication or key bound at
+   origination, and MUST reject a proof whose key does not match the
+   stored thumbprint.
 
 10.2.  Subsequent Polling Requests
 
    If the request remains pending, the client continues polling
-   according to [DTR] using only the polling grant's normal parameters.
-
-   Each subsequent polling request MUST use the client authentication or
-   DPoP sender constraint established for the deferral.  In particular,
-   a public client MUST send a DPoP proof on every poll, using the key
-   identified by dpop_jkt in the redirect flow or the key of the
-   initiating DPoP proof otherwise.
+   according to [DTR] using only the polling grant's normal parameters
+   and the sender constraint established in Section 10.1.
 
    Pending, denied, expired, cancelled, and polling-rate behavior
    follows [DTR].  Callback behavior follows [DTR] only for a deferral
@@ -1377,12 +1372,14 @@ Table of Contents
    application/software-statement+jwt (Section 17.6) with the
    application/ prefix omitted.  Explicit typing prevents other JWTs
    signed by the same issuer, such as JWT access tokens or ID Tokens,
-   from being accepted as software statements.  The type value also
-   anchors format evolution: extensions add claims, which are additive
-   under standard JWT processing, while an incompatible future revision
-   would define a new type value rather than change the meaning of this
-   one.  Supported signing algorithms are published in
-   software_statement_signing_alg_values_supported (Section 14).
+   from being accepted as software statements.
+
+   The type value also anchors format evolution: extensions add claims,
+   which are additive under standard JWT processing, while an
+   incompatible future revision would define a new type value rather
+   than change the meaning of this one.  Supported signing algorithms
+   are published in software_statement_signing_alg_values_supported
+   (Section 14).
 
    The JWT payload MUST contain the following claims in addition to the
    approved client metadata that is eligible for attestation under
@@ -1467,28 +1464,38 @@ Table of Contents
      "jwks_uri": "https://client.example.org/jwks.json"
    }
 
-   Before accepting the statement, a trusting authorization server MUST
-   verify that the typ header carries the value software-statement+jwt;
-   verify the signature under a key trusted for the exact iss value;
-   validate the presence and type of every required claim; validate iss,
-   aud, iat, and exp; verify that sub is a Client Identifier URL
-   conforming to [CIMD]; reject every metadata claim prohibited by
-   Section 5.2; and apply the JWT validation guidance in [RFC8725].  In
-   particular, it MUST reject a statement whose iat is unreasonably far
-   in the future according to its clock-skew policy.  Publishing an
-   issuer URL or a JWK Set does not by itself establish trust: signature
-   keys for a trusted issuer are conventionally obtained from the
-   jwks_uri in the issuer's authorization server metadata [RFC8414], but
-   the decision to trust the issuer MUST come from explicit local
-   configuration.  A trusting authorization server MAY retrieve the
-   client's current metadata document and compare canonical digests
-   against cimd_digest to learn whether the attested content is still
-   published; if it does so, it MUST also verify that the document's
-   client_id is exactly equal to sub as required by [CIMD].  A digest
-   mismatch indicates post-issuance change and is an input to
-   registration policy rather than a validation failure.  The trusting
-   authorization server then processes the software statement according
-   to [RFC7591] and its local registration policy.
+   Before accepting the statement, a trusting authorization server MUST:
+
+   *  verify that the typ header carries the value software-
+      statement+jwt;
+
+   *  verify the signature under a key trusted for the exact iss value;
+
+   *  validate the presence and type of every required claim, and
+      validate iss, aud, iat, and exp, rejecting an iat unreasonably far
+      in the future according to its clock-skew policy;
+
+   *  verify that sub is a client identifier URL conforming to [CIMD];
+
+   *  reject every metadata claim prohibited by Section 5.2; and
+
+   *  apply the JWT validation guidance in [RFC8725].
+
+   Publishing an issuer URL or a JWK Set does not by itself establish
+   trust: signature keys for a trusted issuer are conventionally
+   obtained from the jwks_uri in the issuer's authorization server
+   metadata [RFC8414], but the decision to trust the issuer MUST come
+   from explicit local configuration.
+
+   A trusting authorization server MAY retrieve the client's current
+   metadata document and compare canonical digests against cimd_digest
+   to learn whether the attested content is still published; if it does
+   so, it MUST also verify that the document's client_id is exactly
+   equal to sub as required by [CIMD].  A digest mismatch indicates
+   post-issuance change and is an input to registration policy rather
+   than a validation failure.  The trusting authorization server then
+   processes the software statement according to [RFC7591] and its local
+   registration policy.
 
 13.  Multi-Instance Client Software
 
@@ -1509,22 +1516,26 @@ Table of Contents
    SHOULD register the logical client once per authorization server and
    differentiate instances at the token endpoint, for example with
    [CLIENT-INSTANCE] or attestation-based client authentication [ABCA],
-   rather than minting a registration per instance.  Where authorization
-   server policy is keyed on client_id and genuinely requires per-
-   instance registrations, the same statement can support that model
-   only if it omits jwks and jwks_uri: each registration can then supply
-   its own instance key as plain metadata, subject to trusting
-   authorization server policy.  Omitting them also forecloses token
-   exchange renewal for a client without an authentication method
-   (Section 9).  If the statement contains jwks or jwks_uri, that
-   attested value takes precedence under [RFC7591] and every
-   registration derived from the statement MUST use the attested key
-   material rather than an instance-supplied replacement.  A third model
-   combines attestation with per-instance keys: the statement omits key
-   material but attests the instance_issuers delegation (Section 13.1),
-   so that instance keys are endorsed by an attested authority at the
-   token endpoint instead of appearing unattested in registration
-   metadata.
+   rather than minting a registration per instance.  The statement's key
+   material determines which registration models it can support:
+
+   *  Shared client key: if the statement contains jwks or jwks_uri,
+      that attested value takes precedence under [RFC7591], and every
+      registration derived from the statement MUST use the attested key
+      material rather than an instance-supplied replacement.
+
+   *  Per-instance keys: where authorization server policy is keyed on
+      client_id and genuinely requires per-instance registrations, the
+      same statement supports that model only if it omits jwks and
+      jwks_uri; each registration then supplies its own instance key as
+      plain metadata, subject to trusting authorization server policy.
+      Omitting them also forecloses token exchange renewal for a client
+      without an authentication method (Section 9).
+
+   *  Attested delegation: the statement omits key material but attests
+      the instance_issuers delegation (Section 13.1), so instance keys
+      are endorsed by an attested authority at the token endpoint
+      instead of appearing unattested in registration metadata.
 
 13.1.  Attesting Instance Issuers
 
@@ -1668,14 +1679,19 @@ Table of Contents
    An erroneous approval is amplified by the statement's audience: every
    authorization server in the audience will accept the resulting
    credential until it expires.  The approval interface therefore MUST
-   present the client identifier URL, the effective metadata being
-   attested, and the audience the issuer intends to place in the
-   statement; when the client requested a different or broader audience,
-   the interface SHOULD also make the narrowing visible.  It SHOULD
-   present the intended lifetime of the statement.  Metadata that itself
-   delegates authority deserves particular scrutiny: attesting the
-   instance_issuers member (Section 13) endorses the listed authorities
-   to attest runtime instances of the client.
+   present:
+
+   *  the client identifier URL;
+
+   *  the effective metadata being attested; and
+
+   *  the audience the issuer intends to place in the statement.
+
+   It SHOULD present the intended lifetime, and SHOULD make narrowing
+   visible when the client requested a different or broader audience.
+   Metadata that itself delegates authority deserves particular
+   scrutiny: attesting the instance_issuers member (Section 13) endorses
+   the listed authorities to attest runtime instances of the client.
 
 15.2.  What Issuance Attests
 
@@ -1788,8 +1804,9 @@ Table of Contents
    deferrals it holds per client identifier, per client identifier
    namespace, and per requester, and MAY expire a deferral whose out-of-
    band verification has not begun, or has failed, well before the
-   lifetime it would grant an authenticated deferral.  An
-   unauthenticated public-client request can never complete
+   lifetime it would grant an authenticated deferral.
+
+   An unauthenticated public-client request can never complete
    synchronously (Section 8): issuance to an anonymous requester would
    deliver a bearer attestation for someone else's software identity, so
    the out-of-band verification of the requester's authority is the gate
