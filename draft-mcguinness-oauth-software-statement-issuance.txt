@@ -420,9 +420,8 @@ Table of Contents
       authorization server to issue a software statement, sent as an
       authorization request with response_type=software_statement_code.
 
-   Issuing Authorization Server:  The authorization server that
-      processes a software statement request and signs the resulting
-      software statement.
+   Issuing Authorization Server:  The authorization server that makes
+      the issuance decision and signs the software statement.
 
    Trusting Authorization Server:  An authorization server that accepts
       the issued software statement in a dynamic client registration
@@ -533,10 +532,10 @@ Table of Contents
 
 4.  Client Identification and Authentication
 
-   The client_id in a software statement request MUST be a client
-   identifier URL conforming to [CIMD].  The authorization server MUST
-   obtain and validate the corresponding Client ID Metadata Document
-   according to [CIMD].  A non-URL identifier issued by the
+   The client_id in every request defined by this specification MUST be
+   a client identifier URL conforming to [CIMD].  The authorization
+   server MUST obtain and validate the corresponding Client ID Metadata
+   Document according to [CIMD].  A non-URL identifier issued by the
    authorization server is not supported by this specification.
 
    In the redirect flow, the authorization server MUST compare the
@@ -547,9 +546,9 @@ Table of Contents
 
    The client uses the token_endpoint_auth_method and related key
    metadata in its Client ID Metadata Document when authenticating to
-   the PAR and token endpoints.  If the metadata does not establish a
-   client authentication method usable at the authorization server, the
-   client is treated as a public client.
+   the token endpoint.  If the metadata does not establish a client
+   authentication method usable at the authorization server, the client
+   is treated as a public client.
 
    Sender constraint is established per flow:
 
@@ -558,11 +557,11 @@ Table of Contents
       with the corresponding key at redemption and on every polling
       request.
 
-   *  A public client initiating at the token endpoint through the token
-      exchange profile (Section 8) MUST instead include a DPoP proof on
-      the initiating request.  The authorization server MUST bind any
-      resulting deferral state to that proof's key, and the client MUST
-      use the same key on every polling request.
+   *  A public client using the token exchange profile (Section 8) MUST
+      instead include a DPoP proof on the exchange request.  The
+      authorization server MUST bind any resulting deferral state to
+      that proof's key, and the client MUST use the same key on every
+      polling request.
 
    *  A confidential client MAY use DPoP in addition to its client
       authentication method.
@@ -840,10 +839,9 @@ Table of Contents
       deferral opt-in rule of Section 9.
 
    The request MUST NOT contain actor_token or actor_token_type.  The
-   prohibitions of Section 5.1 apply.  The token exchange grant is
-   within [DTR]'s scope and issuance policy can defer any exchange, so
-   the deferral opt-in rule of Section 9 applies to an exchange
-   requesting urn:ietf:params:oauth:token-type:software-statement.
+   prohibitions of Section 5.1 apply; the token exchange grant is within
+   [DTR]'s scope and issuance policy can defer any exchange, so the
+   deferral opt-in rule of Section 9 applies as well.
 
    The client authenticates according to Section 4, whose sender-
    constraint rules apply to the exchange; the polling rules of
@@ -925,11 +923,11 @@ Table of Contents
    defer a request that has not opted in.  A client implementing this
    specification MUST support the polling grant.
 
-   Approval of a software statement request can take hours or days
-   rather than the seconds typical of user authentication, for example
-   when it involves reviewing the client's policy or compliance
-   documentation.  Issuers SHOULD set deferral code lifetimes that
-   reflect their actual approval latency.
+   Approval of software statement issuance can take hours or days rather
+   than the seconds typical of user authentication, for example when it
+   involves reviewing the client's policy or compliance documentation.
+   Issuers SHOULD set deferral code lifetimes that reflect their actual
+   approval latency.
 
 9.1.  First Polling Request
 
@@ -952,10 +950,10 @@ Table of Contents
    On this and every subsequent polling request, the client
    authenticates according to Section 4 and, when the deferral is bound
    to a DPoP key (through dpop_jkt in the redirect flow or the
-   initiating proof otherwise), MUST send a DPoP proof signed with that
-   key.  The authorization server MUST verify on every poll that the
-   request presents the client authentication or key bound at
-   origination, and MUST reject a proof whose key does not match the
+   originating request's DPoP proof otherwise), MUST send a DPoP proof
+   signed with that key.  The authorization server MUST verify on every
+   poll that the request presents the client authentication or key bound
+   at origination, and MUST reject a proof whose key does not match the
    stored thumbprint.
 
 9.2.  Subsequent Polling Requests
@@ -972,7 +970,7 @@ Table of Contents
    For a deferral created under this specification, the authorization
    server MUST require the deferral's sender constraint on the
    revocation request: client authentication where the deferral is bound
-   to client authentication, or a DPoP proof with the initiation-bound
+   to client authentication, or a DPoP proof with the origination-bound
    key otherwise.  A revocation request that does not present the bound
    constraint MUST be treated as presenting an unrecognized token per
    [DTR].
@@ -1075,19 +1073,7 @@ Table of Contents
    (Section 13).
 
    The JWT payload MUST contain the following claims in addition to the
-   approved client metadata.  Each metadata claim MUST be client
-   metadata registered in the IANA "OAuth Dynamic Client Registration
-   Metadata" registry and recognized by the authorization server.  The
-   following authorization-server-assigned, credential, and recursive
-   metadata members are not eligible for attestation and MUST NOT appear
-   in a software statement issued under this specification: client_id,
-   client_secret, client_id_issued_at, client_secret_expires_at,
-   registration_access_token, registration_client_uri, and
-   software_statement.  An authorization server MAY exclude additional
-   metadata according to policy.  The client_id member required in the
-   Client ID Metadata Document by [CIMD] identifies the canonical
-   document during issuance; the statement represents that identifier in
-   sub and MUST NOT copy it as client metadata.
+   approved client metadata.
 
    iss:  REQUIRED.  The issuer identifier of the issuing authorization
       server, as defined by [RFC8414].
@@ -1120,6 +1106,20 @@ Table of Contents
       content evaluated during issuance and lets any party determine
       whether the client's currently published metadata still matches
       what was attested.
+
+   Each metadata claim MUST be client metadata registered in the IANA
+   "OAuth Dynamic Client Registration Metadata" registry and recognized
+   by the authorization server.  The following authorization-server-
+   assigned, credential, and recursive metadata members are not eligible
+   for attestation and MUST NOT appear in a software statement issued
+   under this specification: client_id, client_secret,
+   client_id_issued_at, client_secret_expires_at,
+   registration_access_token, registration_client_uri, and
+   software_statement.  An authorization server MAY exclude additional
+   metadata according to policy.  The client_id member required in the
+   Client ID Metadata Document by [CIMD] identifies the canonical
+   document during issuance; the statement represents that identifier in
+   sub and MUST NOT copy it as client metadata.
 
    The issuer determines the audience and lifetime according to policy.
    A client can request an audience using the audience parameter, but
@@ -1309,8 +1309,9 @@ Table of Contents
    software statement grant nor the software_statement_code response
    type.
 
-   A client MUST NOT send a software statement request to an
-   authorization server that does not advertise
+   A client MUST NOT send a software statement request, or a token
+   exchange requesting urn:ietf:params:oauth:token-type:software-
+   statement, to an authorization server that does not advertise
    deferred_token_response_supported as true.
 
    This specification defines the following additional authorization
