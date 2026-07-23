@@ -1463,16 +1463,17 @@ Table of Contents
    with its originating request before redemption.
 
    Delivery through the redirection endpoint also establishes who can
-   complete a request.  The redirect_uri must exactly match the client's
-   own metadata document, so the software statement code is only ever
-   delivered to an endpoint the client software's publisher named.  A
-   party initiating a request for another party's client_id gains
-   nothing: its own endpoint is not registered, so the request fails
-   before any redirect, while a request aimed at the genuine registered
-   endpoint delivers a code whose PKCE verifier the recipient does not
-   hold.  Completing the flow therefore demonstrates the requester's
-   association with the client software; whether that association merits
-   issuance remains an approval-policy decision.
+   complete a request.  The redirect_uri must exactly match a
+   redirection URI in the client's own metadata document, so the
+   software statement code is only ever delivered to an endpoint the
+   client software's publisher named.  A party initiating a request for
+   another party's client_id gains nothing: its own endpoint is not
+   registered, so the request fails before any redirect, while a request
+   aimed at the genuine registered endpoint delivers a code whose PKCE
+   verifier the recipient does not hold.  Completing the flow therefore
+   demonstrates the requester's association with the client software;
+   whether that association merits issuance remains an approval-policy
+   decision.
 
    A software statement code returned in a URL is visible to browser
    history, referrer fields, redirection-target logs, and other front-
@@ -2262,17 +2263,17 @@ Appendix B.  Issuance Across the Software Delivery Lifecycle
 
    Release:  Each release updates the client's canonical metadata
       document, including the software_version and software_id members
-      of [RFC7591] where used.  Because cimd_digest is REQUIRED, a
-      statement functions as a signed, expiring release-approval
-      artifact: exactly this metadata, for exactly this version,
-      reviewed and attested for these audiences.  A release pipeline
-      obtains it without human interaction through the token exchange
-      profile, presenting the credential issued at publisher onboarding
-      (Section 8).  The client identifier does not change with a
-      release: updates change the document behind the stable client
-      identifier URL, creating a new trust state for the same identity,
-      and each statement binds the same sub to the digest of the content
-      actually reviewed.
+      of [RFC7591] where used.  Because every statement carries
+      cimd_digest (Section 11), a statement functions as a signed,
+      expiring release-approval artifact: exactly this metadata, for
+      exactly this version, reviewed and attested for these audiences.
+      A release pipeline obtains it without human interaction through
+      the token exchange profile, presenting the credential issued at
+      publisher onboarding (Section 8).  The client identifier does not
+      change with a release: updates change the document behind the
+      stable client identifier URL, creating a new trust state for the
+      same identity, and each statement binds the same sub to the digest
+      of the content actually reviewed.
 
    Distribution:  A publisher program or marketplace reviews the
       software once and issues a statement whose audience covers the
