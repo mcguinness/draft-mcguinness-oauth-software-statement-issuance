@@ -570,9 +570,16 @@ Table of Contents
 
    The client uses the token_endpoint_auth_method and related key
    metadata in its Client ID Metadata Document when authenticating to
-   the token endpoint.  If the metadata does not establish a client
-   authentication method usable at the authorization server, the client
-   is treated as a public client.
+   the token endpoint.  Only an explicit token_endpoint_auth_method
+   value of none establishes a public client.  Any other declared method
+   establishes a confidential client, and the authorization server MUST
+   require exactly that method, as [CIMD] requires; a declared method
+   the authorization server does not support MUST cause rejection of the
+   request rather than treatment of the client as public.  A metadata
+   document that omits token_endpoint_auth_method establishes neither:
+   the [RFC7591] default is a symmetric-secret method that [CIMD]
+   prohibits and that an unregistered client cannot satisfy, so a
+   software statement request for such a client MUST be rejected.
 
    Sender constraint is established per flow:
 
@@ -884,28 +891,39 @@ Table of Contents
    invalid_target [RFC8693].
 
    When the subject token is a software statement, the request MUST be
-   holder-bound: the client MUST authenticate according to Section 4, or
-   present a DPoP proof whose key is attested by the statement (present
-   in its jwks or resolvable through its attested jwks_uri).  A
-   statement that attests no usable key material and belongs to a client
-   without an authentication method MUST NOT be accepted for renewal;
-   such a client performs a new software statement request instead.
+   holder-bound against current metadata.  When the current metadata
+   snapshot establishes a client authentication method, the client MUST
+   authenticate with that method; a key attested only by the subject
+   statement MUST NOT substitute for current client authentication.
+   When the current metadata establishes a public client, the client
+   MUST present a DPoP proof whose key is authorized by both the subject
+   statement and the current metadata snapshot, present in or resolvable
+   through the jwks or jwks_uri of each.  A statement whose subject can
+   satisfy neither requirement cannot be renewed; such a client performs
+   a new software statement request or presents an onboarding credential
+   instead.
 
-   An initial access token presented under this profile SHOULD be:
+   An initial access token presented under this profile MUST be:
 
-   *  integrity protected, and confidential in transit and at rest;
+   *  time limited;
 
-   *  limited to the issuing authorization server and time limited;
+   *  limited to the issuing authorization server;
 
    *  bound to an exact client identifier URL or an explicitly
       authorized client identifier namespace; and
 
    *  of at least 128 bits of entropy, when opaque.
 
-   It MAY further restrict audiences, metadata, or the number of uses.
-   The authorization server MUST enforce every restriction the
-   credential carries and MUST prevent replay beyond its permitted
-   number of uses.
+   It SHOULD be sender-constrained or limited in its number of uses, and
+   SHOULD be integrity protected and kept confidential in transit and at
+   rest.  It MAY further restrict audiences or metadata.  The
+   authorization server MUST enforce every restriction the credential
+   carries and MUST prevent replay beyond its permitted number of uses.
+   A DPoP proof on the exchange sender-constrains the resulting
+   deferral; it neither authenticates the presenter nor protects a
+   bearer credential (Section 3 of [RFC9449]), so a stolen bearer
+   credential remains presentable, under any key, until it expires or
+   exhausts its permitted uses.
 
    The exchange is evaluated against current metadata, not the subject
    token's contents.  The authorization server MUST obtain and validate
@@ -1587,12 +1605,12 @@ Table of Contents
    Renewal through Section 8 would otherwise let an unexpired stolen
    statement be exchanged for a fresh one, outliving its intended
    lifetime.  That profile therefore requires holder binding for
-   statement subjects: the presenter must authenticate as the client or
-   prove possession of a key the statement attests.  A statement that
-   attests no usable key material and belongs to a client without an
-   authentication method cannot be renewed at all; the issuer-scoping
-   guidance of this section applies to the exchange as it does to
-   registration.
+   statement subjects against current metadata: the presenter must
+   authenticate under the client's current authentication method or, for
+   a public client, prove possession of a key that both the statement
+   and the current metadata authorize.  A statement whose subject can do
+   neither cannot be renewed at all; the issuer-scoping guidance of this
+   section applies to the exchange as it does to registration.
 
    This specification does not define online revocation of an issued
    software statement.  The primary control is lifetime: issuance is
@@ -2237,14 +2255,16 @@ A.2.  Enterprise Deployment of a Third-Party Agent
    [RFC7591]; it is not covered by the issuer's attestation, and
    accepting it is the registering server's policy.
 
-   Finally, before the statement expires, the tooling submits a renewal
-   exchange with the statement as subject token and the same two
-   audiences.  When ACME has shipped an update that changes the
-   canonical metadata document, the identity platform computes a current
-   canonical digest that no longer matches the subject statement's
-   cimd_digest (Section 8).  Its issuance policy therefore defers the
-   exchange for a fresh security review instead of copying claims from
-   the old statement or renewing it silently.
+   Finally, before the statement expires, the tooling submits a fresh
+   exchange with the same initial access token as subject token and the
+   same two audiences; renewal with the prior statement as subject token
+   is unavailable to this client, which is public and holds a statement
+   that attests no key material (Section 8).  When ACME has shipped an
+   update that changes the canonical metadata document, the identity
+   platform's fresh snapshot yields a canonical digest that differs from
+   the one in the statement it previously issued.  Its issuance policy
+   therefore defers the exchange for a new security review instead of
+   issuing silently against changed metadata.
 
 A.3.  The Resource Owner as Approver: A Case This Specification Does Not
       Serve
