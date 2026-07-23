@@ -1543,7 +1543,8 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
     |&lt;------------------------------------------------|
     |                                                 |
     | (C) Redemption                                  |
-    |     (software_statement_code, code_verifier)    |
+    |     (software_statement_code, code_verifier,    |
+    |      completion_mode=deferred)                  |
     |------------------------------------------------&gt;|
     |                                                 |
     | (D) Software statement response or              |
@@ -1618,7 +1619,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <dt id="section-5-2.5">
 <code>redirect_uri</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-5-2.6">
-          <p id="section-5-2.6.1"><span class="bcp14">REQUIRED</span>. The value <span class="bcp14">MUST</span> exactly match one of the redirection URIs in the Client ID Metadata Document, subject to the redirect URI rules of <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span>.<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-5-2.6.1"><span class="bcp14">REQUIRED</span>. The value <span class="bcp14">MUST</span> exactly match one of the redirection URIs in the Client ID Metadata Document, subject to the redirect URI rules of <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span>. The value <span class="bcp14">MUST</span> be an HTTPS URL: private-use URI schemes and loopback interface redirection URIs <span class="bcp14">MUST NOT</span> be used in a software statement request (<a href="#authorization-response-security" class="auto internal xref">Section 14.4</a>).<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-5-2.7">
@@ -1866,7 +1867,7 @@ Location: https://client.example.org/cb?
       <h2 id="name-deferred-processing">
 <a href="#section-9" class="section-number selfRef">9. </a><a href="#name-deferred-processing" class="section-name selfRef">Deferred Processing</a>
       </h2>
-<p id="section-9-1">Every deferral originates from a deferred token response of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>, issued for a software statement code redemption (<a href="#software-statement-code-redemption" class="auto internal xref">Section 7</a>) or a token exchange (<a href="#token-exchange-profile" class="auto internal xref">Section 8</a>). The client polls the token endpoint using the polling grant defined by <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>; this specification profiles polling delivery only, and the callback mechanism of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> is not used.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-1">Every deferral originates from a deferred token response of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>, issued for a software statement code redemption (<a href="#software-statement-code-redemption" class="auto internal xref">Section 7</a>) or a token exchange (<a href="#token-exchange-profile" class="auto internal xref">Section 8</a>). The client polls the token endpoint using the polling grant defined by <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>. This specification profiles polling delivery only: a client <span class="bcp14">MUST NOT</span> include the <code>client_notification_token</code> parameter of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> on any request under this specification, and an authorization server <span class="bcp14">MUST NOT</span> deliver callback notifications for a deferral created under this specification, regardless of any <code>deferred_client_notification_endpoint</code> in the client's metadata.<a href="#section-9-1" class="pilcrow">¶</a></p>
 <p id="section-9-2">Each of those originating requests <span class="bcp14">MUST</span> include the <code>completion_mode</code> parameter of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> with a value that includes <code>deferred</code>, and the authorization server <span class="bcp14">MUST</span> reject a request that lacks that opt-in with <code>invalid_request</code>. Issuance routinely completes out of band, so this specification makes <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>'s opt-in mandatory rather than implicit: a client that requires synchronous handling cannot use these flows. Requiring the parameter keeps the profile within the unmodified deferral model of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>, under which a server does not defer a request that has not opted in. A client implementing this specification <span class="bcp14">MUST</span> support the polling grant.<a href="#section-9-2" class="pilcrow">¶</a></p>
 <p id="section-9-3">Approval of software statement issuance can take hours or days rather than the seconds typical of user authentication, for example when it involves reviewing the client's policy or compliance documentation. Issuers <span class="bcp14">SHOULD</span> set deferral code lifetimes that reflect their actual approval latency.<a href="#section-9-3" class="pilcrow">¶</a></p>
 <div id="first-polling-request">
@@ -1938,8 +1939,9 @@ Location: https://client.example.org/cb?
       <dd class="break"></dd>
 </dl>
 <p id="section-10-3">The response <span class="bcp14">MUST NOT</span> contain <code>refresh_token</code> or <code>scope</code>. The authorization server <span class="bcp14">MUST</span> include <code>Cache-Control: no-store</code>; it <span class="bcp14">SHOULD</span> also include <code>Pragma: no-cache</code>.<a href="#section-10-3" class="pilcrow">¶</a></p>
-<p id="section-10-4">For example:<a href="#section-10-4" class="pilcrow">¶</a></p>
-<div class="lang-http sourcecode" id="section-10-5">
+<p id="section-10-4">DPoP under this specification binds requests and deferral state, not the issued artifact: the software statement is not an OAuth access token, and <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>'s requirement that a final access token inherit the originating DPoP binding does not apply because none is issued. The statement's replay and theft properties are those described in <a href="#statement-validation" class="auto internal xref">Section 14.7</a>, including key binding through attested <code>jwks</code> or <code>jwks_uri</code> where a deployment wants proof of possession at registration.<a href="#section-10-4" class="pilcrow">¶</a></p>
+<p id="section-10-5">For example:<a href="#section-10-5" class="pilcrow">¶</a></p>
+<div class="lang-http sourcecode" id="section-10-6">
 <pre>
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -1954,17 +1956,17 @@ Pragma: no-cache
   "token_type": "N_A",
   "expires_in": 3600
 }
-</pre><a href="#section-10-5" class="pilcrow">¶</a>
+</pre><a href="#section-10-6" class="pilcrow">¶</a>
 </div>
-<p id="section-10-6">To use the issued statement for dynamic client registration, the client supplies the value of <code>access_token</code> as the <code>software_statement</code> member of an <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> client registration request.<a href="#section-10-6" class="pilcrow">¶</a></p>
-<p id="section-10-7">A client obtains a replacement for an expiring or expired software statement by performing a new software statement request or, while the statement is unexpired, by exchanging it under <a href="#token-exchange-profile" class="auto internal xref">Section 8</a>. Whether replacement requires new approval is determined by issuer policy.<a href="#section-10-7" class="pilcrow">¶</a></p>
+<p id="section-10-7">To use the issued statement for dynamic client registration, the client supplies the value of <code>access_token</code> as the <code>software_statement</code> member of an <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> client registration request.<a href="#section-10-7" class="pilcrow">¶</a></p>
+<p id="section-10-8">A client obtains a replacement for an expiring or expired software statement by performing a new software statement request or, while the statement is unexpired, by exchanging it under <a href="#token-exchange-profile" class="auto internal xref">Section 8</a>. Whether replacement requires new approval is determined by issuer policy.<a href="#section-10-8" class="pilcrow">¶</a></p>
 <div id="terminal-denial">
 <section id="section-10.1">
         <h3 id="name-terminal-denial">
 <a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-terminal-denial" class="section-name selfRef">Terminal Denial</a>
         </h3>
 <p id="section-10.1-1">When the authorization server decides not to issue the requested software statement, whether that decision is already complete when the originating request arrives or completes during deferred processing, it returns a token error response per Section 5.2 of <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> with the error code <code>access_denied</code> and HTTP status code 400, and <span class="bcp14">MUST</span> include the <code>Cache-Control: no-store</code> response header field. The same rule applies to both originating requests: a software statement code redemption (<a href="#software-statement-code-redemption" class="auto internal xref">Section 7</a>) and a token exchange (<a href="#token-exchange-profile" class="auto internal xref">Section 8</a>). A decision that completes as a denial during deferred processing is delivered in response to a polling request (<a href="#deferred-processing" class="auto internal xref">Section 9</a>).<a href="#section-10.1-1" class="pilcrow">¶</a></p>
-<p id="section-10.1-2">The denial is terminal for the request: a software statement code presented with a denied redemption is consumed, and any deferral state is closed, after which its deferral code <span class="bcp14">MUST</span> be treated as an unrecognized token per <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>. A denial does not preclude a later software statement request; whether to accept one is issuance policy.<a href="#section-10.1-2" class="pilcrow">¶</a></p>
+<p id="section-10.1-2">The denial is terminal for the request: a software statement code presented with a denied redemption is consumed, and a deferral resolves to the denied state, in which subsequent polling requests return the same <code>access_denied</code> response for the remainder of the deferral code's lifetime, as <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> requires for a request that has resolved with an error. A denial does not preclude a later software statement request; whether to accept one is issuance policy.<a href="#section-10.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1994,7 +1996,7 @@ Pragma: no-cache
 <dt id="section-11-5.5">
 <code>aud</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-11-5.6">
-          <p id="section-11-5.6.1"><span class="bcp14">REQUIRED</span>. One or more audience identifiers for the authorization servers permitted to accept the statement. Each value <span class="bcp14">SHOULD</span> be an authorization server issuer identifier as defined by <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>. A trusting authorization server <span class="bcp14">MUST</span> reject the statement unless one of its locally configured audience identifiers exactly matches a value in this claim. When the request contained <code>audience</code> values, every value in this claim <span class="bcp14">MUST</span> have appeared among them.<a href="#section-11-5.6.1" class="pilcrow">¶</a></p>
+          <p id="section-11-5.6.1"><span class="bcp14">REQUIRED</span>. One or more audience identifiers for the authorization servers permitted to accept the statement. Each value <span class="bcp14">MUST</span> be an authorization server issuer identifier as defined by <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>. A trusting authorization server <span class="bcp14">MUST</span> reject the statement unless one of its locally configured audience identifiers exactly matches a value in this claim. When the request contained <code>audience</code> values, every value in this claim <span class="bcp14">MUST</span> have appeared among them.<a href="#section-11-5.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-11-5.7">
@@ -2215,7 +2217,7 @@ Pragma: no-cache
         </h3>
 <p id="section-14.4-1">The software statement is a signed credential and can contain sensitive deployment information. It <span class="bcp14">MUST NOT</span> be returned through the authorization endpoint. The software statement code response applies exact redirect URI matching, PKCE with <code>S256</code>, and the other applicable authorization response protections in <span>[<a href="#RFC9700" class="cite xref">RFC9700</a>]</span>.<a href="#section-14.4-1" class="pilcrow">¶</a></p>
 <p id="section-14.4-2">Before redeeming a software statement code, the client <span class="bcp14">MUST</span> verify <code>state</code> and <span class="bcp14">MUST</span> validate the authorization response <code>iss</code> parameter according to <span>[<a href="#RFC9207" class="cite xref">RFC9207</a>]</span>. Although PKCE with <code>S256</code> already provides the cross-site request forgery protection described in <span>[<a href="#RFC9700" class="cite xref">RFC9700</a>]</span>, this specification requires <code>state</code> so that a client running concurrent software statement requests can correlate each authorization response with its originating request before redemption.<a href="#section-14.4-2" class="pilcrow">¶</a></p>
-<p id="section-14.4-3">Delivery through the redirection endpoint also establishes who can complete a request. The <code>redirect_uri</code> must exactly match a redirection URI in the client's own metadata document, so the software statement code is only ever delivered to an endpoint the client software's publisher named. A party initiating a request for another party's <code>client_id</code> gains nothing: its own endpoint is not registered, so the request fails before any redirect, while a request aimed at the genuine registered endpoint delivers a code whose PKCE verifier the recipient does not hold. Completing the flow therefore demonstrates the requester's association with the client software; whether that association merits issuance remains an approval-policy decision.<a href="#section-14.4-3" class="pilcrow">¶</a></p>
+<p id="section-14.4-3">Delivery through the redirection endpoint also establishes who can complete a request. The <code>redirect_uri</code> must exactly match a redirection URI in the client's own metadata document and must be an HTTPS URL (<a href="#authorization-request" class="auto internal xref">Section 5</a>): private-use scheme and loopback redirections are prohibited in this flow because they are claimable by any application on a device (<span>[<a href="#RFC8252" class="cite xref">RFC8252</a>]</span>), which would let an attacker initiate and complete a request for another party's <code>client_id</code> using its own PKCE verifier and DPoP key. With those prohibited, a party initiating a request for another party's <code>client_id</code> gains nothing: an endpoint of its own is not registered, so the request fails before any redirect, while a request aimed at the genuine registered endpoint delivers a code whose PKCE verifier the recipient does not hold. An authorization server <span class="bcp14">SHOULD</span> additionally relate the redirection URI's origin to the client identifier URL or the metadata document's <code>client_uri</code> according to policy. Completing the flow therefore demonstrates control of an HTTPS endpoint the publisher named; whether that control merits issuance remains an approval-policy decision.<a href="#section-14.4-3" class="pilcrow">¶</a></p>
 <p id="section-14.4-4">A software statement code returned in a URL is visible to browser history, referrer fields, redirection-target logs, and other front-channel observers, like an authorization code, and is protected the same way: it is short lived, single use, and unredeemable without the PKCE verifier and, for a public client, the <code>dpop_jkt</code> key. Deferral codes never transit the front channel under this specification; they are issued only in deferred token responses over the direct TLS connection, and their theft is contained by sender-constrained polling and cancellation (<a href="#deferred-processing" class="auto internal xref">Section 9</a>). Deployments sensitive to URL disclosure of the software statement code can use the <code>form_post</code> response mode <span>[<a href="#FORM-POST" class="cite xref">FORM-POST</a>]</span> as described in <a href="#software-statement-code-response" class="auto internal xref">Section 6.1</a>; the fragment response mode <span class="bcp14">SHOULD NOT</span> be used.<a href="#section-14.4-4" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -2310,7 +2312,7 @@ Pragma: no-cache
           <dd class="break"></dd>
 <dt id="section-16.1-2.3">Change Controller:</dt>
           <dd style="margin-left: 1.5em" id="section-16.1-2.4">
-            <p id="section-16.1-2.4.1">IETF<a href="#section-16.1-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-16.1-2.4.1">IESG<a href="#section-16.1-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-16.1-2.5">Specification Document(s):</dt>
@@ -2340,7 +2342,7 @@ Pragma: no-cache
           <dd class="break"></dd>
 <dt id="section-16.2-2.5">Change Controller:</dt>
           <dd style="margin-left: 1.5em" id="section-16.2-2.6">
-            <p id="section-16.2-2.6.1">IETF<a href="#section-16.2-2.6.1" class="pilcrow">¶</a></p>
+            <p id="section-16.2-2.6.1">IESG<a href="#section-16.2-2.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-16.2-2.7">Specification Document(s):</dt>
@@ -2360,7 +2362,7 @@ Pragma: no-cache
           <dd class="break"></dd>
 <dt id="section-16.2-2.13">Change Controller:</dt>
           <dd style="margin-left: 1.5em" id="section-16.2-2.14">
-            <p id="section-16.2-2.14.1">IETF<a href="#section-16.2-2.14.1" class="pilcrow">¶</a></p>
+            <p id="section-16.2-2.14.1">IESG<a href="#section-16.2-2.14.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-16.2-2.15">Specification Document(s):</dt>
@@ -2391,7 +2393,7 @@ Pragma: no-cache
           <dd class="break"></dd>
 <dt id="section-16.3-3.5">Change Controller:</dt>
           <dd style="margin-left: 1.5em" id="section-16.3-3.6">
-            <p id="section-16.3-3.6.1">IETF<a href="#section-16.3-3.6.1" class="pilcrow">¶</a></p>
+            <p id="section-16.3-3.6.1">IESG<a href="#section-16.3-3.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-16.3-3.7">Specification Document(s):</dt>
@@ -2426,7 +2428,7 @@ Pragma: no-cache
           <dd class="break"></dd>
 <dt id="section-16.4-2.7">Change controller:</dt>
           <dd style="margin-left: 1.5em" id="section-16.4-2.8">
-            <p id="section-16.4-2.8.1">IETF<a href="#section-16.4-2.8.1" class="pilcrow">¶</a></p>
+            <p id="section-16.4-2.8.1">IESG<a href="#section-16.4-2.8.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-16.4-2.9">Specification document(s):</dt>
@@ -2454,7 +2456,7 @@ Pragma: no-cache
           <dd class="break"></dd>
 <dt id="section-16.4-4.7">Change controller:</dt>
           <dd style="margin-left: 1.5em" id="section-16.4-4.8">
-            <p id="section-16.4-4.8.1">IETF<a href="#section-16.4-4.8.1" class="pilcrow">¶</a></p>
+            <p id="section-16.4-4.8.1">IESG<a href="#section-16.4-4.8.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-16.4-4.9">Specification document(s):</dt>
@@ -2644,7 +2646,7 @@ Pragma: no-cache
           <dd class="break"></dd>
 <dt id="section-16.7-2.5">Change Controller:</dt>
           <dd style="margin-left: 1.5em" id="section-16.7-2.6">
-            <p id="section-16.7-2.6.1">IETF<a href="#section-16.7-2.6.1" class="pilcrow">¶</a></p>
+            <p id="section-16.7-2.6.1">IESG<a href="#section-16.7-2.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-16.7-2.7">Specification Document(s):</dt>
@@ -2797,6 +2799,10 @@ Pragma: no-cache
         <dd>
 <span class="refTitle">"OAuth 2.0 Pushed Client Registration"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-richer-oauth-pushed-client-registration">https://datatracker.ietf.org/doc/draft-richer-oauth-pushed-client-registration</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="RFC8252">[RFC8252]</dt>
+        <dd>
+<span class="refAuthor">Denniss, W.</span> and <span class="refAuthor">J. Bradley</span>, <span class="refTitle">"OAuth 2.0 for Native Apps"</span>, <span class="seriesInfo">BCP 212</span>, <span class="seriesInfo">RFC 8252</span>, <span class="seriesInfo">DOI 10.17487/RFC8252</span>, <time datetime="2017-10" class="refDate">October 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8252">https://www.rfc-editor.org/rfc/rfc8252</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC8628">[RFC8628]</dt>
         <dd>
 <span class="refAuthor">Denniss, W.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Jones, M.</span>, and <span class="refAuthor">H. Tschofenig</span>, <span class="refTitle">"OAuth 2.0 Device Authorization Grant"</span>, <span class="seriesInfo">RFC 8628</span>, <span class="seriesInfo">DOI 10.17487/RFC8628</span>, <time datetime="2019-08" class="refDate">August 2019</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8628">https://www.rfc-editor.org/rfc/rfc8628</a>&gt;</span>. </dd>
@@ -2835,7 +2841,7 @@ Pragma: no-cache
             <p id="appendix-A.1-2.1.1">TaskFlow's publisher tooling constructs an authorization request with <code>response_type=software_statement_code</code>, requesting both customer issuer identifiers by repeating <code>audience</code>, and opens it in the developer's user agent (<a href="#authorization-request" class="auto internal xref">Section 5</a>).<a href="#appendix-A.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="appendix-A.1-2.2">
-            <p id="appendix-A.1-2.2.1">The developer authenticates to the publisher program, which records the developer's identity in its audit trail. The authorization endpoint returns the software statement code response (<a href="#software-statement-code-response" class="auto internal xref">Section 6.1</a>). The tooling validates <code>state</code> and <code>iss</code> and redeems the software statement code with its PKCE verifier, authenticating with <code>private_key_jwt</code> (<a href="#software-statement-code-redemption" class="auto internal xref">Section 7</a>); because the compliance review takes two days, the redemption is deferred, and the tooling polls with the same authentication (<a href="#deferred-processing" class="auto internal xref">Section 9</a>).<a href="#appendix-A.1-2.2.1" class="pilcrow">¶</a></p>
+            <p id="appendix-A.1-2.2.1">The developer authenticates to the publisher program, which records the developer's identity in its audit trail. The authorization endpoint returns the software statement code response (<a href="#software-statement-code-response" class="auto internal xref">Section 6.1</a>). The tooling validates <code>state</code> and <code>iss</code> and redeems the software statement code with its PKCE verifier and <code>completion_mode=deferred</code>, authenticating with <code>private_key_jwt</code> (<a href="#software-statement-code-redemption" class="auto internal xref">Section 7</a>); because the compliance review takes two days, the redemption is deferred, and the tooling polls with the same authentication (<a href="#deferred-processing" class="auto internal xref">Section 9</a>).<a href="#appendix-A.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="appendix-A.1-2.3">
             <p id="appendix-A.1-2.3.1">On approval, polling returns the software statement token response. The statement's <code>sub</code> is the TaskFlow metadata URL, its <code>aud</code> array contains the two requested authorization server issuer identifiers, and its <code>cimd_digest</code> binds the review to the exact metadata document evaluated.<a href="#appendix-A.1-2.3.1" class="pilcrow">¶</a></p>
@@ -2881,7 +2887,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3A
 <p id="appendix-A.2-1">A vendor, ACME, ships an AI agent whose installations all share the client identifier URL <code>https://acme.example/agent</code>; the document at that URL describes the logical client software, so no per-installation metadata document exists. An enterprise deploys the agent for its workforce. Internal services each front a small authorization server, none staffed to review client software. The enterprise's identity platform, <code>https://idp.enterprise.example</code>, acts as the issuing authorization server in the attestation-service role of <a href="#authorization-server-metadata" class="auto internal xref">Section 13</a>: a token endpoint, metadata, and signing keys. The internal authorization servers <code>https://tools-as.enterprise.example</code> and <code>https://data-as.enterprise.example</code> each configure it as a trusted issuer for the ACME agent.<a href="#appendix-A.2-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="appendix-A.2-2">
 <li id="appendix-A.2-2.1">
-            <p id="appendix-A.2-2.1.1">The agent is a public client. At onboarding, the identity platform issues its platform tooling an initial access token that pre-authorizes software statement issuance for ACME's client identifier. The tooling, a daemon with no user agent, presents that credential as the subject token of a token exchange (<a href="#token-exchange-profile" class="auto internal xref">Section 8</a>) with <code>client_id=https://acme.example/agent</code> and both internal authorization server issuer identifiers as repeated <code>audience</code> parameters. It includes a DPoP proof and retains the private key for every polling request; the proof sender-constrains any resulting deferral code.<a href="#appendix-A.2-2.1.1" class="pilcrow">¶</a></p>
+            <p id="appendix-A.2-2.1.1">The agent is a public client. At onboarding, the identity platform issues its platform tooling an initial access token that pre-authorizes software statement issuance for ACME's client identifier. The tooling, a daemon with no user agent, presents that credential as the subject token of a token exchange (<a href="#token-exchange-profile" class="auto internal xref">Section 8</a>) with <code>client_id=https://acme.example/agent</code> and both internal authorization server issuer identifiers as repeated <code>audience</code> parameters, opting in to deferral with <code>completion_mode=deferred</code>. It includes a DPoP proof and retains the private key for every polling request; the proof sender-constrains any resulting deferral code.<a href="#appendix-A.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="appendix-A.2-2.2">
             <p id="appendix-A.2-2.2.1">The identity platform validates the subject token, accepts the exchange for review, and returns a DTR deferred response with a three-day lifetime. The tooling waits for the advertised interval, then polls with the deferred grant, the deferral code, and a fresh DPoP proof signed by the same key. Polling carries no PKCE verifier (<a href="#first-polling-request" class="auto internal xref">Section 9.1</a>). The security team reviews the vendor assessment out of band; responses to pending polls repeat neither the deferral code nor the interval.<a href="#appendix-A.2-2.2.1" class="pilcrow">¶</a></p>
@@ -3113,7 +3119,7 @@ Content-Type: application/json
             <p id="appendix-C.9-2.2.1">Request-time metadata selection: a client cannot select the subset of its canonical metadata to be attested. Issuer-side narrowing by policy covers part of the need (<a href="#software-statement-format" class="auto internal xref">Section 11</a>); an extension can add a selection object as an authorization request parameter.<a href="#appendix-C.9-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="appendix-C.9-2.3">
-            <p id="appendix-C.9-2.3.1">Callback delivery: deferral results are delivered by polling only. The callback mechanism of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> can be adopted by a future profile; nothing in this specification conflicts with it.<a href="#appendix-C.9-2.3.1" class="pilcrow">¶</a></p>
+            <p id="appendix-C.9-2.3.1">Callback delivery: deferral results are delivered by polling only, and callbacks are prohibited for deferrals created under this specification (<a href="#deferred-processing" class="auto internal xref">Section 9</a>). A future version can lift that prohibition and adopt the callback mechanism of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>.<a href="#appendix-C.9-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>

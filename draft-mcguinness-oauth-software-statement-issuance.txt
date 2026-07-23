@@ -527,7 +527,8 @@ Table of Contents
        |<------------------------------------------------|
        |                                                 |
        | (C) Redemption                                  |
-       |     (software_statement_code, code_verifier)    |
+       |     (software_statement_code, code_verifier,    |
+       |      completion_mode=deferred)                  |
        |------------------------------------------------>|
        |                                                 |
        | (D) Software statement response or              |
@@ -641,7 +642,9 @@ Table of Contents
 
    redirect_uri:  REQUIRED.  The value MUST exactly match one of the
       redirection URIs in the Client ID Metadata Document, subject to
-      the redirect URI rules of [CIMD].
+      the redirect URI rules of [CIMD].  The value MUST be an HTTPS URL:
+      private-use URI schemes and loopback interface redirection URIs
+      MUST NOT be used in a software statement request (Section 14.4).
 
    state:  REQUIRED.  An opaque value used by the client to bind the
       authorization response to its request.  The authorization server
@@ -934,9 +937,13 @@ Table of Contents
    Every deferral originates from a deferred token response of [DTR],
    issued for a software statement code redemption (Section 7) or a
    token exchange (Section 8).  The client polls the token endpoint
-   using the polling grant defined by [DTR]; this specification profiles
-   polling delivery only, and the callback mechanism of [DTR] is not
-   used.
+   using the polling grant defined by [DTR].  This specification
+   profiles polling delivery only: a client MUST NOT include the
+   client_notification_token parameter of [DTR] on any request under
+   this specification, and an authorization server MUST NOT deliver
+   callback notifications for a deferral created under this
+   specification, regardless of any
+   deferred_client_notification_endpoint in the client's metadata.
 
    Each of those originating requests MUST include the completion_mode
    parameter of [DTR] with a value that includes deferred, and the
@@ -1026,6 +1033,14 @@ Table of Contents
    authorization server MUST include Cache-Control: no-store; it SHOULD
    also include Pragma: no-cache.
 
+   DPoP under this specification binds requests and deferral state, not
+   the issued artifact: the software statement is not an OAuth access
+   token, and [DTR]'s requirement that a final access token inherit the
+   originating DPoP binding does not apply because none is issued.  The
+   statement's replay and theft properties are those described in
+   Section 14.7, including key binding through attested jwks or jwks_uri
+   where a deployment wants proof of possession at registration.
+
    For example:
 
    HTTP/1.1 200 OK
@@ -1066,10 +1081,12 @@ Table of Contents
    processing is delivered in response to a polling request (Section 9).
 
    The denial is terminal for the request: a software statement code
-   presented with a denied redemption is consumed, and any deferral
-   state is closed, after which its deferral code MUST be treated as an
-   unrecognized token per [DTR].  A denial does not preclude a later
-   software statement request; whether to accept one is issuance policy.
+   presented with a denied redemption is consumed, and a deferral
+   resolves to the denied state, in which subsequent polling requests
+   return the same access_denied response for the remainder of the
+   deferral code's lifetime, as [DTR] requires for a request that has
+   resolved with an error.  A denial does not preclude a later software
+   statement request; whether to accept one is issuance policy.
 
 11.  Software Statement Format
 
@@ -1109,9 +1126,9 @@ Table of Contents
 
    aud:  REQUIRED.  One or more audience identifiers for the
       authorization servers permitted to accept the statement.  Each
-      value SHOULD be an authorization server issuer identifier as
-      defined by [RFC8414].  A trusting authorization server MUST reject
-      the statement unless one of its locally configured audience
+      value MUST be an authorization server issuer identifier as defined
+      by [RFC8414].  A trusting authorization server MUST reject the
+      statement unless one of its locally configured audience
       identifiers exactly matches a value in this claim.  When the
       request contained audience values, every value in this claim MUST
       have appeared among them.
@@ -1464,16 +1481,22 @@ Table of Contents
 
    Delivery through the redirection endpoint also establishes who can
    complete a request.  The redirect_uri must exactly match a
-   redirection URI in the client's own metadata document, so the
-   software statement code is only ever delivered to an endpoint the
-   client software's publisher named.  A party initiating a request for
-   another party's client_id gains nothing: its own endpoint is not
-   registered, so the request fails before any redirect, while a request
-   aimed at the genuine registered endpoint delivers a code whose PKCE
-   verifier the recipient does not hold.  Completing the flow therefore
-   demonstrates the requester's association with the client software;
-   whether that association merits issuance remains an approval-policy
-   decision.
+   redirection URI in the client's own metadata document and must be an
+   HTTPS URL (Section 5): private-use scheme and loopback redirections
+   are prohibited in this flow because they are claimable by any
+   application on a device ([RFC8252]), which would let an attacker
+   initiate and complete a request for another party's client_id using
+   its own PKCE verifier and DPoP key.  With those prohibited, a party
+   initiating a request for another party's client_id gains nothing: an
+   endpoint of its own is not registered, so the request fails before
+   any redirect, while a request aimed at the genuine registered
+   endpoint delivers a code whose PKCE verifier the recipient does not
+   hold.  An authorization server SHOULD additionally relate the
+   redirection URI's origin to the client identifier URL or the metadata
+   document's client_uri according to policy.  Completing the flow
+   therefore demonstrates control of an HTTPS endpoint the publisher
+   named; whether that control merits issuance remains an approval-
+   policy decision.
 
    A software statement code returned in a URL is visible to browser
    history, referrer fields, redirection-target logs, and other front-
@@ -1699,7 +1722,7 @@ Table of Contents
 
    Response Type Name:  software_statement_code
 
-   Change Controller:  IETF
+   Change Controller:  IESG
 
    Specification Document(s):  This specification, Section 5 and
       Section 6
@@ -1713,7 +1736,7 @@ Table of Contents
 
    Common Name:  OAuth Software Statement Grant Type
 
-   Change Controller:  IETF
+   Change Controller:  IESG
 
    Specification Document(s):  This specification, Section 7
 
@@ -1721,7 +1744,7 @@ Table of Contents
 
    Common Name:  OAuth Software Statement Token Type
 
-   Change Controller:  IETF
+   Change Controller:  IESG
 
    Specification Document(s):  This specification, Section 10 and
       Section 8
@@ -1741,7 +1764,7 @@ Table of Contents
 
    Parameter Usage Location:  authorization response, token request
 
-   Change Controller:  IETF
+   Change Controller:  IESG
 
    Specification Document(s):  This specification, Section 6.1 and
       Section 7
@@ -1759,7 +1782,7 @@ Table of Contents
    Related protocol extension:  The software statement grant (Section 7)
       and token exchange profile (Section 8) of this specification
 
-   Change controller:  IETF
+   Change controller:  IESG
 
    Specification document(s):  This specification, Section 10.1
 
@@ -1773,7 +1796,7 @@ Table of Contents
    Related protocol extension:  The software_statement_code response
       type and the audience parameter usage of this specification
 
-   Change controller:  IETF
+   Change controller:  IESG
 
    Specification document(s):  This specification, Section 5 and
       Section 8
@@ -1871,7 +1894,7 @@ Table of Contents
       JCS-serialized Client ID Metadata Document evaluated during
       software statement issuance
 
-   Change Controller:  IETF
+   Change Controller:  IESG
 
    Specification Document(s):  This specification, Section 11
 
@@ -2020,6 +2043,10 @@ Table of Contents
               <https://datatracker.ietf.org/doc/draft-richer-oauth-
               pushed-client-registration>.
 
+   [RFC8252]  Denniss, W. and J. Bradley, "OAuth 2.0 for Native Apps",
+              BCP 212, RFC 8252, DOI 10.17487/RFC8252, October 2017,
+              <https://www.rfc-editor.org/rfc/rfc8252>.
+
    [RFC8628]  Denniss, W., Bradley, J., Jones, M., and H. Tschofenig,
               "OAuth 2.0 Device Authorization Grant", RFC 8628,
               DOI 10.17487/RFC8628, August 2019,
@@ -2070,10 +2097,11 @@ A.1.  Publisher Program: One Review, Many Customer Authorization Servers
        records the developer's identity in its audit trail.  The
        authorization endpoint returns the software statement code
        response (Section 6.1).  The tooling validates state and iss and
-       redeems the software statement code with its PKCE verifier,
-       authenticating with private_key_jwt (Section 7); because the
-       compliance review takes two days, the redemption is deferred, and
-       the tooling polls with the same authentication (Section 9).
+       redeems the software statement code with its PKCE verifier and
+       completion_mode=deferred, authenticating with private_key_jwt
+       (Section 7); because the compliance review takes two days, the
+       redemption is deferred, and the tooling polls with the same
+       authentication (Section 9).
 
    3.  On approval, polling returns the software statement token
        response.  The statement's sub is the TaskFlow metadata URL, its
@@ -2143,8 +2171,9 @@ A.2.  Enterprise Deployment of a Third-Party Agent
        that credential as the subject token of a token exchange
        (Section 8) with client_id=https://acme.example/agent and both
        internal authorization server issuer identifiers as repeated
-       audience parameters.  It includes a DPoP proof and retains the
-       private key for every polling request; the proof sender-
+       audience parameters, opting in to deferral with
+       completion_mode=deferred.  It includes a DPoP proof and retains
+       the private key for every polling request; the proof sender-
        constrains any resulting deferral code.
 
    2.  The identity platform validates the subject token, accepts the
@@ -2535,9 +2564,10 @@ C.9.  Deliberately Deferred Capabilities
       by policy covers part of the need (Section 11); an extension can
       add a selection object as an authorization request parameter.
 
-   *  Callback delivery: deferral results are delivered by polling only.
-      The callback mechanism of [DTR] can be adopted by a future
-      profile; nothing in this specification conflicts with it.
+   *  Callback delivery: deferral results are delivered by polling only,
+      and callbacks are prohibited for deferrals created under this
+      specification (Section 9).  A future version can lift that
+      prohibition and adopt the callback mechanism of [DTR].
 
 Appendix D.  Acknowledgments
 
