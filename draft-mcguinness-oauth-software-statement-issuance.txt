@@ -379,7 +379,13 @@ Table of Contents
    This specification targets deployments below that threshold: it
    issues the [RFC7591] artifact that existing registration endpoints
    already accept, with issuer trust established by explicit pairwise
-   configuration rather than chain resolution.  The two address
+   configuration rather than chain resolution.  Federation also
+   standardizes resolution rather than acquisition: how an entity is
+   enrolled with a trust anchor or intermediate, who approves that
+   enrollment, and how a pending decision completes are out of its
+   scope, precisely as issuance was out of scope for [RFC7591].
+   Adopting Federation therefore relocates the ceremony this
+   specification defines rather than replacing it.  The two address
    different scales of trust establishment and do not depend on each
    other.
 
