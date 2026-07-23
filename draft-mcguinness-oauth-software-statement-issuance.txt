@@ -234,26 +234,34 @@ Table of Contents
    access-token-producing response type.
 
    Not every client establishment problem calls for a software
-   statement.  A software statement earns its cost when one or more of
-   the following holds:
+   statement, and two boundaries mark where simpler tools suffice.  When
+   the approving party is the resource owner, the ordinary OAuth grant
+   is the approval, and identifying the client by its metadata document
+   [CIMD] suffices.  When the trust decision is local to a single
+   authorization server, mechanisms that decide at that server serve
+   well without a portable artifact: an initial access token of
+   [RFC7591] pre-authorizes registration, pre-registration under [CIMD]
+   applies review before first use, and approval-based registration
+   [APPROVAL-DCR] runs the approval alongside the registration itself.
 
-   1.  The party approving the software is not the resource owner in a
+   A software statement earns its cost beyond those boundaries, when one
+   or more of the following holds:
+
+   1.  One approval must be honored at many authorization servers.
+
+   2.  The party approving the software is not the resource owner in a
        transaction.
 
-   2.  Approval must exist before any authorization transaction does.
+   3.  Approval must exist before any authorization transaction does.
 
-   3.  Approval requires asynchronous review that outlives a single
+   4.  Approval requires asynchronous review that outlives a single
        protocol exchange.
-
-   4.  One approval must be honored at many authorization servers.
 
    5.  Issuance and renewal must be automated rather than performed
        through a portal.
 
-   Where none of these conditions applies, the resource owner's ordinary
-   OAuth grant is the relevant approval and identifying the client by
-   its metadata document [CIMD] suffices.  Issuance under this
-   specification is therefore deliberately decoupled from any access-
+   Where none of these applies, issuance under this specification is
+   unnecessary.  It is therefore deliberately decoupled from any access-
    granting transaction and can complete out of band over hours or days.
    Appendix A illustrates these boundaries with end-to-end scenarios.
 
@@ -2234,7 +2242,10 @@ B.1.  Comparison with Related Establishment Mechanisms
    asserted values.  An approval-based registration that receives a
    statement gives its approver an issuer's signed decision to evaluate,
    addressing the long-standing problem that a registration approver
-   otherwise has only the client's word.  Where a deployment outgrows
+   otherwise has only the client's word.  Within a single authorization
+   server, the bilateral mechanisms are also sufficient on their own:
+   the cost of issuance is justified by the decision's portability, not
+   by the existence of an approval step.  Where a deployment outgrows
    pairwise issuer configuration, OpenID Federation provides the trust-
    chain infrastructure this specification deliberately omits.
 
