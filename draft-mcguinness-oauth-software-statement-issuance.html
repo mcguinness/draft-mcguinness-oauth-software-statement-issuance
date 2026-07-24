@@ -1055,7 +1055,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 24 January 2027</td>
+<td class="center">Expires 25 January 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1068,12 +1068,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-software-statement-issuance-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-23" class="published">23 July 2026</time>
+<time datetime="2026-07-24" class="published">24 July 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-24">24 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-01-25">25 January 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1108,7 +1108,7 @@ svg {
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 24 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 25 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1424,7 +1424,7 @@ svg {
             <p id="section-1.2-2.1.1"><span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> defines the software statement and the client metadata carried in it.<a href="#section-1.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-1.2-2.2">
-            <p id="section-1.2-2.2.1"><span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span> defines the client identifier and the canonical source of client metadata, including pre-registration with an authorization server and the handling of changed metadata. The flows in this specification can serve as the approval-carrying enrollment step, and the canonical digest (<a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>) makes metadata change precisely detectable.<a href="#section-1.2-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-1.2-2.2.1"><span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span> defines the client identifier and the canonical source of client metadata, including pre-registration with an authorization server and the handling of changed metadata. The flows in this specification can serve as the approval-carrying enrollment step, and the metadata digest (<a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>) makes metadata change precisely detectable.<a href="#section-1.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-1.2-2.3">
             <p id="section-1.2-2.3.1"><span>[<a href="#DTR" class="cite xref">DTR</a>]</span> defines client opt-in, deferred token responses at the token endpoint, polling, cancellation, and sender constraint. This specification profiles that token endpoint deferral for every flow and defines each originating request's successful response.<a href="#section-1.2-2.3.1" class="pilcrow">¶</a></p>
@@ -1480,9 +1480,9 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
           <p id="section-2-4.10.1">The validated canonical metadata bound to a request, as defined in <a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>.<a href="#section-2-4.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-2-4.11">Canonical Digest:</dt>
+<dt id="section-2-4.11">Metadata Digest:</dt>
         <dd style="margin-left: 1.5em" id="section-2-4.12">
-          <p id="section-2-4.12.1">The unpadded base64url encoding of the SHA-256 hash of a metadata document in the canonical form of <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>, as defined in <a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>.<a href="#section-2-4.12.1" class="pilcrow">¶</a></p>
+          <p id="section-2-4.12.1">The unpadded base64url encoding of the SHA-256 hash of the retrieved octets of a metadata document, as defined in <a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>.<a href="#section-2-4.12.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1570,7 +1570,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
       </h2>
 <p id="section-4-1">The <code>client_id</code> in every request defined by this specification <span class="bcp14">MUST</span> be a client identifier URL conforming to <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span>. The authorization server <span class="bcp14">MUST</span> obtain and validate the corresponding Client ID Metadata Document according to <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span>. A non-URL identifier issued by the authorization server is not supported by this specification.<a href="#section-4-1" class="pilcrow">¶</a></p>
 <p id="section-4-2">In the redirect flow, the authorization server <span class="bcp14">MUST</span> compare the <code>redirect_uri</code> in the request with the <code>redirect_uris</code> in the Client ID Metadata Document according to <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span> and <span>[<a href="#RFC9700" class="cite xref">RFC9700</a>]</span>. The authorization server <span class="bcp14">MUST NOT</span> redirect the user agent when the client identifier or redirect URI is missing or invalid.<a href="#section-4-2" class="pilcrow">¶</a></p>
-<p id="section-4-3">The client uses the <code>token_endpoint_auth_method</code> and related key metadata in its Client ID Metadata Document when authenticating to the token endpoint. Only an explicit <code>token_endpoint_auth_method</code> value of <code>none</code> establishes a public client. Any other declared method establishes a confidential client, and the authorization server <span class="bcp14">MUST</span> require exactly that method, as <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span> requires; a declared method the authorization server does not support <span class="bcp14">MUST</span> cause rejection of the request rather than treatment of the client as public. A metadata document that omits <code>token_endpoint_auth_method</code> establishes neither: the <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> default is a symmetric-secret method that <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span> prohibits and that an unregistered client cannot satisfy, so a software statement request for such a client <span class="bcp14">MUST</span> be rejected.<a href="#section-4-3" class="pilcrow">¶</a></p>
+<p id="section-4-3">The client uses the <code>token_endpoint_auth_method</code> and related key metadata in its Client ID Metadata Document when authenticating to the token endpoint. Only an explicit <code>token_endpoint_auth_method</code> value of <code>none</code> establishes a public client. Any other declared method establishes a confidential client, and the authorization server <span class="bcp14">MUST</span> require exactly that method, as <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span> requires; a declared method the authorization server does not support <span class="bcp14">MUST</span> cause rejection of the request rather than treatment of the client as public. A metadata document that omits <code>token_endpoint_auth_method</code> establishes neither: the <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> default is a symmetric-secret method that <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span> prohibits and that an unregistered client cannot satisfy, so any request under this specification identifying such a client <span class="bcp14">MUST</span> be rejected.<a href="#section-4-3" class="pilcrow">¶</a></p>
 <p id="section-4-4">Sender constraint is established per flow:<a href="#section-4-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-4-5.1">
@@ -1591,8 +1591,8 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
         </h3>
 <p id="section-4.1-1">Client metadata documents can change while a request is pending. Before returning a software statement code or a deferral code, the authorization server <span class="bcp14">MUST</span> bind it to the validated canonical metadata. The bound values constitute the metadata snapshot for the request.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
 <p id="section-4.1-2">The authorization server <span class="bcp14">MAY</span> retrieve the document again before issuing the software statement. If it does so and detects a security-relevant change (for example, a change to <code>jwks</code>, <code>jwks_uri</code>, <code>redirect_uris</code>, or <code>token_endpoint_auth_method</code>), it <span class="bcp14">MUST</span> either re-evaluate the request under the new metadata or reject the request. It <span class="bcp14">MUST NOT</span> silently combine values from different document versions.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
-<p id="section-4.1-3">Because JSON member ordering and serialization details carry no meaning, comparing retrieved documents byte for byte over-detects change. Before calculating a canonical digest, the authorization server <span class="bcp14">MUST</span> verify that the document can be represented as the I-JSON input required by <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>. In particular, it <span class="bcp14">MUST</span> reject a document containing duplicate object member names or a number that cannot be represented as an IEEE 754 double-precision value without loss.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
-<p id="section-4.1-4">The canonical digest of a metadata document is the unpadded base64url encoding of the SHA-256 hash <span>[<a href="#RFC6234" class="cite xref">RFC6234</a>]</span> of the UTF-8 bytes produced by applying <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> to the complete document. Two retrievals with the same canonical digest contain the same metadata for purposes of this specification; a changed digest is the concrete signal for the re-evaluation requirement above. A changed digest marks a new trust state for an unchanged identity: the client identifier URL persists across document revisions, so decisions attach to content through the digest rather than to the identifier. The canonical digest also serves the <code>cimd_digest</code> claim (<a href="#software-statement-format" class="auto internal xref">Section 11</a>) and the audit guidance in <a href="#security-considerations" class="auto internal xref">Section 14</a>. Deployments <span class="bcp14">MAY</span> use other deterministic encodings internally for change detection, but interoperable uses of the canonical digest <span class="bcp14">MUST</span> use the form defined here.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
+<p id="section-4.1-3">The metadata digest of a metadata document is the unpadded base64url encoding of the SHA-256 hash <span>[<a href="#RFC6234" class="cite xref">RFC6234</a>]</span> of the document's retrieved octets: the representation body of the HTTPS response after any content coding is removed, with no transcoding, normalization, or re-serialization. Two retrievals with the same metadata digest contain the same document for purposes of this specification; a changed digest is the concrete signal for the re-evaluation requirement above. A changed digest marks a new trust state for an unchanged identity: the client identifier URL persists across document revisions, so decisions attach to content through the digest rather than to the identifier. The metadata digest also serves the <code>cimd_digest</code> claim (<a href="#software-statement-format" class="auto internal xref">Section 11</a>) and the audit guidance in <a href="#security-considerations" class="auto internal xref">Section 14</a>.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+<p id="section-4.1-4">Byte identity deliberately over-detects change: a document republished with different member ordering or whitespace yields a new digest although its meaning is unchanged. That failure direction is safe, causing review rather than silent trust, and a digest mismatch is an input to policy rather than a validation failure throughout this specification. A publisher <span class="bcp14">SHOULD</span> serve its metadata document as a stable byte artifact whose octets change only when the metadata changes. Independent of the digest, the authorization server <span class="bcp14">MUST</span> reject a document containing duplicate object member names: two parsers can read such a document differently while its digest is identical.<a href="#section-4.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1858,7 +1858,7 @@ Location: https://client.example.org/cb?
       </ul>
 <p id="section-8-10">It <span class="bcp14">SHOULD</span> be sender-constrained or limited in its number of uses, and <span class="bcp14">SHOULD</span> be integrity protected and kept confidential in transit and at rest. It <span class="bcp14">MAY</span> further restrict audiences or metadata. The authorization server <span class="bcp14">MUST</span> enforce every restriction the credential carries and <span class="bcp14">MUST</span> prevent replay beyond its permitted number of uses. A DPoP proof on the exchange sender-constrains the resulting deferral; it neither authenticates the presenter nor protects a bearer credential (Section 3 of <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>), so a stolen bearer credential remains presentable, under any key, until it expires or exhausts its permitted uses.<a href="#section-8-10" class="pilcrow">¶</a></p>
 <p id="section-8-11">The exchange is evaluated against current metadata, not the subject token's contents. The authorization server <span class="bcp14">MUST</span> obtain and validate the Client ID Metadata Document and <span class="bcp14">MUST</span> bind a fresh metadata snapshot (<a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>) and the requested audience before returning either the software statement or a deferral code. The statement's claims derive from that snapshot; the authorization server <span class="bcp14">MUST NOT</span> copy metadata claims from a subject statement.<a href="#section-8-11" class="pilcrow">¶</a></p>
-<p id="section-8-12">When the current canonical digest differs from a subject statement's <code>cimd_digest</code>, the metadata has changed since the prior issuance; the change is an input to issuance policy and <span class="bcp14">MAY</span> cause the exchange to be deferred or rejected. The issued statement's <code>aud</code> <span class="bcp14">MUST NOT</span> contain a value absent from a subject statement's <code>aud</code> unless issuance policy independently approves the addition.<a href="#section-8-12" class="pilcrow">¶</a></p>
+<p id="section-8-12">When the current metadata digest differs from a subject statement's <code>cimd_digest</code>, the metadata has changed since the prior issuance; the change is an input to issuance policy and <span class="bcp14">MAY</span> cause the exchange to be deferred or rejected. The issued statement's <code>aud</code> <span class="bcp14">MUST NOT</span> contain a value absent from a subject statement's <code>aud</code> unless issuance policy independently approves the addition.<a href="#section-8-12" class="pilcrow">¶</a></p>
 <p id="section-8-13">Whether an exchange completes synchronously or defers for approval is issuance policy: a subject token can pre-authorize only the making of the request, or the issuance itself. A successful exchange returns the software statement token response (<a href="#software-statement-response" class="auto internal xref">Section 10</a>), which already carries the <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> response members. If processing cannot complete immediately, the authorization server returns the deferred token response of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> and the client polls according to <a href="#deferred-processing" class="auto internal xref">Section 9</a>. An exchange denied by issuance policy returns the terminal denial of <a href="#terminal-denial" class="auto internal xref">Section 10.1</a>.<a href="#section-8-13" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -2020,7 +2020,7 @@ Pragma: no-cache
 <dt id="section-11-5.13">
 <code>cimd_digest</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-11-5.14">
-          <p id="section-11-5.14.1"><span class="bcp14">REQUIRED</span>. The canonical digest (<a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>) of the Client ID Metadata Document from which the metadata snapshot was derived. This claim binds the statement to the exact document content evaluated during issuance and lets any party determine whether the client's currently published metadata still matches what was attested.<a href="#section-11-5.14.1" class="pilcrow">¶</a></p>
+          <p id="section-11-5.14.1"><span class="bcp14">REQUIRED</span>. The metadata digest (<a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>) of the Client ID Metadata Document from which the metadata snapshot was derived. This claim binds the statement to the exact document content evaluated during issuance and lets any party determine whether the client's currently published metadata still matches what was attested.<a href="#section-11-5.14.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2075,7 +2075,7 @@ Pragma: no-cache
 </li>
       </ul>
 <p id="section-11-13">Publishing an issuer URL or a JWK Set does not by itself establish trust: signature keys for a trusted issuer are conventionally obtained from the <code>jwks_uri</code> in the issuer's authorization server metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>, but the decision to trust the issuer <span class="bcp14">MUST</span> come from explicit local configuration.<a href="#section-11-13" class="pilcrow">¶</a></p>
-<p id="section-11-14">A trusting authorization server <span class="bcp14">MAY</span> retrieve the client's current metadata document and compare canonical digests against <code>cimd_digest</code> to learn whether the attested content is still published; if it does so, it <span class="bcp14">MUST</span> also verify that the document's <code>client_id</code> is exactly equal to <code>sub</code> as required by <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span>. A digest mismatch indicates post-issuance change and is an input to registration policy rather than a validation failure. The trusting authorization server then processes the software statement according to <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> and its local registration policy.<a href="#section-11-14" class="pilcrow">¶</a></p>
+<p id="section-11-14">A trusting authorization server <span class="bcp14">MAY</span> retrieve the client's current metadata document and compare metadata digests against <code>cimd_digest</code> to learn whether the attested content is still published; if it does so, it <span class="bcp14">MUST</span> also verify that the document's <code>client_id</code> is exactly equal to <code>sub</code> as required by <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span>. A digest mismatch indicates post-issuance change and is an input to registration policy rather than a validation failure. The trusting authorization server then processes the software statement according to <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> and its local registration policy.<a href="#section-11-14" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="multi-instance">
@@ -2091,7 +2091,7 @@ Pragma: no-cache
           <p id="section-12-4.1.1">Shared client key: if the statement contains <code>jwks</code> or <code>jwks_uri</code>, that attested value takes precedence under <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span>, and every registration derived from the statement <span class="bcp14">MUST</span> use the attested key material rather than an instance-supplied replacement.<a href="#section-12-4.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-4.2">
-          <p id="section-12-4.2.1">Per-instance keys: where authorization server policy is keyed on <code>client_id</code> and genuinely requires per-instance registrations, the same statement supports that model only if it omits <code>jwks</code> and <code>jwks_uri</code>; each registration then supplies its own instance key as plain metadata, subject to trusting authorization server policy. Omitting them also forecloses token exchange renewal for a client without an authentication method (<a href="#token-exchange-profile" class="auto internal xref">Section 8</a>).<a href="#section-12-4.2.1" class="pilcrow">¶</a></p>
+          <p id="section-12-4.2.1">Per-instance keys: where authorization server policy is keyed on <code>client_id</code> and genuinely requires per-instance registrations, the same statement supports that model only if it omits <code>jwks</code> and <code>jwks_uri</code>; each registration then supplies its own instance key as plain metadata, subject to trusting authorization server policy. Omitting them also forecloses token exchange renewal for a public client (<a href="#token-exchange-profile" class="auto internal xref">Section 8</a>).<a href="#section-12-4.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-4.3">
           <p id="section-12-4.3.1">Attested delegation: the statement omits key material but attests the <code>instance_issuers</code> delegation (<a href="#attesting-instance-issuers" class="auto internal xref">Section 12.1</a>), so instance keys are endorsed by an attested authority at the token endpoint instead of appearing unattested in registration metadata.<a href="#section-12-4.3.1" class="pilcrow">¶</a></p>
@@ -2207,7 +2207,7 @@ Pragma: no-cache
 <a href="#section-14.3" class="section-number selfRef">14.3. </a><a href="#name-client-metadata-retrieval" class="section-name selfRef">Client Metadata Retrieval</a>
         </h3>
 <p id="section-14.3-1">Fetching a Client ID Metadata Document and resources referenced by it exposes the authorization server to server-side request forgery, resource exhaustion, malicious content, and client impersonation risks. The validation, address filtering, response-size limits, redirect handling, caching, logo handling, and domain-trust considerations of <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span> apply.<a href="#section-14.3-1" class="pilcrow">¶</a></p>
-<p id="section-14.3-2">The metadata snapshot requirements in <a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a> prevent a time-of-check/time-of-use change from silently altering the metadata after approval. Authorization servers <span class="bcp14">SHOULD</span> record the canonical digest (<a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>) or an immutable copy of the approved document and snapshot for audit purposes.<a href="#section-14.3-2" class="pilcrow">¶</a></p>
+<p id="section-14.3-2">The metadata snapshot requirements in <a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a> prevent a time-of-check/time-of-use change from silently altering the metadata after approval. Authorization servers <span class="bcp14">SHOULD</span> record the metadata digest (<a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>) and retain the exact retrieved octets of the approved document for audit purposes; a re-serialized copy cannot reproduce the digest.<a href="#section-14.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authorization-response-security">
@@ -2278,7 +2278,7 @@ Pragma: no-cache
         </h3>
 <p id="section-14.10-1">The software statement attests to metadata; it does not identify the human or system that approved issuance. Deployments that require approver attribution <span class="bcp14">MUST</span> retain it in an authorization server audit record or define an explicit statement claim and its privacy semantics. They <span class="bcp14">MUST NOT</span> infer approver identity from the signature alone.<a href="#section-14.10-1" class="pilcrow">¶</a></p>
 <p id="section-14.10-2">Approval authority is a policy decision with audience-wide effect: an approved statement is accepted at every authorization server in its audience, not only within the approver's own scope. The policy governing who may approve issuance <span class="bcp14">MUST</span> be at least as restrictive as the policy governing manual client establishment at the issuing authorization server, and approval by a party authorized only for a personal or organizational scope <span class="bcp14">MUST NOT</span> produce a statement whose audience exceeds that scope.<a href="#section-14.10-2" class="pilcrow">¶</a></p>
-<p id="section-14.10-3">An audit record <span class="bcp14">SHOULD</span> bind each decision, whether approval or denial, to the canonical digest (<a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>) of the document the deciding party evaluated, the policy under which the decision was made, the identity of that party, and the time of decision. A recorded denial carrying its grounds has the same audit value as a recorded approval. Portable, independently verifiable decision records are out of scope for this specification.<a href="#section-14.10-3" class="pilcrow">¶</a></p>
+<p id="section-14.10-3">An audit record <span class="bcp14">SHOULD</span> bind each decision, whether approval or denial, to the metadata digest (<a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>) of the document the deciding party evaluated, the policy under which the decision was made, the identity of that party, and the time of decision. A recorded denial carrying its grounds has the same audit value as a recorded approval. Portable, independently verifiable decision records are out of scope for this specification.<a href="#section-14.10-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2641,7 +2641,7 @@ Pragma: no-cache
           <dd class="break"></dd>
 <dt id="section-16.7-2.3">Claim Description:</dt>
           <dd style="margin-left: 1.5em" id="section-16.7-2.4">
-            <p id="section-16.7-2.4.1">Unpadded base64url-encoded SHA-256 digest of the JCS-serialized Client ID Metadata Document evaluated during software statement issuance<a href="#section-16.7-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-16.7-2.4.1">Unpadded base64url-encoded SHA-256 digest of the retrieved octets of the Client ID Metadata Document evaluated during software statement issuance<a href="#section-16.7-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-16.7-2.5">Change Controller:</dt>
@@ -2737,10 +2737,6 @@ Pragma: no-cache
 <dt id="RFC8725">[RFC8725]</dt>
         <dd>
 <span class="refAuthor">Sheffer, Y.</span>, <span class="refAuthor">Hardt, D.</span>, and <span class="refAuthor">M. Jones</span>, <span class="refTitle">"JSON Web Token Best Current Practices"</span>, <span class="seriesInfo">BCP 225</span>, <span class="seriesInfo">RFC 8725</span>, <span class="seriesInfo">DOI 10.17487/RFC8725</span>, <time datetime="2020-02" class="refDate">February 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8725">https://www.rfc-editor.org/rfc/rfc8725</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC8785">[RFC8785]</dt>
-        <dd>
-<span class="refAuthor">Rundgren, A.</span>, <span class="refAuthor">Jordan, B.</span>, and <span class="refAuthor">S. Erdtman</span>, <span class="refTitle">"JSON Canonicalization Scheme (JCS)"</span>, <span class="seriesInfo">RFC 8785</span>, <span class="seriesInfo">DOI 10.17487/RFC8785</span>, <time datetime="2020-06" class="refDate">June 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8785">https://www.rfc-editor.org/rfc/rfc8785</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC9126">[RFC9126]</dt>
         <dd>
@@ -2876,7 +2872,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3A
   &amp;client_assertion=eyJhbGciOiJFUzI1NiIsImtpZCI6InRhc2tmbG93LTEifQ...
 </pre><a href="#appendix-A.1-3" class="pilcrow">¶</a>
 </div>
-<p id="appendix-A.1-4">Under the marketplace's renewal policy, the matching canonical digest and unchanged audience allow the exchange to complete synchronously without a new review. The policy decision, rather than the digest match alone, determines that result.<a href="#appendix-A.1-4" class="pilcrow">¶</a></p>
+<p id="appendix-A.1-4">Under the marketplace's renewal policy, the matching metadata digest and unchanged audience allow the exchange to complete synchronously without a new review. The policy decision, rather than the digest match alone, determines that result.<a href="#appendix-A.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="example-enterprise">
@@ -2931,7 +2927,7 @@ Content-Type: application/json
 </pre><a href="#appendix-A.2-6" class="pilcrow">¶</a>
 </div>
 <p id="appendix-A.2-7">Because the statement does not contain <code>instance_issuers</code>, the locally supplied value does not conflict with the precedence rule of <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span>; it is not covered by the issuer's attestation, and accepting it is the registering server's policy.<a href="#appendix-A.2-7" class="pilcrow">¶</a></p>
-<p id="appendix-A.2-8">Finally, before the statement expires, the tooling submits a fresh exchange with the same initial access token as subject token and the same two audiences; renewal with the prior statement as subject token is unavailable to this client, which is public and holds a statement that attests no key material (<a href="#token-exchange-profile" class="auto internal xref">Section 8</a>). When ACME has shipped an update that changes the canonical metadata document, the identity platform's fresh snapshot yields a canonical digest that differs from the one in the statement it previously issued. Its issuance policy therefore defers the exchange for a new security review instead of issuing silently against changed metadata.<a href="#appendix-A.2-8" class="pilcrow">¶</a></p>
+<p id="appendix-A.2-8">Finally, before the statement expires, the tooling submits a fresh exchange with the same initial access token as subject token and the same two audiences; renewal with the prior statement as subject token is unavailable to this client, which is public and holds a statement that attests no key material (<a href="#token-exchange-profile" class="auto internal xref">Section 8</a>). When ACME has shipped an update that changes the canonical metadata document, the identity platform's fresh snapshot yields a metadata digest that differs from the one in the statement it previously issued. Its issuance policy therefore defers the exchange for a new security review instead of issuing silently against changed metadata.<a href="#appendix-A.2-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="example-resource-owner">
@@ -2970,7 +2966,7 @@ Content-Type: application/json
         <dd class="break"></dd>
 <dt id="appendix-B-2.7">Upgrade:</dt>
         <dd style="margin-left: 1.5em" id="appendix-B-2.8">
-          <p id="appendix-B-2.8.1">Renewal makes the upgrade protocol-visible. When a new version changes the metadata document, the current canonical digest no longer matches the subject statement's <code>cimd_digest</code>, and issuance policy must decide explicitly whether the prior endorsement carries forward or the review re-runs (<a href="#token-exchange-profile" class="auto internal xref">Section 8</a>). The audit guidance in <a href="#security-considerations" class="auto internal xref">Section 14</a> binds that decision to the digests involved, so "was the new version re-approved or inherited" has a recorded answer.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
+          <p id="appendix-B-2.8.1">Renewal makes the upgrade protocol-visible. When a new version changes the metadata document, the current metadata digest no longer matches the subject statement's <code>cimd_digest</code>, and issuance policy must decide explicitly whether the prior endorsement carries forward or the review re-runs (<a href="#token-exchange-profile" class="auto internal xref">Section 8</a>). The audit guidance in <a href="#security-considerations" class="auto internal xref">Section 14</a> binds that decision to the digests involved, so "was the new version re-approved or inherited" has a recorded answer.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="appendix-B-2.9">Fleet operation:</dt>
@@ -3110,7 +3106,7 @@ Content-Type: application/json
         <h3 id="name-deliberately-deferred-capab">
 <a href="#appendix-C.9" class="section-number selfRef">C.9. </a><a href="#name-deliberately-deferred-capab" class="section-name selfRef">Deliberately Deferred Capabilities</a>
         </h3>
-<p id="appendix-C.9-1">This version deliberately omits three capabilities so that the initial protocol surface stays small; each leaves an extension seam rather than a closed door.<a href="#appendix-C.9-1" class="pilcrow">¶</a></p>
+<p id="appendix-C.9-1">This version deliberately omits four capabilities so that the initial protocol surface stays small; each leaves an extension seam rather than a closed door.<a href="#appendix-C.9-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-C.9-2.1">
             <p id="appendix-C.9-2.1.1">Token-endpoint initiation: a client with neither a user agent nor a pre-authorizing credential cannot request a statement in this version. The software statement grant is used only to redeem software statement codes; an extension can add initiation as a use of the same grant without a <code>software_statement_code</code>, signaled by new authorization server metadata, without changing redemption.<a href="#appendix-C.9-2.1.1" class="pilcrow">¶</a></p>
@@ -3120,6 +3116,9 @@ Content-Type: application/json
 </li>
           <li class="normal" id="appendix-C.9-2.3">
             <p id="appendix-C.9-2.3.1">Callback delivery: deferral results are delivered by polling only, and callbacks are prohibited for deferrals created under this specification (<a href="#deferred-processing" class="auto internal xref">Section 9</a>). A future version can lift that prohibition and adopt the callback mechanism of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>.<a href="#appendix-C.9-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="appendix-C.9-2.4">
+            <p id="appendix-C.9-2.4.1">Canonicalized digests: the metadata digest is computed over retrieved octets (<a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>), so republishing a document with different serialization changes the digest without changing the metadata. An extension can define a canonicalization-based digest variant, signaled by a new claim or parameter, if serialization churn proves costly in practice.<a href="#appendix-C.9-2.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>

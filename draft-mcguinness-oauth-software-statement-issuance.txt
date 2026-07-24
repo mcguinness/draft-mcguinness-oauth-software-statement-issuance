@@ -3,9 +3,9 @@
 
 
 Web Authorization Protocol                                 K. McGuinness
-Internet-Draft                                              23 July 2026
+Internet-Draft                                              24 July 2026
 Intended status: Standards Track                                        
-Expires: 24 January 2027
+Expires: 25 January 2027
 
 
                  OAuth 2.0 Software Statement Issuance
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 24 January 2027.
+   This Internet-Draft will expire on 25 January 2027.
 
 Copyright Notice
 
@@ -334,7 +334,7 @@ Table of Contents
       client metadata, including pre-registration with an authorization
       server and the handling of changed metadata.  The flows in this
       specification can serve as the approval-carrying enrollment step,
-      and the canonical digest (Section 4.1) makes metadata change
+      and the metadata digest (Section 4.1) makes metadata change
       precisely detectable.
 
    *  [DTR] defines client opt-in, deferred token responses at the token
@@ -457,9 +457,9 @@ Table of Contents
    Metadata Snapshot:  The validated canonical metadata bound to a
       request, as defined in Section 4.1.
 
-   Canonical Digest:  The unpadded base64url encoding of the SHA-256
-      hash of a metadata document in the canonical form of [RFC8785], as
-      defined in Section 4.1.
+   Metadata Digest:  The unpadded base64url encoding of the SHA-256 hash
+      of the retrieved octets of a metadata document, as defined in
+      Section 4.1.
 
 3.  Protocol Overview
 
@@ -578,8 +578,9 @@ Table of Contents
    request rather than treatment of the client as public.  A metadata
    document that omits token_endpoint_auth_method establishes neither:
    the [RFC7591] default is a symmetric-secret method that [CIMD]
-   prohibits and that an unregistered client cannot satisfy, so a
-   software statement request for such a client MUST be rejected.
+   prohibits and that an unregistered client cannot satisfy, so any
+   request under this specification identifying such a client MUST be
+   rejected.
 
    Sender constraint is established per flow:
 
@@ -614,28 +615,30 @@ Table of Contents
    evaluate the request under the new metadata or reject the request.
    It MUST NOT silently combine values from different document versions.
 
-   Because JSON member ordering and serialization details carry no
-   meaning, comparing retrieved documents byte for byte over-detects
-   change.  Before calculating a canonical digest, the authorization
-   server MUST verify that the document can be represented as the I-JSON
-   input required by [RFC8785].  In particular, it MUST reject a
-   document containing duplicate object member names or a number that
-   cannot be represented as an IEEE 754 double-precision value without
-   loss.
+   The metadata digest of a metadata document is the unpadded base64url
+   encoding of the SHA-256 hash [RFC6234] of the document's retrieved
+   octets: the representation body of the HTTPS response after any
+   content coding is removed, with no transcoding, normalization, or re-
+   serialization.  Two retrievals with the same metadata digest contain
+   the same document for purposes of this specification; a changed
+   digest is the concrete signal for the re-evaluation requirement
+   above.  A changed digest marks a new trust state for an unchanged
+   identity: the client identifier URL persists across document
+   revisions, so decisions attach to content through the digest rather
+   than to the identifier.  The metadata digest also serves the
+   cimd_digest claim (Section 11) and the audit guidance in Section 14.
 
-   The canonical digest of a metadata document is the unpadded base64url
-   encoding of the SHA-256 hash [RFC6234] of the UTF-8 bytes produced by
-   applying [RFC8785] to the complete document.  Two retrievals with the
-   same canonical digest contain the same metadata for purposes of this
-   specification; a changed digest is the concrete signal for the re-
-   evaluation requirement above.  A changed digest marks a new trust
-   state for an unchanged identity: the client identifier URL persists
-   across document revisions, so decisions attach to content through the
-   digest rather than to the identifier.  The canonical digest also
-   serves the cimd_digest claim (Section 11) and the audit guidance in
-   Section 14.  Deployments MAY use other deterministic encodings
-   internally for change detection, but interoperable uses of the
-   canonical digest MUST use the form defined here.
+   Byte identity deliberately over-detects change: a document
+   republished with different member ordering or whitespace yields a new
+   digest although its meaning is unchanged.  That failure direction is
+   safe, causing review rather than silent trust, and a digest mismatch
+   is an input to policy rather than a validation failure throughout
+   this specification.  A publisher SHOULD serve its metadata document
+   as a stable byte artifact whose octets change only when the metadata
+   changes.  Independent of the digest, the authorization server MUST
+   reject a document containing duplicate object member names: two
+   parsers can read such a document differently while its digest is
+   identical.
 
 5.  Software Statement Authorization Request
 
@@ -933,7 +936,7 @@ Table of Contents
    claims derive from that snapshot; the authorization server MUST NOT
    copy metadata claims from a subject statement.
 
-   When the current canonical digest differs from a subject statement's
+   When the current metadata digest differs from a subject statement's
    cimd_digest, the metadata has changed since the prior issuance; the
    change is an input to issuance policy and MAY cause the exchange to
    be deferred or rejected.  The issued statement's aud MUST NOT contain
@@ -1161,7 +1164,7 @@ Table of Contents
    jti:  REQUIRED.  A unique identifier for the statement within the
       issuer's namespace.
 
-   cimd_digest:  REQUIRED.  The canonical digest (Section 4.1) of the
+   cimd_digest:  REQUIRED.  The metadata digest (Section 4.1) of the
       Client ID Metadata Document from which the metadata snapshot was
       derived.  This claim binds the statement to the exact document
       content evaluated during issuance and lets any party determine
@@ -1254,13 +1257,13 @@ Table of Contents
    from explicit local configuration.
 
    A trusting authorization server MAY retrieve the client's current
-   metadata document and compare canonical digests against cimd_digest
-   to learn whether the attested content is still published; if it does
-   so, it MUST also verify that the document's client_id is exactly
-   equal to sub as required by [CIMD].  A digest mismatch indicates
-   post-issuance change and is an input to registration policy rather
-   than a validation failure.  The trusting authorization server then
-   processes the software statement according to [RFC7591] and its local
+   metadata document and compare metadata digests against cimd_digest to
+   learn whether the attested content is still published; if it does so,
+   it MUST also verify that the document's client_id is exactly equal to
+   sub as required by [CIMD].  A digest mismatch indicates post-issuance
+   change and is an input to registration policy rather than a
+   validation failure.  The trusting authorization server then processes
+   the software statement according to [RFC7591] and its local
    registration policy.
 
 12.  Multi-Instance Client Software
@@ -1295,8 +1298,8 @@ Table of Contents
       same statement supports that model only if it omits jwks and
       jwks_uri; each registration then supplies its own instance key as
       plain metadata, subject to trusting authorization server policy.
-      Omitting them also forecloses token exchange renewal for a client
-      without an authentication method (Section 8).
+      Omitting them also forecloses token exchange renewal for a public
+      client (Section 8).
 
    *  Attested delegation: the statement omits key material but attests
       the instance_issuers delegation (Section 12.1), so instance keys
@@ -1477,9 +1480,10 @@ Table of Contents
 
    The metadata snapshot requirements in Section 4.1 prevent a time-of-
    check/time-of-use change from silently altering the metadata after
-   approval.  Authorization servers SHOULD record the canonical digest
-   (Section 4.1) or an immutable copy of the approved document and
-   snapshot for audit purposes.
+   approval.  Authorization servers SHOULD record the metadata digest
+   (Section 4.1) and retain the exact retrieved octets of the approved
+   document for audit purposes; a re-serialized copy cannot reproduce
+   the digest.
 
 14.4.  Authorization Response Security
 
@@ -1700,7 +1704,7 @@ Table of Contents
    audience exceeds that scope.
 
    An audit record SHOULD bind each decision, whether approval or
-   denial, to the canonical digest (Section 4.1) of the document the
+   denial, to the metadata digest (Section 4.1) of the document the
    deciding party evaluated, the policy under which the decision was
    made, the identity of that party, and the time of decision.  A
    recorded denial carrying its grounds has the same audit value as a
@@ -1909,8 +1913,8 @@ Table of Contents
    Claim Name:  cimd_digest
 
    Claim Description:  Unpadded base64url-encoded SHA-256 digest of the
-      JCS-serialized Client ID Metadata Document evaluated during
-      software statement issuance
+      retrieved octets of the Client ID Metadata Document evaluated
+      during software statement issuance
 
    Change Controller:  IESG
 
@@ -1997,11 +2001,6 @@ Table of Contents
               Current Practices", BCP 225, RFC 8725,
               DOI 10.17487/RFC8725, February 2020,
               <https://www.rfc-editor.org/rfc/rfc8725>.
-
-   [RFC8785]  Rundgren, A., Jordan, B., and S. Erdtman, "JSON
-              Canonicalization Scheme (JCS)", RFC 8785,
-              DOI 10.17487/RFC8785, June 2020,
-              <https://www.rfc-editor.org/rfc/rfc8785>.
 
    [RFC9126]  Lodderstedt, T., Campbell, B., Sakimura, N., Tonge, D.,
               and F. Skokan, "OAuth 2.0 Pushed Authorization Requests",
@@ -2162,7 +2161,7 @@ A.1.  Publisher Program: One Review, Many Customer Authorization Servers
      client-assertion-type%3Ajwt-bearer
      &client_assertion=eyJhbGciOiJFUzI1NiIsImtpZCI6InRhc2tmbG93LTEifQ...
 
-   Under the marketplace's renewal policy, the matching canonical digest
+   Under the marketplace's renewal policy, the matching metadata digest
    and unchanged audience allow the exchange to complete synchronously
    without a new review.  The policy decision, rather than the digest
    match alone, determines that result.
@@ -2261,7 +2260,7 @@ A.2.  Enterprise Deployment of a Third-Party Agent
    is unavailable to this client, which is public and holds a statement
    that attests no key material (Section 8).  When ACME has shipped an
    update that changes the canonical metadata document, the identity
-   platform's fresh snapshot yields a canonical digest that differs from
+   platform's fresh snapshot yields a metadata digest that differs from
    the one in the statement it previously issued.  Its issuance policy
    therefore defers the exchange for a new security review instead of
    issuing silently against changed metadata.
@@ -2340,8 +2339,8 @@ Appendix B.  Issuance Across the Software Delivery Lifecycle
       its own.
 
    Upgrade:  Renewal makes the upgrade protocol-visible.  When a new
-      version changes the metadata document, the current canonical
-      digest no longer matches the subject statement's cimd_digest, and
+      version changes the metadata document, the current metadata digest
+      no longer matches the subject statement's cimd_digest, and
       issuance policy must decide explicitly whether the prior
       endorsement carries forward or the review re-runs (Section 8).
       The audit guidance in Section 14 binds that decision to the
@@ -2568,9 +2567,9 @@ C.8.  Why the Response Uses access_token
 
 C.9.  Deliberately Deferred Capabilities
 
-   This version deliberately omits three capabilities so that the
-   initial protocol surface stays small; each leaves an extension seam
-   rather than a closed door.
+   This version deliberately omits four capabilities so that the initial
+   protocol surface stays small; each leaves an extension seam rather
+   than a closed door.
 
    *  Token-endpoint initiation: a client with neither a user agent nor
       a pre-authorizing credential cannot request a statement in this
@@ -2588,6 +2587,13 @@ C.9.  Deliberately Deferred Capabilities
       and callbacks are prohibited for deferrals created under this
       specification (Section 9).  A future version can lift that
       prohibition and adopt the callback mechanism of [DTR].
+
+   *  Canonicalized digests: the metadata digest is computed over
+      retrieved octets (Section 4.1), so republishing a document with
+      different serialization changes the digest without changing the
+      metadata.  An extension can define a canonicalization-based digest
+      variant, signaled by a new claim or parameter, if serialization
+      churn proves costly in practice.
 
 Appendix D.  Acknowledgments
 
