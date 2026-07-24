@@ -37,7 +37,6 @@ normative:
   RFC8693:
   RFC8707:
   RFC8725:
-  RFC8785:
   RFC9126:
   RFC9207:
   RFC9396:
@@ -148,7 +147,7 @@ The two mechanisms compose rather than compete: a pre-registration push that car
 This specification uses the following building blocks:
 
 * {{RFC7591}} defines the software statement and the client metadata carried in it.
-* {{CIMD}} defines the client identifier and the canonical source of client metadata, including pre-registration with an authorization server and the handling of changed metadata. The flows in this specification can serve as the approval-carrying enrollment step, and the canonical digest ({{metadata-snapshot}}) makes metadata change precisely detectable.
+* {{CIMD}} defines the client identifier and the canonical source of client metadata, including pre-registration with an authorization server and the handling of changed metadata. The flows in this specification can serve as the approval-carrying enrollment step, and the metadata digest ({{metadata-snapshot}}) makes metadata change precisely detectable.
 * {{DTR}} defines client opt-in, deferred token responses at the token endpoint, polling, cancellation, and sender constraint. This specification profiles that token endpoint deferral for every flow and defines each originating request's successful response.
 * {{RFC8693}} establishes the token response convention used to return a security token that is not an OAuth access token. Its token exchange grant is profiled in {{token-exchange-profile}} for clients that already hold a token carrying issuance authority.
 
@@ -187,8 +186,8 @@ Software Statement Code:
 Metadata Snapshot:
 : The validated canonical metadata bound to a request, as defined in {{metadata-snapshot}}.
 
-Canonical Digest:
-: The unpadded base64url encoding of the SHA-256 hash of a metadata document in the canonical form of {{RFC8785}}, as defined in {{metadata-snapshot}}.
+Metadata Digest:
+: The unpadded base64url encoding of the SHA-256 hash of the retrieved octets of a metadata document, as defined in {{metadata-snapshot}}.
 
 # Protocol Overview
 
@@ -263,7 +262,7 @@ The `client_id` in every request defined by this specification MUST be a client 
 
 In the redirect flow, the authorization server MUST compare the `redirect_uri` in the request with the `redirect_uris` in the Client ID Metadata Document according to {{CIMD}} and {{RFC9700}}. The authorization server MUST NOT redirect the user agent when the client identifier or redirect URI is missing or invalid.
 
-The client uses the `token_endpoint_auth_method` and related key metadata in its Client ID Metadata Document when authenticating to the token endpoint. Only an explicit `token_endpoint_auth_method` value of `none` establishes a public client. Any other declared method establishes a confidential client, and the authorization server MUST require exactly that method, as {{CIMD}} requires; a declared method the authorization server does not support MUST cause rejection of the request rather than treatment of the client as public. A metadata document that omits `token_endpoint_auth_method` establishes neither: the {{RFC7591}} default is a symmetric-secret method that {{CIMD}} prohibits and that an unregistered client cannot satisfy, so a software statement request for such a client MUST be rejected.
+The client uses the `token_endpoint_auth_method` and related key metadata in its Client ID Metadata Document when authenticating to the token endpoint. Only an explicit `token_endpoint_auth_method` value of `none` establishes a public client. Any other declared method establishes a confidential client, and the authorization server MUST require exactly that method, as {{CIMD}} requires; a declared method the authorization server does not support MUST cause rejection of the request rather than treatment of the client as public. A metadata document that omits `token_endpoint_auth_method` establishes neither: the {{RFC7591}} default is a symmetric-secret method that {{CIMD}} prohibits and that an unregistered client cannot satisfy, so any request under this specification identifying such a client MUST be rejected.
 
 Sender constraint is established per flow:
 
@@ -279,9 +278,9 @@ Client metadata documents can change while a request is pending. Before returnin
 
 The authorization server MAY retrieve the document again before issuing the software statement. If it does so and detects a security-relevant change (for example, a change to `jwks`, `jwks_uri`, `redirect_uris`, or `token_endpoint_auth_method`), it MUST either re-evaluate the request under the new metadata or reject the request. It MUST NOT silently combine values from different document versions.
 
-Because JSON member ordering and serialization details carry no meaning, comparing retrieved documents byte for byte over-detects change. Before calculating a canonical digest, the authorization server MUST verify that the document can be represented as the I-JSON input required by {{RFC8785}}. In particular, it MUST reject a document containing duplicate object member names or a number that cannot be represented as an IEEE 754 double-precision value without loss.
+The metadata digest of a metadata document is the unpadded base64url encoding of the SHA-256 hash {{RFC6234}} of the document's retrieved octets: the representation body of the HTTPS response after any content coding is removed, with no transcoding, normalization, or re-serialization. Two retrievals with the same metadata digest contain the same document for purposes of this specification; a changed digest is the concrete signal for the re-evaluation requirement above. A changed digest marks a new trust state for an unchanged identity: the client identifier URL persists across document revisions, so decisions attach to content through the digest rather than to the identifier. The metadata digest also serves the `cimd_digest` claim ({{software-statement-format}}) and the audit guidance in {{security-considerations}}.
 
-The canonical digest of a metadata document is the unpadded base64url encoding of the SHA-256 hash {{RFC6234}} of the UTF-8 bytes produced by applying {{RFC8785}} to the complete document. Two retrievals with the same canonical digest contain the same metadata for purposes of this specification; a changed digest is the concrete signal for the re-evaluation requirement above. A changed digest marks a new trust state for an unchanged identity: the client identifier URL persists across document revisions, so decisions attach to content through the digest rather than to the identifier. The canonical digest also serves the `cimd_digest` claim ({{software-statement-format}}) and the audit guidance in {{security-considerations}}. Deployments MAY use other deterministic encodings internally for change detection, but interoperable uses of the canonical digest MUST use the form defined here.
+Byte identity deliberately over-detects change: a document republished with different member ordering or whitespace yields a new digest although its meaning is unchanged. That failure direction is safe, causing review rather than silent trust, and a digest mismatch is an input to policy rather than a validation failure throughout this specification. A publisher SHOULD serve its metadata document as a stable byte artifact whose octets change only when the metadata changes. Independent of the digest, the authorization server MUST reject a document containing duplicate object member names: two parsers can read such a document differently while its digest is identical.
 
 # Software Statement Authorization Request {#authorization-request}
 
@@ -442,7 +441,7 @@ It SHOULD be sender-constrained or limited in its number of uses, and SHOULD be 
 
 The exchange is evaluated against current metadata, not the subject token's contents. The authorization server MUST obtain and validate the Client ID Metadata Document and MUST bind a fresh metadata snapshot ({{metadata-snapshot}}) and the requested audience before returning either the software statement or a deferral code. The statement's claims derive from that snapshot; the authorization server MUST NOT copy metadata claims from a subject statement.
 
-When the current canonical digest differs from a subject statement's `cimd_digest`, the metadata has changed since the prior issuance; the change is an input to issuance policy and MAY cause the exchange to be deferred or rejected. The issued statement's `aud` MUST NOT contain a value absent from a subject statement's `aud` unless issuance policy independently approves the addition.
+When the current metadata digest differs from a subject statement's `cimd_digest`, the metadata has changed since the prior issuance; the change is an input to issuance policy and MAY cause the exchange to be deferred or rejected. The issued statement's `aud` MUST NOT contain a value absent from a subject statement's `aud` unless issuance policy independently approves the addition.
 
 Whether an exchange completes synchronously or defers for approval is issuance policy: a subject token can pre-authorize only the making of the request, or the issuance itself. A successful exchange returns the software statement token response ({{software-statement-response}}), which already carries the {{RFC8693}} response members. If processing cannot complete immediately, the authorization server returns the deferred token response of {{DTR}} and the client polls according to {{deferred-processing}}. An exchange denied by issuance policy returns the terminal denial of {{terminal-denial}}.
 
@@ -553,7 +552,7 @@ The JWT payload MUST contain the following claims in addition to the approved cl
 : REQUIRED. A unique identifier for the statement within the issuer's namespace.
 
 `cimd_digest`:
-: REQUIRED. The canonical digest ({{metadata-snapshot}}) of the Client ID Metadata Document from which the metadata snapshot was derived. This claim binds the statement to the exact document content evaluated during issuance and lets any party determine whether the client's currently published metadata still matches what was attested.
+: REQUIRED. The metadata digest ({{metadata-snapshot}}) of the Client ID Metadata Document from which the metadata snapshot was derived. This claim binds the statement to the exact document content evaluated during issuance and lets any party determine whether the client's currently published metadata still matches what was attested.
 
 Each metadata claim MUST be client metadata registered in the IANA "OAuth Dynamic Client Registration Metadata" registry and recognized by the authorization server. The following authorization-server-assigned, credential, and recursive metadata members are not eligible for attestation and MUST NOT appear in a software statement issued under this specification: `client_id`, `client_secret`, `client_id_issued_at`, `client_secret_expires_at`, `registration_access_token`, `registration_client_uri`, and `software_statement`. An authorization server MAY exclude additional metadata according to policy. The `client_id` member required in the Client ID Metadata Document by {{CIMD}} identifies the canonical document during issuance; the statement represents that identifier in `sub` and MUST NOT copy it as client metadata.
 
@@ -598,7 +597,7 @@ Before accepting the statement, a trusting authorization server MUST:
 
 Publishing an issuer URL or a JWK Set does not by itself establish trust: signature keys for a trusted issuer are conventionally obtained from the `jwks_uri` in the issuer's authorization server metadata {{RFC8414}}, but the decision to trust the issuer MUST come from explicit local configuration.
 
-A trusting authorization server MAY retrieve the client's current metadata document and compare canonical digests against `cimd_digest` to learn whether the attested content is still published; if it does so, it MUST also verify that the document's `client_id` is exactly equal to `sub` as required by {{CIMD}}. A digest mismatch indicates post-issuance change and is an input to registration policy rather than a validation failure. The trusting authorization server then processes the software statement according to {{RFC7591}} and its local registration policy.
+A trusting authorization server MAY retrieve the client's current metadata document and compare metadata digests against `cimd_digest` to learn whether the attested content is still published; if it does so, it MUST also verify that the document's `client_id` is exactly equal to `sub` as required by {{CIMD}}. A digest mismatch indicates post-issuance change and is an input to registration policy rather than a validation failure. The trusting authorization server then processes the software statement according to {{RFC7591}} and its local registration policy.
 
 # Multi-Instance Client Software {#multi-instance}
 
@@ -609,7 +608,7 @@ A single unexpired statement is therefore intended to be presented more than onc
 Deployments whose client software runs as many concurrent instances SHOULD register the logical client once per authorization server and differentiate instances at the token endpoint, for example with {{CLIENT-INSTANCE}} or attestation-based client authentication {{ABCA}}, rather than minting a registration per instance. The statement's key material determines which registration models it can support:
 
 * Shared client key: if the statement contains `jwks` or `jwks_uri`, that attested value takes precedence under {{RFC7591}}, and every registration derived from the statement MUST use the attested key material rather than an instance-supplied replacement.
-* Per-instance keys: where authorization server policy is keyed on `client_id` and genuinely requires per-instance registrations, the same statement supports that model only if it omits `jwks` and `jwks_uri`; each registration then supplies its own instance key as plain metadata, subject to trusting authorization server policy. Omitting them also forecloses token exchange renewal for a client without an authentication method ({{token-exchange-profile}}).
+* Per-instance keys: where authorization server policy is keyed on `client_id` and genuinely requires per-instance registrations, the same statement supports that model only if it omits `jwks` and `jwks_uri`; each registration then supplies its own instance key as plain metadata, subject to trusting authorization server policy. Omitting them also forecloses token exchange renewal for a public client ({{token-exchange-profile}}).
 * Attested delegation: the statement omits key material but attests the `instance_issuers` delegation ({{attesting-instance-issuers}}), so instance keys are endorsed by an attested authority at the token endpoint instead of appearing unattested in registration metadata.
 
 ## Attesting Instance Issuers {#attesting-instance-issuers}
@@ -686,7 +685,7 @@ A trusting authorization server is accordingly entitled to conclude what the iss
 
 Fetching a Client ID Metadata Document and resources referenced by it exposes the authorization server to server-side request forgery, resource exhaustion, malicious content, and client impersonation risks. The validation, address filtering, response-size limits, redirect handling, caching, logo handling, and domain-trust considerations of {{CIMD}} apply.
 
-The metadata snapshot requirements in {{metadata-snapshot}} prevent a time-of-check/time-of-use change from silently altering the metadata after approval. Authorization servers SHOULD record the canonical digest ({{metadata-snapshot}}) or an immutable copy of the approved document and snapshot for audit purposes.
+The metadata snapshot requirements in {{metadata-snapshot}} prevent a time-of-check/time-of-use change from silently altering the metadata after approval. Authorization servers SHOULD record the metadata digest ({{metadata-snapshot}}) and retain the exact retrieved octets of the approved document for audit purposes; a re-serialized copy cannot reproduce the digest.
 
 ## Authorization Response Security {#authorization-response-security}
 
@@ -744,7 +743,7 @@ The software statement attests to metadata; it does not identify the human or sy
 
 Approval authority is a policy decision with audience-wide effect: an approved statement is accepted at every authorization server in its audience, not only within the approver's own scope. The policy governing who may approve issuance MUST be at least as restrictive as the policy governing manual client establishment at the issuing authorization server, and approval by a party authorized only for a personal or organizational scope MUST NOT produce a statement whose audience exceeds that scope.
 
-An audit record SHOULD bind each decision, whether approval or denial, to the canonical digest ({{metadata-snapshot}}) of the document the deciding party evaluated, the policy under which the decision was made, the identity of that party, and the time of decision. A recorded denial carrying its grounds has the same audit value as a recorded approval. Portable, independently verifiable decision records are out of scope for this specification.
+An audit record SHOULD bind each decision, whether approval or denial, to the metadata digest ({{metadata-snapshot}}) of the document the deciding party evaluated, the policy under which the decision was made, the identity of that party, and the time of decision. A recorded denial carrying its grounds has the same audit value as a recorded approval. Portable, independently verifiable decision records are out of scope for this specification.
 
 # Privacy Considerations
 
@@ -951,7 +950,7 @@ Claim Name:
 : `cimd_digest`
 
 Claim Description:
-: Unpadded base64url-encoded SHA-256 digest of the JCS-serialized Client ID Metadata Document evaluated during software statement issuance
+: Unpadded base64url-encoded SHA-256 digest of the retrieved octets of the Client ID Metadata Document evaluated during software statement issuance
 
 Change Controller:
 : IESG
@@ -997,7 +996,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3A
   &client_assertion=eyJhbGciOiJFUzI1NiIsImtpZCI6InRhc2tmbG93LTEifQ...
 ~~~
 
-Under the marketplace's renewal policy, the matching canonical digest and unchanged audience allow the exchange to complete synchronously without a new review. The policy decision, rather than the digest match alone, determines that result.
+Under the marketplace's renewal policy, the matching metadata digest and unchanged audience allow the exchange to complete synchronously without a new review. The policy decision, rather than the digest match alone, determines that result.
 
 ## Enterprise Deployment of a Third-Party Agent {#example-enterprise}
 
@@ -1043,7 +1042,7 @@ Content-Type: application/json
 
 Because the statement does not contain `instance_issuers`, the locally supplied value does not conflict with the precedence rule of {{RFC7591}}; it is not covered by the issuer's attestation, and accepting it is the registering server's policy.
 
-Finally, before the statement expires, the tooling submits a fresh exchange with the same initial access token as subject token and the same two audiences; renewal with the prior statement as subject token is unavailable to this client, which is public and holds a statement that attests no key material ({{token-exchange-profile}}). When ACME has shipped an update that changes the canonical metadata document, the identity platform's fresh snapshot yields a canonical digest that differs from the one in the statement it previously issued. Its issuance policy therefore defers the exchange for a new security review instead of issuing silently against changed metadata.
+Finally, before the statement expires, the tooling submits a fresh exchange with the same initial access token as subject token and the same two audiences; renewal with the prior statement as subject token is unavailable to this client, which is public and holds a statement that attests no key material ({{token-exchange-profile}}). When ACME has shipped an update that changes the canonical metadata document, the identity platform's fresh snapshot yields a metadata digest that differs from the one in the statement it previously issued. Its issuance policy therefore defers the exchange for a new security review instead of issuing silently against changed metadata.
 
 ## The Resource Owner as Approver: A Case This Specification Does Not Serve {#example-resource-owner}
 
@@ -1067,7 +1066,7 @@ Deployment:
 : An organization adopting third-party software runs its own review through deferred processing, which tolerates the days such a review takes ({{deferred-processing}}), and receives a statement scoped to its internal authorization servers ({{example-enterprise}}). Deployment tooling then registers the software everywhere the statement is audienced, and no internal server operates an approval process of its own.
 
 Upgrade:
-: Renewal makes the upgrade protocol-visible. When a new version changes the metadata document, the current canonical digest no longer matches the subject statement's `cimd_digest`, and issuance policy must decide explicitly whether the prior endorsement carries forward or the review re-runs ({{token-exchange-profile}}). The audit guidance in {{security-considerations}} binds that decision to the digests involved, so "was the new version re-approved or inherited" has a recorded answer.
+: Renewal makes the upgrade protocol-visible. When a new version changes the metadata document, the current metadata digest no longer matches the subject statement's `cimd_digest`, and issuance policy must decide explicitly whether the prior endorsement carries forward or the review re-runs ({{token-exchange-profile}}). The audit guidance in {{security-considerations}} binds that decision to the digests involved, so "was the new version re-approved or inherited" has a recorded answer.
 
 Fleet operation:
 : The statement attests the software, not its instances. Concurrent instances share one registration per authorization server and differentiate at the token endpoint, and the statement's key material selects the registration model, including attestation of the `instance_issuers` delegation itself ({{multi-instance}}, {{attesting-instance-issuers}}).
@@ -1133,11 +1132,12 @@ Using that convention keeps immediate and deferred responses compatible with exi
 
 ## Deliberately Deferred Capabilities {#deferred-capabilities}
 
-This version deliberately omits three capabilities so that the initial protocol surface stays small; each leaves an extension seam rather than a closed door.
+This version deliberately omits four capabilities so that the initial protocol surface stays small; each leaves an extension seam rather than a closed door.
 
 * Token-endpoint initiation: a client with neither a user agent nor a pre-authorizing credential cannot request a statement in this version. The software statement grant is used only to redeem software statement codes; an extension can add initiation as a use of the same grant without a `software_statement_code`, signaled by new authorization server metadata, without changing redemption.
 * Request-time metadata selection: a client cannot select the subset of its canonical metadata to be attested. Issuer-side narrowing by policy covers part of the need ({{software-statement-format}}); an extension can add a selection object as an authorization request parameter.
 * Callback delivery: deferral results are delivered by polling only, and callbacks are prohibited for deferrals created under this specification ({{deferred-processing}}). A future version can lift that prohibition and adopt the callback mechanism of {{DTR}}.
+* Canonicalized digests: the metadata digest is computed over retrieved octets ({{metadata-snapshot}}), so republishing a document with different serialization changes the digest without changing the metadata. An extension can define a canonicalization-based digest variant, signaled by a new claim or parameter, if serialization churn proves costly in practice.
 
 # Acknowledgments
 
