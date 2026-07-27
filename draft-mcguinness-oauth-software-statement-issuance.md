@@ -91,7 +91,7 @@ informative:
 
 --- abstract
 
-RFC 7591 standardizes how a client presents a software statement and how a registration endpoint consumes it, but not how the client obtains one. This specification defines OAuth 2.0 issuance flows for that artifact. A Client ID Metadata Document identifies a client that has not been registered with the authorization server.
+RFC 7591 standardizes how a client presents a software statement and how a registration endpoint consumes it, but not how the client obtains one. This specification defines OAuth 2.0 issuance flows for that artifact, in which a Client ID Metadata Document identifies a client that has not been registered with the authorization server.
 
 In the redirect flow, the authorization endpoint returns a short-lived `software_statement_code`, which the client redeems using a new token endpoint grant. A completed decision returns a statement; a pending decision uses Deferred Token Response and polling. The statement never appears in an authorization response URL.
 
@@ -107,7 +107,7 @@ Today, issuance relies on manual provisioning, deployment-specific portals, or p
 
 A human-facing portal is not a protocol contract: it does not let independently built clients and issuers interoperate over automated submission, deferred completion, credential delivery, metadata binding, renewal, and errors. This specification standardizes the protocol beneath the portal, leaving the approval workflow, acceptance policy, and issuer trust to the deployment.
 
-Adjacent client-establishment mechanisms are bilateral: pre-registration {{CIMD}}, pushed registration {{PUSHED-DCR}}, and approval-gated registration {{APPROVAL-DCR}} each establish trust at one authorization server based on client-supplied metadata.
+Adjacent client-establishment mechanisms are bilateral: pre-registration {{CIMD}}, pushed registration {{PUSHED-DCR}}, and approval-based registration {{APPROVAL-DCR}} each establish trust at one authorization server based on client-supplied metadata.
 
 A software statement instead makes an issuer's decision portable. A publisher program, enterprise security function, or ecosystem operator reviews the software once; each authorization server in the statement's audience can then rely on the signed decision under its own policy ({{what-issuance-attests}}, {{comparison}}). {{beyond-pre-registration}} compares this model with pre-registration.
 
@@ -128,7 +128,7 @@ Other mechanisms are preferable when:
 * the trust decision is local to one authorization server, where an initial access token {{RFC7591}}, pre-registration {{CIMD}}, or approval-based registration {{APPROVAL-DCR}} can establish the client directly; or
 * the client cannot host a metadata document at an HTTPS URL and therefore does not fit this specification's identity model ({{client-identity}}).
 
-A software statement earns its cost beyond those boundaries, when one or more of the following holds:
+A software statement earns its cost beyond those boundaries when one or more of the following holds:
 
 1. One approval must be honored at many authorization servers.
 2. The party approving the software is not the resource owner in a transaction.
@@ -268,7 +268,7 @@ The URL remains the client identity when its content changes. One issuance decis
     |<------------------------------------------------|
 ~~~
 
-At (A), the client requests a statement. The authorization server validates the request, can perform user-agent interaction or initiate approval, and returns a software statement code at (B).
+At (A), the client requests a statement. The authorization server validates the request, performs any user-agent interaction or initiates an approval workflow, and returns a software statement code at (B).
 
 At (C), the client redeems the code with its PKCE verifier. Redemption returns the statement at (D) or a {{DTR}} `deferral_code`; in the latter case, the client polls at (E). Errors follow {{RFC6749}} and {{DTR}}.
 
@@ -281,7 +281,7 @@ In the redirect flow, the authorization server MUST compare the `redirect_uri` i
 The client authenticates to the token endpoint using the `token_endpoint_auth_method` and related key metadata in its Client ID Metadata Document. The authorization server classifies the client from that member:
 
 * `none` (explicit) establishes a public client.
-* Any other value establishes a confidential client, and the authorization server MUST require exactly that method, as {{CIMD}} requires; a declared method the authorization server does not support MUST cause rejection rather than treatment as public.
+* Any other value establishes a confidential client, and the authorization server MUST require exactly that method, as required by {{CIMD}}; a declared method the authorization server does not support MUST cause rejection rather than treatment as public.
 * An omitted value establishes neither: the {{RFC7591}} default is a symmetric-secret method that {{CIMD}} prohibits and an unregistered client cannot satisfy, so any request identifying such a client MUST be rejected.
 
 Classification uses the singular `token_endpoint_auth_method`; this specification does not interpret a list of methods a client merely declares it supports, and a client that wants a deterministic classification for issuance declares the singular member.
@@ -432,7 +432,7 @@ The result depends on the issuance decision:
 * **Denied:** it returns the terminal denial of {{terminal-denial}}, and the code is consumed.
 * **Pending:** a deferred issuer returns the deferred token response of {{DTR}}. It binds the deferral to the code's client identifier, metadata snapshot, audience, and client authentication or DPoP key. The client then polls according to {{deferred-processing}}.
 
-A synchronous issuer never reaches the pending branch: it MUST complete the issuance decision, to approval or denial, before returning the software statement code.
+A synchronous issuer never reaches the pending branch: it MUST complete the issuance decision, reaching either approval or denial, before returning the software statement code.
 
 # Token Exchange Profile {#token-exchange-profile}
 
@@ -477,7 +477,7 @@ A DPoP proof on the exchange constrains any resulting deferral; it does not auth
 
 The exchange is evaluated against current metadata. The authorization server MUST obtain and validate the Client ID Metadata Document and MUST bind a fresh metadata snapshot ({{metadata-snapshot}}) and the requested audience before returning either the software statement or a deferral code. The statement's claims derive from that snapshot. An authorization server that recorded the metadata digest of a prior issuance for this `client_id` MAY compare it against the fresh snapshot and treat a change as an input to issuance policy.
 
-Whether an exchange completes synchronously or defers for approval is issuance policy: an initial access token can pre-authorize only the making of the request, or the issuance itself. A successful exchange returns the software statement token response ({{software-statement-response}}), which already carries the {{RFC8693}} response members. If processing cannot complete immediately, the authorization server returns the deferred token response of {{DTR}} and the client polls according to {{deferred-processing}}. An exchange denied by issuance policy returns the terminal denial of {{terminal-denial}}.
+Whether an exchange completes synchronously or defers for approval is issuance policy: an initial access token can pre-authorize only the request, or the issuance itself. A successful exchange returns the software statement token response ({{software-statement-response}}), which already carries the {{RFC8693}} response members. If processing cannot complete immediately, the authorization server returns the deferred token response of {{DTR}} and the client polls according to {{deferred-processing}}. An exchange denied by issuance policy returns the terminal denial of {{terminal-denial}}.
 
 # Deferred Processing {#deferred-processing}
 
@@ -498,7 +498,7 @@ When an issuer defers a request, it MUST record the sender-constraint context es
 * the client authentication method; and
 * for a method that binds a key, that specific key: the DPoP JWK thumbprint, or the authenticated key for a method such as `private_key_jwt` or mTLS.
 
-A method that does not bind a key freezes only the client identity and method. Every polling request MUST match the recorded context. The authorization server MUST NOT re-derive that context from the current metadata document. A client that loses the origination key cannot complete the deferral and makes a new request.
+A method that does not bind a key freezes only the client identity and method. Every polling request MUST match the recorded context. The authorization server MUST NOT re-derive that context from the current metadata document. A client that loses the origination key cannot complete the deferral and instead makes a new request.
 
 Approval of software statement issuance can take hours or days rather than the seconds typical of user authentication, for example when it involves reviewing the client's policy or compliance documentation. Issuers SHOULD set deferral code lifetimes that reflect their actual approval latency.
 
@@ -662,7 +662,7 @@ A trusting authorization server SHOULD bound the number of registrations derived
 
 A server that treats a repeat as idempotent MUST NOT disclose the credentials or registration access token of the prior registration to a later presenter unless it independently authorizes that presenter. A server that permits multiple registrations from one statement SHOULD bound the count.
 
-Deployments whose client software runs as many concurrent instances SHOULD register the logical client once per authorization server and differentiate instances at the token endpoint, for example with {{CLIENT-INSTANCE}} or attestation-based client authentication {{ABCA}}, rather than minting a registration per instance. The statement's key material determines which registration models it can support:
+Deployments whose client software runs many concurrent instances SHOULD register the logical client once per authorization server and differentiate instances at the token endpoint, for example with {{CLIENT-INSTANCE}} or attestation-based client authentication {{ABCA}}, rather than minting a registration per instance. The statement's key material determines which registration models it can support:
 
 * Shared client key: if the statement contains `jwks` or `jwks_uri`, that attested value takes precedence under {{RFC7591}}, and every registration derived from the statement MUST use the attested key material rather than an instance-supplied replacement.
 * Per-instance keys: where authorization server policy is keyed on `client_id` and genuinely requires per-instance registrations, the same statement supports that model only if it omits `jwks` and `jwks_uri`; each registration then supplies its own instance key as plain metadata, subject to trusting authorization server policy and the presenter-proof guidance of {{statement-validation}}.
@@ -701,7 +701,7 @@ An authorization server supporting the redirect flow advertises:
 
 An authorization server supporting the token exchange profile ({{token-exchange-profile}}) advertises `urn:ietf:params:oauth:grant-type:token-exchange` in `grant_types_supported` and publishes `software_statement_subject_token_types_supported` below; general token exchange support does not by itself imply support for this profile. An implementation supporting only that profile advertises neither the software statement grant nor the `software_statement_code` response type.
 
-A client that requires the ability to have a request deferred MUST NOT send it to an authorization server that does not advertise `deferred_token_response_supported`; a synchronous issuer answers such a request with a statement or a terminal denial rather than a deferral.
+A client that requires deferral MUST NOT send a request to an authorization server that does not advertise `deferred_token_response_supported`; a synchronous issuer answers such a request with a statement or a terminal denial rather than a deferral.
 
 This specification defines the following additional authorization server metadata members:
 
@@ -1132,11 +1132,11 @@ Before expiry, the daemon renews with the same initial access token and audience
 
 ## The Resource Owner as Approver: A Case This Specification Does Not Serve {#example-resource-owner}
 
-Now consider an individual running the ACME agent against the user's own authorization server. The resource owner is the approver, so the Introduction's applicability guidance excludes this case.
+Now consider an individual running the ACME agent against their own authorization server. The resource owner is the approver, so the Introduction's applicability guidance excludes this case.
 
 The OAuth authorization grant already records the user's approval. The generic URL identifies the client {{CIMD}}; instance assertions identify installations at the token endpoint ({{CLIENT-INSTANCE}}). Tokens can then identify the user as subject and the instance as actor, sender-constrained to the installation key.
 
-A statement adds nothing: there is one authorization server, the user already approves the transaction, and no review cost to amortize. {{example-enterprise}} reverses each condition.
+A statement adds nothing: there is a single authorization server, a single approver already present in the transaction, and no review whose cost needs amortizing. {{example-enterprise}} reverses each condition.
 
 # Issuance Across the Software Delivery Lifecycle {#delivery-lifecycle}
 
