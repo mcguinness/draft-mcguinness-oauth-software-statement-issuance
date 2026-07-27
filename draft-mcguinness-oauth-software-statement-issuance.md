@@ -738,19 +738,15 @@ A software statement code returned in a URL is visible to browser history, refer
 
 ## Deferral Sender Constraint
 
-All software statement requests made through the authorization endpoint use PKCE, verified when the software statement code is redeemed. Every deferral in this specification is created by a token request, and every polling request is protected by the client authentication or DPoP key bound at that origination, as required by {{DTR}}. A public client using the redirect flow is therefore required to supply `dpop_jkt` in the authorization request and use that key at redemption and on every poll; this preserves sender-constraint continuity from the authorization response through the polling sequence.
-
-All additional sender-constraint, polling-rate, replay, cancellation, and logging requirements of {{DTR}} apply.
+Every deferral is created by a token request, and every poll is bound to the client authentication or DPoP key fixed at origination ({{deferred-processing}}), so a public redirect-flow client's `dpop_jkt` carries sender constraint continuously from the authorization response through polling. All additional sender-constraint, polling-rate, replay, cancellation, and logging requirements of {{DTR}} apply.
 
 ## Token Exchange Considerations {#te-considerations}
 
-A token exchange reaches the token endpoint without prior user-agent interaction. Subject token validation precedes metadata retrieval and any enqueueing ({{token-exchange-profile}}), which bounds the retrieval, queue, and deferral resources an unauthorized requester can consume. Authorization servers SHOULD nevertheless rate-limit exchanges requesting this token type, SHOULD cache metadata retrieval results and failures, and SHOULD bound the pending deferrals they hold per client identifier and per requester. Client authentication remains mandatory when established by the Client ID Metadata Document.
+A token exchange reaches the token endpoint without prior user-agent interaction. Subject token validation precedes metadata retrieval and any enqueueing ({{token-exchange-profile}}), which bounds the retrieval, queue, and deferral resources an unauthorized requester can consume. Authorization servers SHOULD nevertheless rate-limit exchanges requesting this token type, cache metadata retrieval results and failures, and bound the pending deferrals they hold per client identifier and per requester. Client authentication remains mandatory when established by the Client ID Metadata Document.
 
 A pre-authorization credential presented as a subject token ({{token-exchange-profile}}) is an authorization credential, not a client identifier and not a substitute for client authentication when the Client ID Metadata Document establishes an authentication method. It is sent in a form body and is therefore exposed to any component that records request bodies. Authorization servers MUST exclude subject tokens from logs, traces, error messages, and audit records; clients and authorization servers MUST protect the credential as a bearer credential unless its format provides proof of possession. The binding, lifetime, entropy, and replay requirements of {{token-exchange-profile}} limit the effect of disclosure.
 
 The absence of a user agent removes front-channel exposure: neither the deferral code nor any other response parameter transits a browser. It also removes any in-band evidence of user participation. An authorization server MUST NOT treat a token exchange as implying prior user consent and MUST apply the same issuance and approval policy as for the redirect flow.
-
-Sender constraint for every deferral is established at its originating token request through client authentication or a DPoP proof; polling carries no PKCE state, the redirect flow's `code_verifier` having been consumed at redemption ({{software-statement-code-redemption}}).
 
 ## Statement Validation and Replay {#statement-validation}
 
