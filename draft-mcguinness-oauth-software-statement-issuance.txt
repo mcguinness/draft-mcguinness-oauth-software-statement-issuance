@@ -2736,6 +2736,22 @@ C.7.  Why Deferral Happens Only at the Token Endpoint
    special first poll, and no extension to [DTR]'s authorization
    endpoint behavior is required.
 
+   The registration endpoint of [RFC7591] is the other candidate, and it
+   is where [APPROVAL-DCR] places its own deferral.  It is the wrong
+   home here for a specific reason: that endpoint registers a client at
+   the server it runs on, whereas this specification mints a portable
+   artifact presented later at other servers' registration endpoints.
+   There is no single registration endpoint at which issuance lives, so
+   a registration-endpoint design would have to invert the registration
+   contract, validating metadata but creating no client and returning a
+   statement instead.  The token endpoint is the natural home for
+   minting a security token, and the pre-authorized path already is a
+   token-endpoint grant (Section 8), so both flows defer under one model
+   rather than two.  Reusing [DTR] inherits its polling, cancellation,
+   sender constraint, and rate limiting, together with the client
+   authentication that [CIMD] metadata binds to the token endpoint, none
+   of which a registration-endpoint deferral could take for granted.
+
 C.8.  Why the Response Uses access_token
 
    OAuth token endpoint infrastructure expects a token response to
