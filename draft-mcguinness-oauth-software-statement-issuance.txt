@@ -16,8 +16,8 @@ Abstract
    RFC 7591 standardizes how a client presents a software statement and
    how a registration endpoint consumes it, but not how the client
    obtains one.  This specification defines OAuth 2.0 issuance flows for
-   that artifact.  A Client ID Metadata Document identifies a client
-   that has not been registered with the authorization server.
+   that artifact, in which a Client ID Metadata Document identifies a
+   client that has not been registered with the authorization server.
 
    In the redirect flow, the authorization endpoint returns a short-
    lived software_statement_code, which the client redeems using a new
@@ -156,7 +156,7 @@ Table of Contents
 
    Adjacent client-establishment mechanisms are bilateral: pre-
    registration [CIMD], pushed registration [PUSHED-DCR], and approval-
-   gated registration [APPROVAL-DCR] each establish trust at one
+   based registration [APPROVAL-DCR] each establish trust at one
    authorization server based on client-supplied metadata.
 
    A software statement instead makes an issuer's decision portable.  A
@@ -207,7 +207,7 @@ Table of Contents
       therefore does not fit this specification's identity model
       (Section 4).
 
-   A software statement earns its cost beyond those boundaries, when one
+   A software statement earns its cost beyond those boundaries when one
    or more of the following holds:
 
    1.  One approval must be honored at many authorization servers.
@@ -451,8 +451,9 @@ Table of Contents
        |<------------------------------------------------|
 
    At (A), the client requests a statement.  The authorization server
-   validates the request, can perform user-agent interaction or initiate
-   approval, and returns a software statement code at (B).
+   validates the request, performs any user-agent interaction or
+   initiates an approval workflow, and returns a software statement code
+   at (B).
 
    At (C), the client redeems the code with its PKCE verifier.
    Redemption returns the statement at (D) or a [DTR] deferral_code; in
@@ -481,8 +482,8 @@ Table of Contents
    *  none (explicit) establishes a public client.
 
    *  Any other value establishes a confidential client, and the
-      authorization server MUST require exactly that method, as [CIMD]
-      requires; a declared method the authorization server does not
+      authorization server MUST require exactly that method, as required
+      by [CIMD]; a declared method the authorization server does not
       support MUST cause rejection rather than treatment as public.
 
    *  An omitted value establishes neither: the [RFC7591] default is a
@@ -757,8 +758,8 @@ Table of Contents
       key.  The client then polls according to Section 9.
 
    A synchronous issuer never reaches the pending branch: it MUST
-   complete the issuance decision, to approval or denial, before
-   returning the software statement code.
+   complete the issuance decision, reaching either approval or denial,
+   before returning the software statement code.
 
 8.  Token Exchange Profile
 
@@ -852,12 +853,12 @@ Table of Contents
 
    Whether an exchange completes synchronously or defers for approval is
    issuance policy: an initial access token can pre-authorize only the
-   making of the request, or the issuance itself.  A successful exchange
-   returns the software statement token response (Section 10), which
-   already carries the [RFC8693] response members.  If processing cannot
-   complete immediately, the authorization server returns the deferred
-   token response of [DTR] and the client polls according to Section 9.
-   An exchange denied by issuance policy returns the terminal denial of
+   request, or the issuance itself.  A successful exchange returns the
+   software statement token response (Section 10), which already carries
+   the [RFC8693] response members.  If processing cannot complete
+   immediately, the authorization server returns the deferred token
+   response of [DTR] and the client polls according to Section 9.  An
+   exchange denied by issuance policy returns the terminal denial of
    Section 10.1.
 
 9.  Deferred Processing
@@ -914,7 +915,7 @@ Table of Contents
    and method.  Every polling request MUST match the recorded context.
    The authorization server MUST NOT re-derive that context from the
    current metadata document.  A client that loses the origination key
-   cannot complete the deferral and makes a new request.
+   cannot complete the deferral and instead makes a new request.
 
    Approval of software statement issuance can take hours or days rather
    than the seconds typical of user authentication, for example when it
@@ -1239,7 +1240,7 @@ Table of Contents
    A server that permits multiple registrations from one statement
    SHOULD bound the count.
 
-   Deployments whose client software runs as many concurrent instances
+   Deployments whose client software runs many concurrent instances
    SHOULD register the logical client once per authorization server and
    differentiate instances at the token endpoint, for example with
    [CLIENT-INSTANCE] or attestation-based client authentication [ABCA],
@@ -1329,8 +1330,8 @@ Table of Contents
    software statement grant nor the software_statement_code response
    type.
 
-   A client that requires the ability to have a request deferred MUST
-   NOT send it to an authorization server that does not advertise
+   A client that requires deferral MUST NOT send a request to an
+   authorization server that does not advertise
    deferred_token_response_supported; a synchronous issuer answers such
    a request with a statement or a terminal denial rather than a
    deferral.
@@ -2210,8 +2211,8 @@ A.2.  Enterprise Deployment of a Third-Party Agent
 A.3.  The Resource Owner as Approver: A Case This Specification Does Not
       Serve
 
-   Now consider an individual running the ACME agent against the user's
-   own authorization server.  The resource owner is the approver, so the
+   Now consider an individual running the ACME agent against their own
+   authorization server.  The resource owner is the approver, so the
    Introduction's applicability guidance excludes this case.
 
    The OAuth authorization grant already records the user's approval.
@@ -2220,9 +2221,9 @@ A.3.  The Resource Owner as Approver: A Case This Specification Does Not
    Tokens can then identify the user as subject and the instance as
    actor, sender-constrained to the installation key.
 
-   A statement adds nothing: there is one authorization server, the user
-   already approves the transaction, and no review cost to amortize.
-   Appendix A.2 reverses each condition.
+   A statement adds nothing: there is a single authorization server, a
+   single approver already present in the transaction, and no review
+   whose cost needs amortizing.  Appendix A.2 reverses each condition.
 
 Appendix B.  Issuance Across the Software Delivery Lifecycle
 
