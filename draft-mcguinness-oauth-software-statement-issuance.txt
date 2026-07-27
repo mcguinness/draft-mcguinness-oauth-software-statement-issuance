@@ -3,9 +3,9 @@
 
 
 Web Authorization Protocol                                 K. McGuinness
-Internet-Draft                                              24 July 2026
+Internet-Draft                                              27 July 2026
 Intended status: Standards Track                                        
-Expires: 25 January 2027
+Expires: 28 January 2027
 
 
                  OAuth 2.0 Software Statement Issuance
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 January 2027.
+   This Internet-Draft will expire on 28 January 2027.
 
 Copyright Notice
 
@@ -582,6 +582,13 @@ Table of Contents
    request under this specification identifying such a client MUST be
    rejected.
 
+   Classification uses the singular token_endpoint_auth_method member.
+   This specification does not interpret a list of authentication
+   methods a client merely declares it supports; a client that requires
+   a deterministic public or confidential classification for issuance
+   declares the singular token_endpoint_auth_method, and an
+   authorization server classifies on that member alone.
+
    Sender constraint is established per flow:
 
    *  A public client using the redirect flow MUST include dpop_jkt in
@@ -644,6 +651,19 @@ Table of Contents
    object member names: two parsers can read such a document differently
    while its digest is identical.
 
+   Signing and client-authentication keys are a common source of change,
+   and routine key rotation is expected [CIMD].  An issuance source
+   SHOULD publish keys by reference through jwks_uri rather than inline
+   through jwks: a rotation behind a stable jwks_uri leaves the document
+   octets, and therefore the metadata digest, unchanged, so it neither
+   invalidates an issued statement nor triggers re-evaluation, and the
+   statement continues to attest the key location.  An issuer that
+   instead attests an inline jwks binds the digest to the specific key
+   material, so a rotation changes the document and is a re-issuance
+   event, renewed through Section 8.  Either way the statement attests
+   exactly what the digest covers: a key location under jwks_uri, or
+   specific keys under inline jwks.
+
    A metadata document used as an issuance source MUST NOT contain a
    software_statement member, even though [CIMD] permits one in general.
    The digest covers the complete retrieved document, so embedding a
@@ -665,9 +685,12 @@ Table of Contents
 
    redirect_uri:  REQUIRED.  The value MUST exactly match one of the
       redirection URIs in the Client ID Metadata Document, subject to
-      the redirect URI rules of [CIMD].  The value MUST be an HTTPS URL:
-      private-use URI schemes and loopback interface redirection URIs
-      MUST NOT be used in a software statement request (Section 14.4).
+      the redirect URI rules of [CIMD].  A public client MUST use an
+      HTTPS redirection URI and MUST NOT use a private-use URI scheme or
+      a loopback interface redirection URI in a software statement
+      request.  A confidential client MAY use a loopback or private-use
+      redirection URI, because redemption is bound to its client
+      authentication (Section 14.4).
 
    state:  REQUIRED.  An opaque value used by the client to bind the
       authorization response to its request.  The authorization server
@@ -1252,12 +1275,15 @@ Table of Contents
    client_id that need not be related to sub.  A trusting authorization
    server MAY use sub to correlate registrations of the same client
    software and to apply per-client policy, such as bounding the number
-   of active registrations (Section 12).  Because sub is stable across
-   releases of the software, that correlation spans document revisions;
-   the cimd_digest of each statement distinguishes the content that was
-   reviewed.  When the metadata snapshot includes software_id, that
-   value identifies the software as defined by [RFC7591]; this
-   specification does not derive either identifier from the other.
+   of active registrations (Section 12).  Where a deployment keeps a
+   stable client identifier URL across releases, sub correlates those
+   releases and the cimd_digest of each statement distinguishes the
+   content reviewed.  Where releases instead use distinct client
+   identifier URLs, sub identifies a single release; an attested
+   software_id, as defined by [RFC7591], is then the cross-release
+   identifier, and a trusting authorization server correlates on
+   whichever identifier the deployment provides.  This specification
+   does not derive sub and software_id from each other.
 
    The following is a non-normative example of the JOSE header and JWT
    payload of a software statement:
@@ -1573,24 +1599,37 @@ Table of Contents
    software statement requests can correlate each authorization response
    with its originating request before redemption.
 
-   Delivery through the redirection endpoint also establishes who can
-   complete a request.  The redirect_uri must exactly match a
-   redirection URI in the client's own metadata document and must be an
-   HTTPS URL (Section 5): private-use scheme and loopback redirections
-   are prohibited in this flow because they are claimable by any
-   application on a device ([RFC8252]), which would let an attacker
-   initiate and complete a request for another party's client_id using
-   its own PKCE verifier and DPoP key.  With those prohibited, a party
-   initiating a request for another party's client_id gains nothing: an
-   endpoint of its own is not registered, so the request fails before
-   any redirect, while a request aimed at the genuine registered
-   endpoint delivers a code whose PKCE verifier the recipient does not
-   hold.  An authorization server SHOULD additionally relate the
-   redirection URI's origin to the client identifier URL or the metadata
-   document's client_uri according to policy.  Completing the flow
-   therefore demonstrates control of an HTTPS endpoint the publisher
-   named; whether that control merits issuance remains an approval-
-   policy decision.
+   Delivery through the redirection endpoint establishes who can
+   complete a public client's request.  A public client presents no
+   client authentication, so the only evidence that the party completing
+   the flow is associated with the software is that the code was
+   delivered to a redirection endpoint named in the client's own
+   metadata document.  That evidence holds only for an HTTPS endpoint,
+   which can be received solely by whoever controls the publisher's
+   origin.  A private-use scheme or loopback endpoint is claimable by
+   any application on a device ([RFC8252]), so an attacker could
+   initiate a request for another party's client_id, receive the code at
+   its own claimed receiver, and redeem it with its own PKCE verifier
+   and DPoP key; PKCE and DPoP bind the code to the initiator but do not
+   prevent an attacker from initiating.  A public client therefore MUST
+   use an HTTPS redirection URI (Section 5).  This deliberately narrows,
+   for public clients in this flow, the loopback and private-use
+   redirection options that [RFC8252] otherwise allows native apps; a
+   native public client that needs interactive issuance either hosts an
+   HTTPS redirection endpoint or, more naturally, uses the token
+   exchange profile (Section 8), which involves no redirect.
+
+   A confidential client is not exposed to this: redemption requires its
+   client authentication, so a code delivered to a claimed receiver is
+   useless to a party that does not hold the client's key, and such a
+   client MAY use a loopback or private-use redirection URI.  An
+   authorization server SHOULD additionally relate the redirection URI's
+   origin to the client identifier URL or the metadata document's
+   client_uri according to policy.  Completing the flow demonstrates,
+   for a public client, control of an HTTPS endpoint the publisher
+   named, and for a confidential client, possession of the client's
+   authentication key; whether that control merits issuance remains an
+   approval-policy decision.
 
    A software statement code returned in a URL is visible to browser
    history, referrer fields, redirection-target logs, and other front-
