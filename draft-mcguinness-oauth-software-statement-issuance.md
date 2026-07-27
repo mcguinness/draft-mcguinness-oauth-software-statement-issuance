@@ -605,7 +605,7 @@ Before accepting the statement, a trusting authorization server MUST:
 * reject every metadata claim prohibited by this section; and
 * apply the JWT validation guidance in {{RFC8725}}.
 
-Publishing an issuer URL or a JWK Set does not by itself establish trust: signature keys for a trusted issuer are conventionally obtained from the `jwks_uri` in the issuer's authorization server metadata {{RFC8414}}, but the decision to trust the issuer MUST come from explicit local configuration.
+Publishing an issuer URL or a JWK Set does not by itself establish trust; a trusting authorization server accepts a statement only from an issuer configured as described in {{issuer-trust}}, whose signing keys it obtains from that issuer's authorization server metadata {{RFC8414}} rather than from the statement.
 
 A trusting authorization server MAY retrieve the client's current metadata document and compare metadata digests against `cimd_digest` to learn whether the attested content is still published; if it does so, it MUST also verify that the document's `client_id` is exactly equal to `sub` as required by {{CIMD}}. A digest mismatch indicates post-issuance change and is an input to registration policy rather than a validation failure. The trusting authorization server then processes the software statement according to {{RFC7591}} and its local registration policy.
 
@@ -668,6 +668,29 @@ This specification defines the following additional authorization server metadat
 
 `software_statement_subject_token_types_supported`:
 : REQUIRED for an authorization server that supports the token exchange profile ({{token-exchange-profile}}), and absent otherwise. A JSON array of the `subject_token_type` values the authorization server accepts when `requested_token_type` is `urn:ietf:params:oauth:token-type:software-statement`. Publication of this member is the discovery signal for the profile.
+
+# Issuer Trust Establishment {#issuer-trust}
+
+A trusting authorization server accepts a software statement only from an issuer it has been configured to trust. This specification defines no in-band mechanism for discovering or deciding to trust an issuer: that decision is made out of band, from a relationship between the operators of the two authorization servers, such as participation in a marketplace's publisher program or shared operation of an enterprise identity platform and its internal authorization servers. How the decision is reached and communicated is out of scope, as it is for trust in a certification authority or a federation operator.
+
+Configuring trust in an issuer is a one-time act that covers every client that issuer attests, so a trusting authorization server maintains a small, stable set of trusted issuers rather than per-client state. For each, it records at least:
+
+* the exact `iss` identifier it will accept;
+* the source of that issuer's signing keys: the `jwks_uri` in the issuer's authorization server metadata {{RFC8414}}, reached from the configured `iss`;
+* the signing algorithms it will accept from the issuer;
+* the client identifier namespaces the issuer may attest through `sub`;
+* the audience identifiers the issuer may name;
+* the maximum statement lifetime it will honor;
+* the metadata claims for which it treats the issuer as authoritative; and
+* its policy on repeated and multiple registration ({{multi-instance}}).
+
+These inputs, not the signature alone, are the security contract behind an accepted statement; leaving any of them implicit invites divergent behavior between servers that accept the same artifact. The issuer is an authorization server role ({{authorization-server-metadata}}), so key retrieval reuses the discovery of {{RFC8414}} and needs no mechanism specific to this specification.
+
+A trusting authorization server MUST derive trust from this local configuration and MUST NOT derive it from an `iss`, `jku`, `x5u`, or other key-location value carried in a presented statement. Having established trust, it validates each statement as described in {{software-statement-format}}.
+
+Issuer trust SHOULD be scoped as well as explicit. An issuer accepted for all values of `sub` can, if compromised or over-broad, mint acceptable statements about any client software; trust configuration SHOULD therefore constrain each issuer to the client identifier namespaces it is expected to attest, for example URLs under the domains of the software publishers it serves, and a statement whose `sub` falls outside that scope SHOULD be rejected even when its signature verifies.
+
+Pairwise configuration bounds a statement's reach to the issuers a trusting authorization server has configured, which is why a statement's practical audience is an ecosystem or administrative domain rather than the open web. The OAuth Identity Assertion Trust Framework {{TRUST-FRAMEWORK}} generalizes the model: a trusting authorization server publishes the conditions an issuer must satisfy and evaluates published evidence, such as authorization by the owner of a client identifier's namespace, when a statement is presented, replacing enumeration of trusted issuers with open-world policy. OpenID Federation {{OPENID-FED}} provides an alternative through trust chains. Both are out of scope here.
 
 # Security Considerations {#security-considerations}
 
@@ -737,24 +760,9 @@ A software statement authorizes metadata, not the party that presents it. When a
 
 Renewal in this version does not accept a prior software statement as a subject token; a client renews by presenting an initial access token to the token exchange profile ({{token-exchange-profile}}) or by making a new software statement request. A stolen statement therefore cannot be exchanged for a fresh one that outlives it. Statement-as-subject renewal, and the holder binding against current metadata it requires, is deferred to a future version ({{deferred-capabilities}}).
 
-This specification does not define online revocation of an issued software statement. The primary control is lifetime: issuance is decoupled from use, renewal is inexpensive ({{token-exchange-profile}}), and a short `exp` bounds the exposure window; the Australian Consumer Data Right Register, for example, issues statements that expire after ten minutes ({{AU-CDR}}). A deployment that needs acceptance-time status beyond expiration can compose existing mechanisms without change to this protocol: an issuer can include a `status` claim referencing a Token Status List {{STATUS-LIST}}, giving trusting authorization servers a standardized status check when a statement is presented, and the scoped issuer trust configuration described above supports emergency removal of a compromised issuer or namespace. Revoking a statement does not undo registrations already derived from it; responding to client software found to be malicious after registration is client lifecycle management at each trusting authorization server, outside this protocol.
+This specification does not define online revocation of an issued software statement. The primary control is lifetime: issuance is decoupled from use, renewal is inexpensive ({{token-exchange-profile}}), and a short `exp` bounds the exposure window; the Australian Consumer Data Right Register, for example, issues statements that expire after ten minutes ({{AU-CDR}}). A deployment that needs acceptance-time status beyond expiration can compose existing mechanisms without change to this protocol: an issuer can include a `status` claim referencing a Token Status List {{STATUS-LIST}}, giving trusting authorization servers a standardized status check when a statement is presented, and the scoped issuer trust configuration of {{issuer-trust}} supports emergency removal of a compromised issuer or namespace. Revoking a statement does not undo registrations already derived from it; responding to client software found to be malicious after registration is client lifecycle management at each trusting authorization server, outside this protocol.
 
-Trusting authorization servers MUST use an explicit issuer trust configuration and MUST verify the signature and claims described in {{software-statement-format}}. They MUST NOT derive trust solely from attacker-controlled `iss`, `jku`, `x5u`, or other key-location values in the JWT.
-
-Issuer trust SHOULD be scoped as well as explicit. A trusting authorization server that accepts an issuer for all values of `sub` allows that issuer, if compromised or over-broad, to mint acceptable statements about any client software. Trust configuration SHOULD therefore constrain each issuer to the client identifier namespaces it is expected to attest, for example to URLs under the domains of the software publishers it serves, and statements whose `sub` falls outside that scope SHOULD be rejected. {{TRUST-FRAMEWORK}} generalizes this namespace-authorization check into an open-world policy evaluation.
-
-Signature validation alone does not define acceptance. For each trusted issuer, a trusting authorization server maintains at least the following, and these inputs, not the signature alone, are the security contract behind an accepted statement:
-
-* the exact issuer identifier;
-* the source of that issuer's signing keys, obtained independently of key-location values in the JWT;
-* the acceptable signing algorithms;
-* the client identifier namespaces the issuer may attest through `sub`;
-* the audience identifiers the issuer may name;
-* the maximum statement lifetime it will honor;
-* the metadata claims for which it treats the issuer as authoritative; and
-* its policy on repeated and multiple registration ({{multi-instance}}).
-
-Leaving any of these implicit invites divergent behavior between servers that accept the same artifact. {{TRUST-FRAMEWORK}} describes how such policy can be published and evaluated rather than configured pairwise.
+The explicit, scoped issuer trust configuration that acceptance depends on, and the requirement never to derive trust from key-location values in the statement itself, are specified in {{issuer-trust}}.
 
 ## Registration Fraud and Impersonation {#registration-fraud}
 
