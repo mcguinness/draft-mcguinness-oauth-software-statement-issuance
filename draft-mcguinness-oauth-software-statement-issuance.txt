@@ -593,13 +593,11 @@ Table of Contents
       statement requests and do not affect proprietary uses of audience
       for access-token targeting.
 
-   completion_mode:  OPTIONAL.  A value that includes deferred, sent as
-      the advance hint [DTR] defines for the endpoint preceding a token
-      request.  The hint lets the authorization server choose an
-      interaction or review path suited to out-of-band completion before
-      it begins work, rather than discovering the client's willingness
-      only at redemption.  It does not replace the opt-in required there
-      (Section 9).
+   completion_mode:  OPTIONAL.  A value that includes deferred, the
+      advance hint [DTR] defines for an endpoint preceding a token
+      request.  It lets the authorization server choose a review path
+      suited to out-of-band completion before it begins work, and does
+      not replace the opt-in required at redemption (Section 9).
 
    dpop_jkt:  REQUIRED for a public client and OPTIONAL for a
       confidential client.  The parameter has the semantics defined in
@@ -758,11 +756,8 @@ Table of Contents
       metadata snapshot, audience, and client authentication or DPoP
       key.  The client then polls according to Section 9.
 
-   A synchronous issuer never reaches the pending branch.  It MUST
-   complete the issuance decision, reaching either approval or denial,
-   before responding to an originating request: in the redirect flow,
-   before returning the software statement code, and under the token
-   exchange profile, before responding to the exchange (Section 8).
+   A synchronous issuer never reaches the pending branch, having decided
+   before it returned the code (Section 9).
 
    The following is a non-normative example of a redemption request from
    a confidential client at a deferred issuer (line breaks are for
@@ -883,23 +878,22 @@ Table of Contents
 
    *  a software statement token response (Section 10) on success;
 
-   *  a [DTR] deferred token response followed by polling when
-      processing cannot complete immediately (Section 9); or
+   *  from a deferred issuer, a [DTR] deferred token response followed
+      by polling when processing cannot complete immediately
+      (Section 9); or
 
    *  the terminal denial of Section 10.1 when issuance policy denies
       the exchange.
-
-   A synchronous issuer produces only the first and third of these: it
-   MUST reach approval or denial before responding to the exchange
-   (Section 9).
 
 9.  Deferred Processing
 
    An authorization server supports one of two conformance levels:
 
    *  A *synchronous issuer* answers every originating request with a
-      statement or terminal denial (Section 10.1).  It never defers,
-      need not implement [DTR], and does not advertise
+      statement or terminal denial (Section 10.1), so it MUST reach the
+      issuance decision before responding, which in the redirect flow
+      means before returning the software statement code.  It never
+      defers, need not implement [DTR], and does not advertise
       deferred_token_response_supported.
 
    *  A *deferred issuer* returns a deferred token response when a
@@ -910,18 +904,18 @@ Table of Contents
    token response of [DTR], issued for a software statement code
    redemption (Section 7) or a token exchange (Section 8), and the
    client polls the token endpoint using the polling grant defined by
-   [DTR].  A client contacting a deferred issuer MUST include the
+   [DTR].
+
+   A client contacting a deferred issuer MUST include the
    completion_mode parameter of [DTR] with a value that includes
-   deferred on the originating request, signaling its willingness to
-   accept a deferred response; the issuer MAY still complete
-   synchronously.  A deferred issuer MUST reject an originating request
-   that does not carry that opt-in with invalid_request: [DTR] treats an
-   absent or non-deferred completion_mode as a requirement for
-   synchronous handling, which an issuer whose decisions can outlive a
-   request cannot guarantee.  This deliberately raises the parameter
-   from OPTIONAL in [DTR] to REQUIRED for the flows defined here.  A
-   synchronous issuer neither requires nor processes completion_mode.  A
-   client that opts in to deferral MUST support the polling grant.
+   deferred on the originating request, and MUST support the polling
+   grant; the issuer MAY still complete synchronously.  A deferred
+   issuer MUST reject a request that does not carry that opt-in with
+   invalid_request, because [DTR] treats an absent or non-deferred value
+   as a requirement for synchronous handling, which an issuer whose
+   decisions can outlive a request cannot guarantee.  This deliberately
+   raises the parameter from OPTIONAL in [DTR] to REQUIRED here.  A
+   synchronous issuer neither requires nor processes it.
 
    This specification profiles polling delivery only: a client MUST NOT
    include the client_notification_token parameter of [DTR] on any
@@ -1087,13 +1081,12 @@ Table of Contents
    (Section 8).  A decision that completes as a denial during deferred
    processing is delivered in response to a polling request (Section 9).
 
-   The denial is terminal for the request: a software statement code
-   presented with a denied redemption is consumed, and a deferral
-   resolves to the denied state, in which subsequent polling requests
-   return the same access_denied response for the remainder of the
-   deferral code's lifetime, as [DTR] requires for a request that has
-   resolved with an error.  A denial does not preclude a later software
-   statement request; whether to accept one is issuance policy.
+   The denial is terminal for the request: a deferral resolves to the
+   denied state, in which subsequent polling requests return the same
+   access_denied response for the remainder of the deferral code's
+   lifetime, as [DTR] requires for a request that has resolved with an
+   error.  A denial does not preclude a later software statement
+   request; whether to accept one is issuance policy.
 
 11.  Software Statement Format
 
