@@ -340,7 +340,7 @@ The client sends an authorization request as described in Section 4.1.1 of {{RFC
 : OPTIONAL. A target service at which the client intends to use the statement, with the semantics defined in Section 2.1 of {{RFC8693}}. The parameter MAY be repeated to request multiple audiences. Each value MUST be an authorization server issuer identifier as defined by {{RFC8414}}; values MUST NOT be repeated, and order is insignificant. The authorization server selects the final audience according to policy. When this parameter is present, every value in the statement's `aud` claim MUST have appeared in the request. If no requested audience is acceptable, the authorization server MUST reject the request with `invalid_target` {{RFC8693}}, following the authorization-request precedent of {{RFC8707}}. These semantics apply only to software statement requests and do not affect proprietary uses of `audience` for access-token targeting.
 
 `completion_mode`:
-: OPTIONAL. A value that includes `deferred`, sent as the advance hint {{DTR}} defines for the endpoint preceding a token request. The hint lets the authorization server choose an interaction or review path suited to out-of-band completion before it begins work, rather than discovering the client's willingness only at redemption. It does not replace the opt-in required there ({{deferred-processing}}).
+: OPTIONAL. A value that includes `deferred`, the advance hint {{DTR}} defines for an endpoint preceding a token request. It lets the authorization server choose a review path suited to out-of-band completion before it begins work, and does not replace the opt-in required at redemption ({{deferred-processing}}).
 
 `dpop_jkt`:
 : REQUIRED for a public client and OPTIONAL for a confidential client. The parameter has the semantics defined in Section 10 of {{RFC9449}}. When present, its value MUST be associated with the resulting software statement code and with any deferral state derived from its redemption.
@@ -438,7 +438,7 @@ Redemption consumes the software statement code in every case; the result depend
 * **Denied:** it returns the terminal denial of {{terminal-denial}}.
 * **Pending:** a deferred issuer returns the deferred token response of {{DTR}}. It binds the deferral to the code's client identifier, metadata snapshot, audience, and client authentication or DPoP key. The client then polls according to {{deferred-processing}}.
 
-A synchronous issuer never reaches the pending branch. It MUST complete the issuance decision, reaching either approval or denial, before responding to an originating request: in the redirect flow, before returning the software statement code, and under the token exchange profile, before responding to the exchange ({{token-exchange-profile}}).
+A synchronous issuer never reaches the pending branch, having decided before it returned the code ({{deferred-processing}}).
 
 The following is a non-normative example of a redemption request from a confidential client at a deferred issuer (line breaks are for display purposes only):
 
@@ -505,19 +505,19 @@ The exchange is evaluated against current metadata. The authorization server MUS
 Issuance policy determines whether an initial access token authorizes only the request or issuance itself. The result is:
 
 * a software statement token response ({{software-statement-response}}) on success;
-* a {{DTR}} deferred token response followed by polling when processing cannot complete immediately ({{deferred-processing}}); or
+* from a deferred issuer, a {{DTR}} deferred token response followed by polling when processing cannot complete immediately ({{deferred-processing}}); or
 * the terminal denial of {{terminal-denial}} when issuance policy denies the exchange.
-
-A synchronous issuer produces only the first and third of these: it MUST reach approval or denial before responding to the exchange ({{deferred-processing}}).
 
 # Deferred Processing {#deferred-processing}
 
 An authorization server supports one of two conformance levels:
 
-* A **synchronous issuer** answers every originating request with a statement or terminal denial ({{terminal-denial}}). It never defers, need not implement {{DTR}}, and does not advertise `deferred_token_response_supported`.
+* A **synchronous issuer** answers every originating request with a statement or terminal denial ({{terminal-denial}}), so it MUST reach the issuance decision before responding, which in the redirect flow means before returning the software statement code. It never defers, need not implement {{DTR}}, and does not advertise `deferred_token_response_supported`.
 * A **deferred issuer** returns a deferred token response when a decision needs out-of-band processing. It implements {{DTR}} and advertises `deferred_token_response_supported` ({{authorization-server-metadata}}).
 
-Against a deferred issuer, every deferral originates from a deferred token response of {{DTR}}, issued for a software statement code redemption ({{software-statement-code-redemption}}) or a token exchange ({{token-exchange-profile}}), and the client polls the token endpoint using the polling grant defined by {{DTR}}. A client contacting a deferred issuer MUST include the `completion_mode` parameter of {{DTR}} with a value that includes `deferred` on the originating request, signaling its willingness to accept a deferred response; the issuer MAY still complete synchronously. A deferred issuer MUST reject an originating request that does not carry that opt-in with `invalid_request`: {{DTR}} treats an absent or non-`deferred` `completion_mode` as a requirement for synchronous handling, which an issuer whose decisions can outlive a request cannot guarantee. This deliberately raises the parameter from OPTIONAL in {{DTR}} to REQUIRED for the flows defined here. A synchronous issuer neither requires nor processes `completion_mode`. A client that opts in to deferral MUST support the polling grant.
+Against a deferred issuer, every deferral originates from a deferred token response of {{DTR}}, issued for a software statement code redemption ({{software-statement-code-redemption}}) or a token exchange ({{token-exchange-profile}}), and the client polls the token endpoint using the polling grant defined by {{DTR}}.
+
+A client contacting a deferred issuer MUST include the `completion_mode` parameter of {{DTR}} with a value that includes `deferred` on the originating request, and MUST support the polling grant; the issuer MAY still complete synchronously. A deferred issuer MUST reject a request that does not carry that opt-in with `invalid_request`, because {{DTR}} treats an absent or non-`deferred` value as a requirement for synchronous handling, which an issuer whose decisions can outlive a request cannot guarantee. This deliberately raises the parameter from OPTIONAL in {{DTR}} to REQUIRED here. A synchronous issuer neither requires nor processes it.
 
 This specification profiles polling delivery only: a client MUST NOT include the `client_notification_token` parameter of {{DTR}} on any request under this specification, and an authorization server MUST NOT deliver callback notifications for a deferral created under this specification, regardless of any `deferred_client_notification_endpoint` in the client's metadata. Polling over the authenticated token endpoint retrieves the statement without an outbound channel, so this version does not require an issuer to operate one; a future version can adopt the callback mechanism of {{DTR}} ({{deferred-capabilities}}).
 
@@ -601,7 +601,7 @@ A client obtains a replacement for an expiring or expired software statement by 
 
 When the authorization server decides not to issue the requested software statement, whether that decision is already complete when the originating request arrives or completes during deferred processing, it returns a token error response per Section 5.2 of {{RFC6749}} with the error code `access_denied` and HTTP status code 400, and MUST include the `Cache-Control: no-store` response header field. The same rule applies to both originating requests: a software statement code redemption ({{software-statement-code-redemption}}) and a token exchange ({{token-exchange-profile}}). A decision that completes as a denial during deferred processing is delivered in response to a polling request ({{deferred-processing}}).
 
-The denial is terminal for the request: a software statement code presented with a denied redemption is consumed, and a deferral resolves to the denied state, in which subsequent polling requests return the same `access_denied` response for the remainder of the deferral code's lifetime, as {{DTR}} requires for a request that has resolved with an error. A denial does not preclude a later software statement request; whether to accept one is issuance policy.
+The denial is terminal for the request: a deferral resolves to the denied state, in which subsequent polling requests return the same `access_denied` response for the remainder of the deferral code's lifetime, as {{DTR}} requires for a request that has resolved with an error. A denial does not preclude a later software statement request; whether to accept one is issuance policy.
 
 # Software Statement Format {#software-statement-format}
 
