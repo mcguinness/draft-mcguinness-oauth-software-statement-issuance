@@ -101,24 +101,22 @@ A client that holds an initial access token authorizing issuance instead uses OA
 
 # Introduction
 
-Section 2.3 of {{RFC7591}} defines a software statement as a JSON Web Token (JWT) that asserts client metadata. A client presents it to a dynamic client registration endpoint, where the signature identifies who attested to the metadata. {{RFC7591}} standardizes consumption, but not issuance.
+Section 2.3 of {{RFC7591}} defines a software statement as a JWT that asserts client metadata. A client presents it to a dynamic client registration endpoint, where the signature identifies who attested to the metadata. {{RFC7591}} standardizes consumption, but not issuance.
 
-Today, issuance relies on manual provisioning, deployment-specific portals, or proprietary federation processes. The UK Open Banking Directory and Australian Consumer Data Right Register each built a central issuer for statements used with {{RFC7591}} registration ({{UK-OPEN-BANKING}}, {{AU-CDR}}). Their independent implementations show both a recurring protocol role and the interoperability gap: clients must integrate separately with each issuer even though every resulting statement uses the same {{RFC7591}} `software_statement` member.
+Today, issuance relies on manual provisioning, deployment-specific portals, or proprietary federation processes. The UK Open Banking Directory and Australian Consumer Data Right Register each built a central issuer for statements consumed through the same {{RFC7591}} `software_statement` member ({{UK-OPEN-BANKING}}, {{AU-CDR}}). Clients nevertheless need an ecosystem-specific issuance integration for each.
 
-A human-facing portal is not a protocol contract: it does not let independently built clients and issuers interoperate over automated submission, deferred completion, credential delivery, metadata binding, renewal, and errors. This specification standardizes the protocol beneath the portal, leaving the approval workflow, acceptance policy, and issuer trust to the deployment.
+A portal does not provide interoperable submission, deferral, delivery, metadata binding, renewal, or errors. This specification standardizes that protocol while leaving approval workflow, acceptance policy, and issuer trust to deployments.
 
-Adjacent client-establishment mechanisms are bilateral: pre-registration {{CIMD}}, pushed registration {{PUSHED-DCR}}, and approval-based registration {{APPROVAL-DCR}} each establish trust at one authorization server based on client-supplied metadata.
+Pre-registration {{CIMD}}, pushed registration {{PUSHED-DCR}}, and approval-based registration {{APPROVAL-DCR}} each establish trust bilaterally at one authorization server from client-supplied metadata.
 
-A software statement instead makes an issuer's decision portable. A publisher program, enterprise security function, or ecosystem operator reviews the software once; each authorization server in the statement's audience can then rely on the signed decision under its own policy ({{what-issuance-attests}}, {{comparison}}). {{beyond-pre-registration}} compares this model with pre-registration.
+A software statement makes an issuer's decision portable. A publisher program, enterprise security function, or ecosystem operator reviews the software once; each authorization server in the audience can rely on the signed decision under its own policy ({{what-issuance-attests}}, {{comparison}}, {{beyond-pre-registration}}).
 
-Consumption is already deployed: {{RFC7591}} registration endpoints have accepted the `software_statement` member since 2015. This specification supplies the missing issuance protocol and hardens the artifact for interoperability ({{software-statement-format}}), introducing no new client credential or federation architecture. Portability is bounded by trust: a statement is honored only where the trusting authorization server trusts its issuer, so its practical audience is an ecosystem or administrative domain, not the open web.
+This specification supplies the missing issuance protocol and hardens the existing artifact for interoperability ({{software-statement-format}}). It introduces no new client credential or federation architecture. Portability remains bounded by configured issuer trust, typically within an ecosystem or administrative domain rather than the open web.
 
 A client identified by its {{CIMD}} URL obtains a statement through either:
 
 * a redirect flow, using `response_type=software_statement_code` and the `urn:ietf:params:oauth:grant-type:software-statement` redemption grant; or
 * OAuth token exchange, when it already holds an initial access token authorizing issuance ({{token-exchange-profile}}).
-
-A pending decision defers at the token endpoint under {{DTR}} and resolves by polling.
 
 The flow concerns client establishment, not authorization to access a protected resource. Consequently, a software statement request cannot be combined with `scope`, `resource`, `authorization_details`, or an access-token-producing response type.
 
@@ -136,11 +134,11 @@ A software statement earns its cost beyond those boundaries when one or more of 
 4. Approval requires asynchronous review that outlives a single protocol exchange.
 5. Issuance and renewal must be automated rather than performed through a portal.
 
-Where none of these applies, issuance under this specification is unnecessary. It is therefore deliberately decoupled from any access-granting transaction and can complete out of band over hours or days. {{deployment-examples}} illustrates these boundaries with end-to-end scenarios.
+Where none applies, this issuance protocol is unnecessary. Issuance is decoupled from access grants and can complete out of band over hours or days. {{deployment-examples}} illustrates the boundaries.
 
 ## What Pre-Registration Does Not Solve {#beyond-pre-registration}
 
-Pre-registration, as described by {{CIMD}}, lets a client enroll its client identifier URL with an authorization server before its first authorization request: the authorization server fetches the metadata document, applies policy or human review, and records a local decision. For a client and an authorization server that already know each other, that is the right tool, and this specification does not replace it.
+Pre-registration {{CIMD}} lets a client enroll its identifier URL before its first authorization request. The authorization server fetches the metadata, reviews it, and records a local decision. This specification does not replace that model.
 
 Pre-registration changes when the trust decision is made, but not:
 
@@ -149,16 +147,16 @@ Pre-registration changes when the trust decision is made, but not:
 * **What was approved:** the subject is a URL whose content can change, with no interoperable binding to the reviewed version.
 * **What acceptance depends on:** later evaluation still requires dereferencing the document.
 
-A software statement makes one decision portable, binds it to the exact content evaluated ({{metadata-snapshot}}), and permits offline verification against issuer keys. This is useful where many small authorization servers are not staffed to review software: each verifies a trusted issuer's signature instead of running its own approval process. The mechanisms compose rather than compete ({{comparison}}).
+A software statement makes one decision portable, binds it to the exact content evaluated ({{metadata-snapshot}}), and permits offline verification. This is useful where many authorization servers are not staffed to review software: each verifies a trusted issuer's signature instead of running an approval process. The mechanisms compose ({{comparison}}).
 
 ## Relationship to Other Specifications
 
 This specification uses the following building blocks:
 
 * {{RFC7591}} defines the software statement and the client metadata carried in it.
-* {{CIMD}} defines the client identifier and the canonical source of client metadata, including pre-registration with an authorization server and the handling of changed metadata. The flows in this specification can serve as the approval-carrying enrollment step, and the metadata digest ({{metadata-snapshot}}) makes metadata change precisely detectable.
-* {{DTR}} defines client opt-in, deferred token responses at the token endpoint, polling, cancellation, and sender constraint. This specification profiles that token endpoint deferral for every flow and defines each originating request's successful response.
-* {{RFC8693}} establishes the token response convention used to return a security token that is not an OAuth access token. Its token exchange grant is profiled in {{token-exchange-profile}} for clients that already hold a token carrying issuance authority.
+* {{CIMD}} defines the client identifier, canonical metadata source, pre-registration, and metadata-change handling. These flows can serve as approval-carrying enrollment, while the metadata digest ({{metadata-snapshot}}) makes changes precisely detectable.
+* {{DTR}} defines client opt-in, token endpoint deferral, polling, cancellation, and sender constraint. This specification profiles it for both issuance flows.
+* {{RFC8693}} defines both the response convention for non-access security tokens and the exchange profiled in {{token-exchange-profile}}.
 
 {{APPROVAL-DCR}} creates an authorization-server-specific `client_id` and, when applicable, client credentials after approval. This specification issues a portable statement for later {{RFC7591}} registration. The two compose ({{comparison}}).
 
@@ -166,11 +164,11 @@ This specification uses the following building blocks:
 
 {{CLIENT-INSTANCE}} carries per-instance identity into tokens for runtime instances behind one `client_id`. This specification carries the trust decision about the client software to the trusting authorization server. {{multi-instance}} describes their composition.
 
-OpenID Federation {{OPENID-FED}} also conveys third-party-attested client metadata across authorization servers, through entity statements resolved along trust chains anchored in a federation operator, which suits ecosystems prepared to operate that infrastructure. This specification targets deployments below that threshold, issuing the {{RFC7591}} artifact existing registration endpoints already accept under explicit pairwise issuer trust. Federation standardizes resolution, not acquisition: how an entity is enrolled with a trust anchor, who approves it, and how a pending decision completes are out of its scope, precisely as issuance was out of scope for {{RFC7591}}, so adopting Federation relocates the ceremony this specification defines rather than replacing it.
+OpenID Federation {{OPENID-FED}} conveys attested metadata through trust chains, suiting ecosystems prepared to operate federation infrastructure. This specification instead issues the existing {{RFC7591}} artifact under explicit issuer trust. Federation standardizes trust resolution, not enrollment, approval, or deferred completion; it relocates rather than replaces the issuance ceremony defined here.
 
-The pairwise issuer configuration this specification assumes can be generalized. The OAuth Identity Assertion Trust Framework {{TRUST-FRAMEWORK}} lets a verifier publish the conditions an issuer must satisfy instead of enumerating issuers; applied to software statements, that would let a trusting authorization server evaluate a previously unconfigured issuer against the namespace authority of the client identifier's owner. Such a profile is out of scope here.
+The OAuth Identity Assertion Trust Framework {{TRUST-FRAMEWORK}} could generalize pairwise configuration by evaluating issuers against published conditions, including authority over the client's identifier namespace. Such a profile is out of scope.
 
-This specification does not define the approval workflow, the identity of an approver, or a protocol to an external approval system, and does not require a trusting authorization server to accept any particular issuer; acceptance policy and trust establishment are deployment-specific. Issuer discovery is likewise out of scope: a natural future home is a metadata-document member naming the issuers authorized to attest under the publisher's namespace, which would also serve as {{TRUST-FRAMEWORK}} evidence.
+This specification does not define approval workflow, approver identity, external approval integration, acceptance of any particular issuer, or issuer discovery. Acceptance policy and trust establishment are deployment-specific. A future metadata-document member could name issuers authorized for the publisher's namespace and serve as {{TRUST-FRAMEWORK}} evidence.
 
 # Conventions and Definitions
 
@@ -336,7 +334,7 @@ The client sends an authorization request as described in Section 4.1.1 of {{RFC
 : OPTIONAL. The mechanism for returning authorization response parameters, as defined by {{OAUTH-MRT}}. The default response mode for `response_type=software_statement_code` is `query`. Response mode considerations are given in {{software-statement-code-response}}.
 
 `audience`:
-: OPTIONAL. A target service at which the client intends to use the issued software statement, with the semantics of the `audience` parameter defined in Section 2.1 of {{RFC8693}}. The parameter MAY be repeated to request multiple audiences. Each value MUST be an authorization server issuer identifier as defined by {{RFC8414}}, values MUST NOT be repeated, and order is not significant. The authorization server determines the final audience according to policy, but when this parameter is present every value in the statement's `aud` claim MUST have appeared in the request. If none of the requested audiences is acceptable, the authorization server MUST reject the request with `invalid_target`, defined by {{RFC8693}} and used on authorization requests following the precedent of {{RFC8707}}. Deployments that use a proprietary `audience` parameter for access token targeting are unaffected: the semantics defined here apply only to software statement requests.
+: OPTIONAL. A target service at which the client intends to use the statement, with the semantics defined in Section 2.1 of {{RFC8693}}. The parameter MAY be repeated to request multiple audiences. Each value MUST be an authorization server issuer identifier as defined by {{RFC8414}}; values MUST NOT be repeated, and order is insignificant. The authorization server selects the final audience according to policy. When this parameter is present, every value in the statement's `aud` claim MUST have appeared in the request. If no requested audience is acceptable, the authorization server MUST reject the request with `invalid_target` {{RFC8693}}, following the authorization-request precedent of {{RFC8707}}. These semantics apply only to software statement requests and do not affect proprietary uses of `audience` for access-token targeting.
 
 `dpop_jkt`:
 : REQUIRED for a public client and OPTIONAL for a confidential client. The parameter has the semantics defined in Section 10 of {{RFC9449}}. When present, its value MUST be associated with the resulting software statement code and with any deferral state derived from its redemption.
@@ -436,7 +434,7 @@ A synchronous issuer never reaches the pending branch: it MUST complete the issu
 
 # Token Exchange Profile {#token-exchange-profile}
 
-A software statement request asks the authorization server to make a new issuance decision. When the client already holds a token carrying issuance authority, it MAY instead exchange that token for a software statement using OAuth 2.0 Token Exchange {{RFC8693}}. Existing ecosystems use this onboarding-credential pattern ({{UK-OPEN-BANKING}}, {{AU-CDR}}). An authorization server advertises support through `software_statement_subject_token_types_supported` ({{authorization-server-metadata}}).
+A software statement request asks the authorization server to make a new issuance decision. A client that already holds a token carrying issuance authority MAY instead exchange that token for a statement using OAuth 2.0 Token Exchange {{RFC8693}}, a pattern used by existing ecosystems ({{UK-OPEN-BANKING}}, {{AU-CDR}}). Support is advertised through `software_statement_subject_token_types_supported` ({{authorization-server-metadata}}).
 
 The client sends a token exchange request as defined in Section 2.1 of {{RFC8693}} with:
 
@@ -458,7 +456,7 @@ The client sends a token exchange request as defined in Section 2.1 of {{RFC8693
 `completion_mode`:
 : REQUIRED when the authorization server advertises `deferred_token_response_supported` ({{authorization-server-metadata}}); otherwise not used. When present, the value MUST include `deferred`, per the deferral opt-in rule of {{deferred-processing}}.
 
-The request MUST NOT contain `actor_token` or `actor_token_type`. The prohibitions of {{prohibited-parameters}} apply. When the authorization server may defer, the deferral opt-in rule of {{deferred-processing}} applies to this exchange as to any originating request.
+The request MUST NOT contain `actor_token` or `actor_token_type`. The prohibitions of {{prohibited-parameters}} apply.
 
 The client authenticates according to {{client-identity}}, whose sender-constraint rules apply to the exchange; the polling rules of {{deferred-processing}} govern any resulting deferral.
 
@@ -477,7 +475,11 @@ A DPoP proof on the exchange constrains any resulting deferral; it does not auth
 
 The exchange is evaluated against current metadata. The authorization server MUST obtain and validate the Client ID Metadata Document and MUST bind a fresh metadata snapshot ({{metadata-snapshot}}) and the requested audience before returning either the software statement or a deferral code. The statement's claims derive from that snapshot. An authorization server that recorded the metadata digest of a prior issuance for this `client_id` MAY compare it against the fresh snapshot and treat a change as an input to issuance policy.
 
-Whether an exchange completes synchronously or defers for approval is issuance policy: an initial access token can pre-authorize only the request, or the issuance itself. A successful exchange returns the software statement token response ({{software-statement-response}}), which already carries the {{RFC8693}} response members. If processing cannot complete immediately, the authorization server returns the deferred token response of {{DTR}} and the client polls according to {{deferred-processing}}. An exchange denied by issuance policy returns the terminal denial of {{terminal-denial}}.
+Issuance policy determines whether an initial access token authorizes only the request or issuance itself. The result is:
+
+* a software statement token response ({{software-statement-response}}) on success;
+* a {{DTR}} deferred token response followed by polling when processing cannot complete immediately ({{deferred-processing}}); or
+* the terminal denial of {{terminal-denial}} when issuance policy denies the exchange.
 
 # Deferred Processing {#deferred-processing}
 
@@ -485,8 +487,6 @@ An authorization server supports one of two conformance levels:
 
 * A **synchronous issuer** answers every originating request with a statement or terminal denial ({{terminal-denial}}). It never defers, need not implement {{DTR}}, and does not advertise `deferred_token_response_supported`.
 * A **deferred issuer** returns a deferred token response when a decision needs out-of-band processing. It implements {{DTR}} and advertises `deferred_token_response_supported` ({{authorization-server-metadata}}).
-
-An issuer needs the deferred level only when its decisions can outlive a request.
 
 Against a deferred issuer, every deferral originates from a deferred token response of {{DTR}}, issued for a software statement code redemption ({{software-statement-code-redemption}}) or a token exchange ({{token-exchange-profile}}), and the client polls the token endpoint using the polling grant defined by {{DTR}}. A client contacting a deferred issuer MUST include the `completion_mode` parameter of {{DTR}} with a value that includes `deferred` on the originating request, signaling its willingness to accept a deferred response; the issuer MAY still complete synchronously. A synchronous issuer neither requires nor processes `completion_mode`. A client that opts in to deferral MUST support the polling grant.
 
@@ -576,11 +576,11 @@ The denial is terminal for the request: a software statement code presented with
 
 # Software Statement Format {#software-statement-format}
 
-The software statement is a compact JWT {{RFC7519}} protected by a digital signature using JWS {{RFC7515}}. Although {{RFC7591}} also permits a MAC, a statement issued under this specification MUST use an asymmetric digital signature so that it can be validated without distributing an issuer-held symmetric key. The issuer and trusting authorization server MUST follow the algorithm verification guidance in {{RFC8725}}. The `none` algorithm and symmetric algorithms MUST NOT be used.
+The software statement is a compact JWT {{RFC7519}} protected by JWS {{RFC7515}}. Although {{RFC7591}} permits a MAC, a statement issued under this specification MUST use an asymmetric digital signature so trusting servers need not receive an issuer-held symmetric key. The issuer and trusting authorization server MUST follow {{RFC8725}} algorithm-verification guidance. The `none` algorithm and symmetric algorithms MUST NOT be used.
 
-The JOSE header MUST include a `typ` (type) header parameter with the value `software-statement+jwt`, applying the explicit typing recommendation in Section 3.11 of {{RFC8725}}. As described in Section 4.1.9 of {{RFC7515}}, this value names the media type `application/software-statement+jwt` ({{media-type}}) with the `application/` prefix omitted. Explicit typing prevents other JWTs signed by the same issuer, such as JWT access tokens or ID Tokens, from being accepted as software statements.
+The JOSE header MUST include `typ` with the value `software-statement+jwt`, applying Section 3.11 of {{RFC8725}}. This value names `application/software-statement+jwt` ({{media-type}}) with the `application/` prefix omitted, as described in Section 4.1.9 of {{RFC7515}}. Explicit typing prevents confusion with other JWTs from the same issuer.
 
-The type value also anchors format evolution: extensions add claims, which are additive under standard JWT processing, while an incompatible future revision would define a new type value rather than change the meaning of this one. Supported signing algorithms are published in `software_statement_signing_alg_values_supported` ({{authorization-server-metadata}}).
+Extensions can add claims; an incompatible revision would use a new type value. Supported algorithms appear in `software_statement_signing_alg_values_supported` ({{authorization-server-metadata}}).
 
 The JWT payload MUST contain the following claims in addition to the approved client metadata.
 
@@ -648,9 +648,9 @@ Before accepting the statement, a trusting authorization server MUST:
 * reject every metadata claim prohibited by this section; and
 * apply the JWT validation guidance in {{RFC8725}}.
 
-Publishing an issuer URL or a JWK Set does not by itself establish trust; a trusting authorization server accepts a statement only from an issuer configured as described in {{issuer-trust}}, whose signing keys it obtains from that issuer's authorization server metadata {{RFC8414}} rather than from the statement.
+An issuer URL or JWK Set does not establish trust. A trusting authorization server accepts only configured issuers ({{issuer-trust}}) and obtains their keys from authorization server metadata {{RFC8414}}, not from the statement.
 
-A trusting authorization server MAY retrieve the client's current metadata document and compare metadata digests against `cimd_digest` to learn whether the attested content is still published; if it does so, it MUST also verify that the document's `client_id` is exactly equal to `sub` as required by {{CIMD}}. A digest mismatch indicates post-issuance change and is an input to registration policy rather than a validation failure. The trusting authorization server then processes the software statement according to {{RFC7591}} and its local registration policy.
+A trusting authorization server MAY retrieve current client metadata and compare its digest with `cimd_digest`; if it does so, it MUST also verify that the document's `client_id` exactly equals `sub`, as required by {{CIMD}}. A mismatch indicates post-issuance change and is a policy input, not a validation failure. The server then applies {{RFC7591}} and local registration policy.
 
 # Multi-Instance Client Software {#multi-instance}
 
@@ -741,27 +741,27 @@ Pairwise configuration bounds a statement's reach to the issuers a trusting auth
 
 ## Client Establishment Is Not an Access Grant
 
-A software statement attests to client metadata; it grants no access to a protected resource. Each user's access through a subsequently registered client still requires that user's authorization. Issuance approval is therefore not consent on behalf of the software's users.
+A software statement attests client metadata; it grants no resource access or consent on behalf of the software's users. Each user still authorizes access through the registered client.
 
 Authorization servers MUST enforce the prohibited-parameter and response-type rules in {{prohibited-parameters}}. The successful response uses `access_token` only as the generic security-token container defined by {{RFC8693}}; the contained software statement MUST NOT be accepted as an access token at a protected resource.
 
 When an approval interface is shown, it MUST clearly describe that the decision concerns attestation to client metadata. It MUST NOT imply that the approver is granting the client access to resources.
 
-An erroneous approval is amplified by the statement's audience: every authorization server in the audience will accept the resulting credential until it expires. The approval interface therefore MUST present:
+An erroneous approval affects every authorization server in the statement's audience until expiry. The approval interface therefore MUST present:
 
 * the client identifier URL;
 * the effective metadata being attested; and
 * the audience the issuer intends to place in the statement.
 
-It SHOULD present the intended lifetime, and SHOULD make narrowing visible when the client requested a different or broader audience. Metadata that itself delegates authority deserves particular scrutiny: attesting the `instance_issuers` member ({{multi-instance}}) endorses the listed authorities to attest runtime instances of the client.
+It SHOULD present the intended lifetime, and SHOULD make narrowing visible when the client requested a different or broader audience. Attesting `instance_issuers` ({{multi-instance}}) endorses the listed authorities to attest runtime instances and deserves particular scrutiny.
 
 ## What Issuance Attests {#what-issuance-attests}
 
 A software statement means one thing: the issuer evaluated the exact document content captured in the metadata snapshot ({{metadata-snapshot}}), under its issuance policy, at the time recorded in `iat`, and decided to attest the contained metadata for the named audience.
 
-Issuance does not mean every attested value was independently verified. The client authors the metadata document; issuance does not turn self-assertion into fact. It records one accountable evaluation of a deterministic, digest-bound input ({{metadata-snapshot}}). An issuer SHOULD corroborate security-relevant metadata through evidence beyond the document itself. The depth of that verification is part of the trust relationship.
+The client authors the metadata document, so issuance does not make every value an independently verified fact. It records an accountable evaluation of a deterministic, digest-bound input ({{metadata-snapshot}}). An issuer SHOULD corroborate security-relevant metadata through evidence beyond the document itself. Verification depth is part of the trust relationship.
 
-A trusting authorization server is accordingly entitled to conclude what the issuer decided, and no more. Its own registration policy determines what that decision is worth.
+A trusting authorization server can conclude only what the issuer decided; local registration policy determines what that decision is worth.
 
 ## Client Metadata Retrieval
 
@@ -773,15 +773,15 @@ The metadata snapshot requirements in {{metadata-snapshot}} prevent a time-of-ch
 
 The software statement is a signed credential and can contain sensitive deployment information. It MUST NOT be returned through the authorization endpoint. The software statement code response applies exact redirect URI matching, PKCE with `S256`, and the other applicable authorization response protections in {{RFC9700}}.
 
-Before redeeming a software statement code, the client MUST verify `state` and MUST validate the authorization response `iss` parameter according to {{RFC9207}}. Although PKCE with `S256` already provides the cross-site request forgery protection described in {{RFC9700}}, this specification requires `state` so that a client running concurrent software statement requests can correlate each authorization response with its originating request before redemption.
+Before redeeming a software statement code, the client MUST verify `state` and MUST validate the authorization response `iss` parameter according to {{RFC9207}}. PKCE with `S256` provides the cross-site request forgery protection described in {{RFC9700}}; `state` also correlates concurrent requests with their responses.
 
-A public client presents no client authentication. Its association with the software therefore depends on delivery to a redirection endpoint named in the metadata document. Only an HTTPS endpoint demonstrates control of the publisher's origin. A private-use or loopback endpoint can be claimed by another application ({{RFC8252}}); PKCE and DPoP bind a code to the request initiator but cannot stop an attacker from initiating a request for another party's `client_id`.
+A public client presents no client authentication, so its association with the software depends on delivery to a metadata-listed redirection endpoint. Only HTTPS demonstrates control of the publisher's origin. Another application can claim a private-use or loopback endpoint ({{RFC8252}}); PKCE and DPoP bind the code to the initiator but cannot stop an attacker from initiating under another party's `client_id`.
 
 A public client therefore MUST use an HTTPS redirection URI ({{authorization-request}}). A native public client can host such an endpoint or use the redirect-free token exchange profile ({{token-exchange-profile}}).
 
-A confidential client's authentication protects redemption, so it MAY use a loopback or private-use redirection URI. An authorization server SHOULD additionally relate the redirection URI's origin to the client identifier URL or the metadata document's `client_uri` according to policy. Endpoint or key control is evidence for issuance policy, not an issuance decision by itself.
+A confidential client's authentication protects redemption, so it MAY use a loopback or private-use redirection URI. An authorization server SHOULD additionally relate the redirection URI's origin to the client identifier URL or the metadata document's `client_uri` according to policy. Endpoint or key control informs issuance policy but does not determine issuance.
 
-A software statement code in a URL is visible to browser history, referrer fields, logs, and other front-channel observers. Like an authorization code, it is short lived, single use, and unredeemable without the PKCE verifier and, for a public client, the `dpop_jkt` key.
+A software statement code in a URL is visible to browser history, referrer fields, logs, and other observers. It is short lived, single use, and unredeemable without the PKCE verifier and, for a public client, the `dpop_jkt` key.
 
 Deferral codes travel only over a direct TLS connection and are protected by sender-constrained polling and cancellation ({{deferred-processing}}). Deployments sensitive to URL disclosure can use `form_post` {{FORM-POST}}; the fragment response mode SHOULD NOT be used.
 
@@ -791,23 +791,23 @@ Every deferral is created by a token request, and every poll is bound to the cli
 
 ## Token Exchange Considerations {#te-considerations}
 
-A token exchange reaches the token endpoint without prior user-agent interaction. Subject token validation precedes metadata retrieval and any enqueueing ({{token-exchange-profile}}), which bounds the retrieval, queue, and deferral resources an unauthorized requester can consume. Authorization servers SHOULD nevertheless rate-limit exchanges requesting this token type, cache metadata retrieval results and failures, and bound the pending deferrals they hold per client identifier and per requester. Client authentication remains mandatory when established by the Client ID Metadata Document.
+A token exchange reaches the token endpoint without prior user-agent interaction. Validating the subject token before metadata retrieval or enqueueing ({{token-exchange-profile}}) limits resource consumption by unauthorized requesters. Authorization servers SHOULD still rate-limit these exchanges, cache retrieval results and failures, and bound pending deferrals per client identifier and requester. Client authentication remains mandatory when established by the Client ID Metadata Document.
 
-A pre-authorization credential presented as a subject token ({{token-exchange-profile}}) is an authorization credential, not a client identifier and not a substitute for client authentication when the Client ID Metadata Document establishes an authentication method. It is sent in a form body and is therefore exposed to any component that records request bodies. Authorization servers MUST exclude subject tokens from logs, traces, error messages, and audit records; clients and authorization servers MUST protect the credential as a bearer credential unless its format provides proof of possession. The binding, lifetime, entropy, and replay requirements of {{token-exchange-profile}} limit the effect of disclosure.
+A subject token is an authorization credential, not a client identifier or substitute for client authentication when the Client ID Metadata Document establishes a method. Because it appears in a form body, any component recording request bodies can expose it. Authorization servers MUST exclude subject tokens from logs, traces, error messages, and audit records; clients and authorization servers MUST protect the credential as a bearer credential unless its format provides proof of possession. The binding, lifetime, entropy, and replay requirements of {{token-exchange-profile}} limit disclosure impact.
 
-The absence of a user agent removes front-channel exposure: neither the deferral code nor any other response parameter transits a browser. It also removes any in-band evidence of user participation. An authorization server MUST NOT treat a token exchange as implying prior user consent and MUST apply the same issuance and approval policy as for the redirect flow.
+No response parameter transits a browser, but there is also no in-band evidence of user participation. An authorization server MUST NOT treat a token exchange as implying prior user consent and MUST apply the same issuance and approval policy as for the redirect flow.
 
 ## Statement Validation and Replay {#statement-validation}
 
-A software statement is intended to be presented more than once ({{multi-instance}}); until it expires, it can equally be presented by a party that steals it, at every registration endpoint included in its audience. Issuers SHOULD use the narrowest practical audience and lifetime. Trusting authorization servers SHOULD track `jti` values to inventory the registrations derived from a statement and to enforce any local bound on their number.
+A software statement is reusable ({{multi-instance}}) and, until expiry, so is a stolen copy at every registration endpoint in its audience. Issuers SHOULD use the narrowest practical audience and lifetime. Trusting authorization servers SHOULD track `jti` values to inventory the registrations derived from a statement and to enforce any local bound on their number.
 
-When registrations derived from a statement are intended to share a client key, and the canonical metadata provides `jwks` or `jwks_uri`, the issuer SHOULD include that member in the attested metadata. A trusting authorization server can then require proof of possession of a corresponding private key during or after registration, which renders a stolen statement unusable to a party that does not also hold the client's key. When each registration is expected to supply a distinct instance key, the issuer MUST omit `jwks` and `jwks_uri` so that the plain registration metadata can carry that key without conflicting with the precedence rule of {{RFC7591}}.
+When registrations derived from a statement are intended to share a client key, and the canonical metadata provides `jwks` or `jwks_uri`, the issuer SHOULD include that member in the attested metadata. A trusting authorization server can then require proof of the corresponding private key during or after registration, making a stolen statement unusable without that key. When each registration is expected to supply a distinct instance key, the issuer MUST omit `jwks` and `jwks_uri` so that plain registration metadata can carry that key without conflicting with {{RFC7591}} precedence.
 
-A software statement authorizes metadata, not the party that presents it. When a statement omits attested key material so that each registration supplies a per-instance key ({{multi-instance}}), possession of the statement alone lets any holder, including one who stole it, register a key of its own choosing. A trusting authorization server SHOULD require independent proof that the presenter is an authorized instance of the software before accepting such a registration, for example attestation-based client authentication {{ABCA}}, an attested `instance_issuers` chain ({{attesting-instance-issuers}}), or a registration credential the trusting server itself issued. Absent such proof, the one-registration-per-(`iss`, `jti`, local audience) default of {{multi-instance}} bounds the exposure.
+A statement authorizes metadata, not its presenter. If it omits attested key material for per-instance keys ({{multi-instance}}), any holder can register its own key. A trusting authorization server SHOULD require independent proof that the presenter is an authorized instance of the software before accepting such a registration, such as {{ABCA}}, an attested `instance_issuers` chain ({{attesting-instance-issuers}}), or a registration credential the trusting server issued. Without such proof, the one-registration-per-(`iss`, `jti`, local audience) default bounds exposure.
 
 Renewal in this version does not accept a prior software statement as a subject token; a client renews by presenting an initial access token to the token exchange profile ({{token-exchange-profile}}) or by making a new software statement request. A stolen statement therefore cannot be exchanged for a fresh one that outlives it. Statement-as-subject renewal, and the holder binding against current metadata it requires, is deferred to a future version ({{deferred-capabilities}}).
 
-This specification does not define online revocation of an issued statement. Short lifetimes bound exposure; the Australian Consumer Data Right Register, for example, uses ten minutes ({{AU-CDR}}). An issuer can provide acceptance-time status through a `status` claim referencing a Token Status List {{STATUS-LIST}}, while scoped issuer trust supports emergency removal of a compromised issuer or namespace ({{issuer-trust}}).
+This specification does not define online revocation. Short lifetimes bound exposure; the Australian Consumer Data Right Register uses ten minutes ({{AU-CDR}}). A `status` claim can reference a Token Status List {{STATUS-LIST}}, while scoped trust supports emergency removal of a compromised issuer or namespace ({{issuer-trust}}).
 
 Revocation does not undo registrations already derived from a statement. Responding to malicious software after registration is client lifecycle management at each trusting authorization server.
 
@@ -815,9 +815,9 @@ The explicit, scoped issuer trust configuration that acceptance depends on, and 
 
 ## Registration Fraud and Impersonation {#registration-fraud}
 
-Open registration lets any party register a client whose `client_name`, `logo_uri`, and `client_uri` imitate software the user trusts, and the consent screen then renders the imitation. A trusting authorization server that requires a software statement from a trusted issuer before accepting such metadata replaces the self-asserted claim with an issuer's reviewed one. Servers that render registration-supplied values on consent screens SHOULD prefer attested values and SHOULD apply heightened scrutiny to unattested registrations that claim user-visible branding.
+Open registration permits `client_name`, `logo_uri`, and `client_uri` values that imitate trusted software on consent screens. Requiring a statement replaces self-asserted branding with issuer-reviewed values. Servers that render registration-supplied values on consent screens SHOULD prefer attested values and SHOULD apply heightened scrutiny to unattested registrations that claim user-visible branding.
 
-Statement-gated registration also re-prices identity-rotation abuse. Where registration is open, an abusive client discarded under one identity returns under another at no cost; where registration requires a statement, each identity costs an issuance decision at an issuer positioned to review it, and the `sub` and `jti` tracking of {{multi-instance}} bounds the registrations any one statement or piece of software can create. Neither control makes attested metadata true ({{what-issuance-attests}}): a client that misleads the issuer's review obtains a genuine statement for fraudulent metadata, and the issuer's verification depth remains the limiting factor.
+Statement-gated registration also makes each rotated identity require another issuer decision, rather than letting a discarded client return at no cost; `sub` and `jti` tracking bounds registrations ({{multi-instance}}). Neither control makes metadata true: a client that misleads review can obtain a genuine statement for fraudulent metadata, so issuer verification depth remains decisive ({{what-issuance-attests}}).
 
 ## Signing Keys and Algorithms
 
@@ -1148,7 +1148,7 @@ The statement attests the software, not its instances ({{multi-instance}}). It d
 
 ## Comparison with Related Establishment Mechanisms {#comparison}
 
-Several contemporaneous mechanisms address client establishment. The table summarizes where each makes its trust decision, what input that decision evaluates, and what establishing trust with M authorization servers costs.
+The table compares where each establishment mechanism decides trust, its input, and its cost across M authorization servers.
 
 | Mechanism | Decision made at | Input evaluated | Cost for M authorization servers |
 | --- | --- | --- | --- |
@@ -1158,41 +1158,41 @@ Several contemporaneous mechanisms address client establishment. The table summa
 | This specification | the issuing authorization server | canonical metadata document | one issuance decision, M policy evaluations of an attested artifact |
 | OpenID Federation ({{OPENID-FED}}) | resolved along a trust chain | entity statements | federation infrastructure |
 
-The bilateral mechanisms compose with statements. Pre-registration or pushed registration can carry attested rather than self-asserted metadata. Approval-based registration can evaluate an issuer's signed decision. For one authorization server, these mechanisms remain sufficient alone; issuance is justified by portability. OpenID Federation supplies trust-chain infrastructure when pairwise issuer configuration no longer scales.
+The bilateral mechanisms compose with statements: pre-registration or pushed registration can carry attested metadata, and approval-based registration can evaluate an issuer's decision. For one authorization server, they remain sufficient alone; portability justifies issuance. OpenID Federation supplies trust chains when pairwise issuer configuration no longer scales.
 
-OpenID for Verifiable Credential Issuance {{OID4VCI}} has a similar issuance shape but serves wallet-held credentials presented to verifiers. A software statement instead describes software and is consumed by {{RFC7591}} registration. An OID4VCI profile would still need this specification's statement format, metadata binding, and consumption rules while adding wallet machinery; an existing OID4VCI ecosystem could carry a statement as a credential payload.
+OpenID for Verifiable Credential Issuance {{OID4VCI}} has a similar flow but serves wallet-held credentials presented to verifiers. A software statement describes software and is consumed by {{RFC7591}} registration. An OID4VCI profile would still need this specification's format, metadata binding, and consumption rules, although an existing ecosystem could carry the statement as a credential payload.
 
 ## Why Use the Authorization Endpoint
 
-Issuance commonly requires browser-mediated interaction with a user or administrator. The authorization endpoint supplies established redirect URI, request correlation, PKCE, and issuer-identification mechanisms for that interaction. Returning a short-lived, sender-constrained software statement code keeps the software statement itself out of the browser and delivers it over a direct TLS-protected connection. When no in-band interaction is possible, a pre-authorized client exchanges its credential directly at the token endpoint instead ({{token-exchange-profile}}).
+The authorization endpoint supplies redirect URI validation, request correlation, PKCE, and issuer identification for browser-mediated interaction. A short-lived, sender-constrained code keeps the statement out of the browser; the token endpoint delivers it over a direct TLS connection. Without in-band interaction, a pre-authorized client instead uses token exchange ({{token-exchange-profile}}).
 
 ## Why Not the Device Authorization Grant
 
-The device authorization grant {{RFC8628}} serves an interactive user who is co-present with a constrained device and can transcribe a short code into a secondary browser. Software statement issuance for non-interactive software has a different shape: the approving party is typically an administrator who is not co-present, acts through an out-of-band workflow, and may respond long after the request. Deferred processing at the token endpoint covers that case without a verification URI or user code, while the redirect flow covers issuance that does require interactive authentication or consent.
+The device authorization grant {{RFC8628}} assumes an interactive user co-present with a constrained device. Software-statement approval can instead involve a remote administrator and a long-running out-of-band workflow. Token endpoint deferral covers that case without a verification URI or user code; the redirect flow covers interactive authentication or consent.
 
 ## Why the Issuer Is an Authorization Server Role
 
-Leaving a standalone issuer's minting interface out of scope works for intra-domain instance attestation {{CLIENT-INSTANCE}}. It does not work here: {{RFC7591}} already standardized presentation, and minting is the missing interface.
+Leaving minting out of scope works for intra-domain instance attestation {{CLIENT-INSTANCE}}. Here, {{RFC7591}} already standardized presentation; minting is the missing interface.
 
-The authorization server role reuses token endpoint authentication, {{DTR}} deferral, {{RFC8693}} token exchange, and {{RFC8414}} discovery. A minimal issuer therefore needs only a token endpoint, metadata, and signing keys ({{authorization-server-metadata}}). Statement and instance issuers remain distinct roles, separated by explicit `typ` values.
+The authorization server role reuses token endpoint authentication, {{DTR}} deferral, {{RFC8693}} token exchange, and {{RFC8414}} discovery. A minimal issuer needs only a token endpoint, metadata, and signing keys ({{authorization-server-metadata}}). Explicit `typ` values separate statement and instance issuers.
 
 ## Why the Software Statement Code Is Not an Authorization Code
 
-The software statement code is not an authorization code because successful `authorization_code` redemption issues an access token under {{RFC6749}}. OpenID Connect returns an ID Token alongside a real access token, not instead of one. A distinct code preserves a code-shaped front channel while keeping deferral at the token endpoint.
+The code is distinct because successful `authorization_code` redemption issues an access token under {{RFC6749}}. OpenID Connect returns an ID Token alongside, not instead of, an access token. A separate code preserves a code-shaped front channel while keeping deferral at the token endpoint.
 
 ## Why Token Exchange Is a Profile, Not the Only Flow
 
-Token exchange requires a `subject_token` {{RFC8693}}, which a first-time client does not hold. It derives authority from that token; the redirect flow derives it from a new issuance decision. Token exchange therefore serves clients with a pre-authorizing token, while the redirect flow serves those without one.
+Token exchange requires a `subject_token` {{RFC8693}}, which a first-time client lacks. It derives authority from that token; the redirect flow derives authority from a new issuance decision. Thus token exchange serves pre-authorized clients, while the redirect flow serves those without a token.
 
 ## Why Deferral Happens Only at the Token Endpoint
 
-A short-lived front-channel code keeps statements and long-lived credentials out of the browser. Its token endpoint redemption either returns the statement or defers through {{DTR}}. Every deferral therefore originates from a token request.
+A short-lived code keeps statements and long-lived credentials out of the browser. Token endpoint redemption returns the statement or defers through {{DTR}}, so every deferral originates from a token request.
 
-An {{RFC7591}} registration endpoint creates a local client, and is where {{APPROVAL-DCR}} places its own deferral; this specification instead mints a portable artifact for later registration elsewhere. Hosting issuance there would invert that contract by validating metadata without creating a client. The token endpoint already mints security tokens and hosts the pre-authorized path ({{token-exchange-profile}}). Using it for both flows also reuses {{DTR}} polling, cancellation, sender constraint, rate limiting, and token endpoint authentication.
+An {{RFC7591}} registration endpoint creates a local client, and {{APPROVAL-DCR}} defers that operation there. This specification instead mints a portable artifact for registration elsewhere; placing issuance at registration would validate metadata without creating a client. The token endpoint already mints security tokens and hosts the pre-authorized path ({{token-exchange-profile}}). Using it for both flows reuses its authentication and {{DTR}} polling, cancellation, sender constraint, and rate limiting.
 
 ## Why the Response Uses `access_token`
 
-The response follows the {{RFC8693}} convention for carrying a security token that is not an access token: `access_token` holds the issued artifact, `issued_token_type` names its representation, and `token_type=N_A` states that access-token semantics do not apply. This keeps immediate and deferred responses compatible with existing token endpoint processing while stating that a statement grants no resource access.
+The response follows {{RFC8693}}: `access_token` carries the artifact, `issued_token_type` identifies it, and `token_type=N_A` excludes access-token semantics. Immediate and deferred responses therefore use existing token endpoint processing without implying resource access.
 
 ## Deliberately Deferred Capabilities {#deferred-capabilities}
 
