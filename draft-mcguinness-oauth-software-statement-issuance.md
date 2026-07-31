@@ -299,6 +299,8 @@ Client metadata documents can change while a request is pending. Before returnin
 
 The authorization server MAY retrieve the document again before issuing the software statement. If it does so and detects a security-relevant change (for example, a change to `jwks`, `jwks_uri`, `redirect_uris`, or `token_endpoint_auth_method`), it MUST either re-evaluate the request under the new metadata or reject the request. It MUST NOT silently combine values from different document versions.
 
+Re-evaluation replaces the bound snapshot in full. A statement attests the snapshot in effect when it is signed, and `cimd_digest` is that snapshot's digest, so a client that observes a digest other than the one it expected knows which document content was attested. An approval recorded against a superseded snapshot does not carry forward to its replacement without a fresh issuance-policy decision. Replacing the snapshot does not alter the sender-constraint context recorded for a deferral, which remains as fixed at origination ({{deferred-processing}}).
+
 The metadata digest is the unpadded base64url-encoded SHA-256 hash {{RFC6234}} of the retrieved representation body after removal of content coding. No transcoding, normalization, or re-serialization occurs; a byte order mark and trailing newline are included.
 
 Equal digests identify the same document for this specification. A changed digest marks a new trust state for the same client identifier and is the signal used by the re-evaluation rule above. The digest also supplies the `cimd_digest` claim ({{software-statement-format}}) and audit guidance ({{security-considerations}}).
@@ -336,6 +338,9 @@ The client sends an authorization request as described in Section 4.1.1 of {{RFC
 
 `audience`:
 : OPTIONAL. A target service at which the client intends to use the statement, with the semantics defined in Section 2.1 of {{RFC8693}}. The parameter MAY be repeated to request multiple audiences. Each value MUST be an authorization server issuer identifier as defined by {{RFC8414}}; values MUST NOT be repeated, and order is insignificant. The authorization server selects the final audience according to policy. When this parameter is present, every value in the statement's `aud` claim MUST have appeared in the request. If no requested audience is acceptable, the authorization server MUST reject the request with `invalid_target` {{RFC8693}}, following the authorization-request precedent of {{RFC8707}}. These semantics apply only to software statement requests and do not affect proprietary uses of `audience` for access-token targeting.
+
+`completion_mode`:
+: OPTIONAL. A value that includes `deferred`, sent as the advance hint {{DTR}} defines for the endpoint preceding a token request. The hint lets the authorization server choose an interaction or review path suited to out-of-band completion before it begins work, rather than discovering the client's willingness only at redemption. It does not replace the opt-in required there ({{deferred-processing}}).
 
 `dpop_jkt`:
 : REQUIRED for a public client and OPTIONAL for a confidential client. The parameter has the semantics defined in Section 10 of {{RFC9449}}. When present, its value MUST be associated with the resulting software statement code and with any deferral state derived from its redemption.
@@ -482,7 +487,7 @@ The request MUST NOT contain `actor_token` or `actor_token_type`, nor the `scope
 
 The client authenticates according to {{client-identity}}, whose sender-constraint rules apply to the exchange; the polling rules of {{deferred-processing}} govern any resulting deferral.
 
-The authorization server MUST validate the subject token before retrieving client-controlled metadata or enqueueing any processing. An invalid, expired, or revoked subject token, or one that does not authorize issuance for the presented `client_id`, MUST result in `invalid_grant`. An unacceptable requested audience results in `invalid_target` {{RFC8693}}.
+The authorization server MUST validate the subject token before retrieving client-controlled metadata or enqueueing any processing. An invalid, expired, or revoked subject token, or one that does not authorize issuance for the presented `client_id`, MUST result in `invalid_request`, as Section 2.2.2 of {{RFC8693}} requires for a subject token that is invalid or unacceptable under policy. An unacceptable requested audience results in `invalid_target` {{RFC8693}}.
 
 An initial access token presented under this profile MUST be:
 
@@ -491,7 +496,7 @@ An initial access token presented under this profile MUST be:
 * bound to an exact client identifier URL or an explicitly authorized client identifier namespace; and
 * of at least 128 bits of entropy, when opaque.
 
-A reusable initial access token MUST be sender-constrained, for example bound to a client key through DPoP or mTLS; a bearer initial access token MUST be single-use. The credential SHOULD be integrity protected and kept confidential in transit and at rest, and MAY further restrict audiences or metadata. The authorization server MUST enforce every restriction the credential carries and MUST prevent replay beyond its permitted number of uses.
+A reusable initial access token MUST be sender-constrained, for example bound to a client key through DPoP or mTLS; a bearer initial access token MUST be single-use. The credential SHOULD be integrity protected and kept confidential in transit and at rest, and MAY further restrict audiences or metadata. The authorization server MUST enforce every restriction the credential carries and MUST prevent replay beyond its permitted number of uses. A use is consumed when the authorization server commits to an outcome for the request, whether it issues a statement, creates a deferral, or denies issuance; concurrent presentations of a single-use credential MUST NOT both be committed. Once a deferral exists, the client recovers the outcome by polling with the deferral code rather than by presenting the credential again.
 
 A DPoP proof on the exchange constrains any resulting deferral; it does not authenticate the presenter or protect the subject token (Section 3 of {{RFC9449}}). The initial access token therefore needs its own sender constraint or single-use restriction.
 
@@ -1021,7 +1026,7 @@ Optional parameters:
 : n/a
 
 Encoding considerations:
-: binary. A software statement is a JWT; JWT values are encoded as a series of base64url-encoded values separated by period ('.') characters.
+: 8bit. A software statement is a JWT; JWT values are encoded as a series of base64url-encoded values separated by period ('.') characters, as registered for `application/jwt` in Section 10.3.1 of {{RFC7519}}.
 
 Security considerations:
 : See {{security-considerations}} of this specification and Section 11 of {{RFC7519}}.
@@ -1168,7 +1173,7 @@ A statement adds nothing: there is a single authorization server, a single appro
 
 # Issuance Across the Software Delivery Lifecycle {#delivery-lifecycle}
 
-This non-normative appendix places review, attestation, renewal, and expiry in the software-delivery lifecycle. A publisher or enterprise reviews once and issues a statement ({{example-publisher}}, {{example-enterprise}}). A release pipeline renews through token exchange; a changed digest prompts a carry-forward-or-re-review decision ({{token-exchange-profile}}). Sunset is the absence of renewal ({{statement-validation}}).
+This non-normative appendix places review, attestation, renewal, and expiry in the software-delivery lifecycle. A publisher or enterprise reviews once and issues a statement ({{example-publisher}}, {{example-enterprise}}). A release pipeline renews through token exchange; a changed digest prompts a carry-forward-or-re-review decision ({{token-exchange-profile}}). Sunset begins with the absence of renewal, which stops further statement use; retiring the registrations already derived from a statement remains each trusting authorization server's own lifecycle work ({{statement-validation}}).
 
 The statement attests the software, not its instances ({{multi-instance}}). It does not attest binaries or build provenance, identify running instances ({{CLIENT-INSTANCE}}, {{ABCA}}), or grant access. It standardizes the vouching layer of delivery, which no other layer of the stack defines.
 
