@@ -3,9 +3,9 @@
 
 
 Web Authorization Protocol                                 K. McGuinness
-Internet-Draft                                             1 August 2026
+Internet-Draft                                             5 August 2026
 Intended status: Standards Track                                        
-Expires: 2 February 2027
+Expires: 6 February 2027
 
 
                  OAuth 2.0 Software Statement Issuance
@@ -43,7 +43,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 February 2027.
+   This Internet-Draft will expire on 6 February 2027.
 
 Copyright Notice
 
@@ -1240,8 +1240,13 @@ Table of Contents
    and compare its digest with cimd_digest; if it does so, it MUST also
    verify that the document's client_id exactly equals sub, as required
    by [CIMD].  A mismatch indicates post-issuance change and is a policy
-   input, not a validation failure.  The server then applies [RFC7591]
-   and local registration policy.
+   input, not a validation failure.  Because the digest covers the whole
+   document, a mismatch signals only that something changed; a trusting
+   authorization server SHOULD distinguish a change confined to metadata
+   the statement did not attest, which leaves the attested claims
+   intact, from a change to an attested member, which means the
+   statement no longer describes the published document.  The server
+   then applies [RFC7591] and local registration policy.
 
    Rejections are reported using the registration error codes of
    Section 3.2.2 of [RFC7591].  A statement that cannot be validated,
@@ -2412,7 +2417,7 @@ C.8.  Why the Response Uses access_token
 
 C.9.  Deliberately Deferred Capabilities
 
-   This version omits six capabilities, each with an extension point:
+   This version omits seven capabilities, each with an extension point:
 
    *  *Token-endpoint initiation:* a client without a user agent or pre-
       authorizing credential cannot initiate issuance.  An extension can
@@ -2439,6 +2444,14 @@ C.9.  Deliberately Deferred Capabilities
       (Section 15.7).  An extension can define a status claim, for
       example over a Token Status List [STATUS-LIST], with the
       processing rules a trusting authorization server applies.
+
+   *  *CIMD-native conveyance:* a statement is presented in an [RFC7591]
+      registration request, reintroducing a registration step that
+      [CIMD] otherwise avoids.  A future version could let a metadata
+      document carry a stable reference to where a client publishes its
+      current statements, so a resolving server fetches the review out
+      of band.  This differs from embedding a statement in the document,
+      which the digest rule of Section 4.1 forbids.
 
 Appendix D.  Acknowledgments
 

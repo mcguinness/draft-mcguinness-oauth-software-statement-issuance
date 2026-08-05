@@ -28,7 +28,7 @@
     Jinja2 3.1.6
     lxml 6.1.1
     natsort 8.4.0
-    platformdirs 4.10.1
+    platformdirs 4.11.0
     pycountry 24.6.1
     PyYAML 6.0.3
     requests 2.33.1
@@ -1052,7 +1052,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 2 February 2027</td>
+<td class="center">Expires 6 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1065,12 +1065,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-software-statement-issuance-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-01" class="published">1 August 2026</time>
+<time datetime="2026-08-05" class="published">5 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-02">2 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-06">6 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1105,7 +1105,7 @@ svg {
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 2 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 6 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2205,7 +2205,7 @@ Pragma: no-cache
 </li>
       </ul>
 <p id="section-11-14">An issuer URL or JWK Set does not establish trust. A trusting authorization server accepts only configured issuers (<a href="#issuer-trust" class="auto internal xref">Section 14</a>) and obtains their keys from authorization server metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>, not from the statement.<a href="#section-11-14" class="pilcrow">¶</a></p>
-<p id="section-11-15">A trusting authorization server <span class="bcp14">MAY</span> retrieve current client metadata and compare its digest with <code>cimd_digest</code>; if it does so, it <span class="bcp14">MUST</span> also verify that the document's <code>client_id</code> exactly equals <code>sub</code>, as required by <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span>. A mismatch indicates post-issuance change and is a policy input, not a validation failure. The server then applies <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> and local registration policy.<a href="#section-11-15" class="pilcrow">¶</a></p>
+<p id="section-11-15">A trusting authorization server <span class="bcp14">MAY</span> retrieve current client metadata and compare its digest with <code>cimd_digest</code>; if it does so, it <span class="bcp14">MUST</span> also verify that the document's <code>client_id</code> exactly equals <code>sub</code>, as required by <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span>. A mismatch indicates post-issuance change and is a policy input, not a validation failure. Because the digest covers the whole document, a mismatch signals only that something changed; a trusting authorization server <span class="bcp14">SHOULD</span> distinguish a change confined to metadata the statement did not attest, which leaves the attested claims intact, from a change to an attested member, which means the statement no longer describes the published document. The server then applies <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> and local registration policy.<a href="#section-11-15" class="pilcrow">¶</a></p>
 <p id="section-11-16">Rejections are reported using the registration error codes of Section 3.2.2 of <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span>. A statement that cannot be validated, because it is malformed, expired, or fails signature or claim validation, results in <code>invalid_software_statement</code>. A statement that validates but is not acceptable here, because its issuer is not configured, its <code>aud</code> does not include this server, its <code>sub</code> falls outside the issuer's configured namespaces, or its lifetime exceeds what the server honors, results in <code>unapproved_software_statement</code>. The distinction tells a client whether to obtain a corrected statement or to approach a different issuer.<a href="#section-11-16" class="pilcrow">¶</a></p>
 <p id="section-11-17">A trusting authorization server <span class="bcp14">MUST</span> reject a statement whose lifetime exceeds the maximum it records for the issuer (<a href="#issuer-trust" class="auto internal xref">Section 14</a>). An attested claim outside the set for which the trusting authorization server treats the issuer as authoritative <span class="bcp14">MUST NOT</span> take the <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> precedence of an attested value; the server either ignores the claim or treats it as client-supplied registration metadata, according to policy.<a href="#section-11-17" class="pilcrow">¶</a></p>
 </section>
@@ -3252,7 +3252,7 @@ Content-Type: application/json
         <h3 id="name-deliberately-deferred-capab">
 <a href="#appendix-C.9" class="section-number selfRef">C.9. </a><a href="#name-deliberately-deferred-capab" class="section-name selfRef">Deliberately Deferred Capabilities</a>
         </h3>
-<p id="appendix-C.9-1">This version omits six capabilities, each with an extension point:<a href="#appendix-C.9-1" class="pilcrow">¶</a></p>
+<p id="appendix-C.9-1">This version omits seven capabilities, each with an extension point:<a href="#appendix-C.9-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-C.9-2.1">
             <p id="appendix-C.9-2.1.1"><strong>Token-endpoint initiation:</strong> a client without a user agent or pre-authorizing credential cannot initiate issuance. An extension can use the software statement grant without <code>software_statement_code</code> and advertise that mode in metadata.<a href="#appendix-C.9-2.1.1" class="pilcrow">¶</a></p>
@@ -3271,6 +3271,9 @@ Content-Type: application/json
 </li>
           <li class="normal" id="appendix-C.9-2.6">
             <p id="appendix-C.9-2.6.1"><strong>Acceptance-time status:</strong> lifetime is the only revocation control (<a href="#statement-validation" class="auto internal xref">Section 15.7</a>). An extension can define a status claim, for example over a Token Status List <span>[<a href="#STATUS-LIST" class="cite xref">STATUS-LIST</a>]</span>, with the processing rules a trusting authorization server applies.<a href="#appendix-C.9-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="appendix-C.9-2.7">
+            <p id="appendix-C.9-2.7.1"><strong>CIMD-native conveyance:</strong> a statement is presented in an <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> registration request, reintroducing a registration step that <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span> otherwise avoids. A future version could let a metadata document carry a stable reference to where a client publishes its current statements, so a resolving server fetches the review out of band. This differs from embedding a statement in the document, which the digest rule of <a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a> forbids.<a href="#appendix-C.9-2.7.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
