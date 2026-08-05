@@ -684,7 +684,7 @@ Before accepting the statement, a trusting authorization server MUST:
 
 An issuer URL or JWK Set does not establish trust. A trusting authorization server accepts only configured issuers ({{issuer-trust}}) and obtains their keys from authorization server metadata {{RFC8414}}, not from the statement.
 
-A trusting authorization server MAY retrieve current client metadata and compare its digest with `cimd_digest`; if it does so, it MUST also verify that the document's `client_id` exactly equals `sub`, as required by {{CIMD}}. A mismatch indicates post-issuance change and is a policy input, not a validation failure. The server then applies {{RFC7591}} and local registration policy.
+A trusting authorization server MAY retrieve current client metadata and compare its digest with `cimd_digest`; if it does so, it MUST also verify that the document's `client_id` exactly equals `sub`, as required by {{CIMD}}. A mismatch indicates post-issuance change and is a policy input, not a validation failure. Because the digest covers the whole document, a mismatch signals only that something changed; a trusting authorization server SHOULD distinguish a change confined to metadata the statement did not attest, which leaves the attested claims intact, from a change to an attested member, which means the statement no longer describes the published document. The server then applies {{RFC7591}} and local registration policy.
 
 Rejections are reported using the registration error codes of Section 3.2.2 of {{RFC7591}}. A statement that cannot be validated, because it is malformed, expired, or fails signature or claim validation, results in `invalid_software_statement`. A statement that validates but is not acceptable here, because its issuer is not configured, its `aud` does not include this server, its `sub` falls outside the issuer's configured namespaces, or its lifetime exceeds what the server honors, results in `unapproved_software_statement`. The distinction tells a client whether to obtain a corrected statement or to approach a different issuer.
 
@@ -1234,7 +1234,7 @@ The response follows {{RFC8693}}: `access_token` carries the artifact, `issued_t
 
 ## Deliberately Deferred Capabilities {#deferred-capabilities}
 
-This version omits six capabilities, each with an extension point:
+This version omits seven capabilities, each with an extension point:
 
 * **Token-endpoint initiation:** a client without a user agent or pre-authorizing credential cannot initiate issuance. An extension can use the software statement grant without `software_statement_code` and advertise that mode in metadata.
 * **Statement-as-subject renewal:** renewal uses an initial access token or a new request ({{token-exchange-profile}}), not a prior statement. `software_statement_subject_token_types_supported` can advertise a future holder-bound subject-token profile.
@@ -1242,6 +1242,7 @@ This version omits six capabilities, each with an extension point:
 * **Callback delivery:** this version permits polling only ({{deferred-processing}}). A future version can adopt {{DTR}} callbacks.
 * **Canonicalized digests:** serialization changes alter the octet digest ({{metadata-snapshot}}). An extension can define a canonicalized digest claim or parameter.
 * **Acceptance-time status:** lifetime is the only revocation control ({{statement-validation}}). An extension can define a status claim, for example over a Token Status List {{STATUS-LIST}}, with the processing rules a trusting authorization server applies.
+* **CIMD-native conveyance:** a statement is presented in an {{RFC7591}} registration request, reintroducing a registration step that {{CIMD}} otherwise avoids. A future version could let a metadata document carry a stable reference to where a client publishes its current statements, so a resolving server fetches the review out of band. This differs from embedding a statement in the document, which the digest rule of {{metadata-snapshot}} forbids.
 
 # Acknowledgments
 
