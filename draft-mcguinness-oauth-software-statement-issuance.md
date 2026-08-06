@@ -243,6 +243,8 @@ The URL remains the client identity when its content changes. One issuance decis
 +---------------+  +---------------+       +---------------+
 ~~~
 
+The figure shows the registration path. Under runtime presentation ({{PRESENTATION}}), step 3 is instead a sender-constrained authorization or token request carrying the statement, and no registration is created.
+
 ## Redirect Flow Overview
 
 ~~~
@@ -792,7 +794,7 @@ Pairwise configuration bounds a statement's reach to the issuers a trusting auth
 
 ## Client Establishment Is Not an Access Grant
 
-A software statement attests client metadata; it grants no resource access or consent on behalf of the software's users. Each user still authorizes access through the registered client.
+A software statement attests client metadata; it grants no resource access or consent on behalf of the software's users. Each user still authorizes access through the established client.
 
 Authorization servers MUST enforce the prohibited-parameter and response-type rules in {{prohibited-parameters}}. The successful response uses `access_token` only as the generic security-token container defined by {{RFC8693}}; the contained software statement MUST NOT be accepted as an access token at a protected resource.
 
@@ -812,7 +814,7 @@ A software statement means one thing: the issuer evaluated the exact document co
 
 The client authors the metadata document, so issuance does not make every value an independently verified fact. It records an accountable evaluation of a deterministic, digest-bound input ({{metadata-snapshot}}). An issuer SHOULD corroborate security-relevant metadata through evidence beyond the document itself. Verification depth is part of the trust relationship.
 
-A trusting authorization server can conclude only what the issuer decided; local registration policy determines what that decision is worth.
+A trusting authorization server can conclude only what the issuer decided; local client-establishment policy determines what that decision is worth.
 
 ## Client Metadata Retrieval
 

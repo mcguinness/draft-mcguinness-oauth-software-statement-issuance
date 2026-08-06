@@ -8,6 +8,14 @@ RFC 7591 standardizes how a client presents a software statement and how a regis
 * [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-software-statement-issuance.txt)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-software-statement-issuance/) (after first submission)
 
+## OAuth 2.0 Software Statement Runtime Presentation
+
+This repository also hosts the companion Internet-Draft, "OAuth 2.0 Software Statement Runtime Presentation", which defines the second consumption path for the issued statement: a client presents it at runtime in an authorization or token request, sender-constrained by a proof that chains to the statement, and the authorization server applies the attested metadata to that request without creating a persistent registration.
+
+* [Editor's Copy (HTML)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-sw-stmt-presentation.html)
+* [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-sw-stmt-presentation.txt)
+* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-sw-stmt-presentation/) (after first submission)
+
 ## Related Drafts
 
 * [OAuth Client ID Metadata Document](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/) (normative dependency)
