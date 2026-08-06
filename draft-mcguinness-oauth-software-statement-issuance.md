@@ -216,7 +216,7 @@ The flow has four elements:
 3. The client presents the statement to consuming servers: in an {{RFC7591}} registration request ({{consumption}}) or a sender-constrained runtime presentation ({{PRESENTATION}}).
 4. Trusting authorization servers in its audience apply their local acceptance policies.
 
-The URL remains the client identity when its content changes. One issuance decision can serve many registrations ({{comparison}}).
+The URL remains the client identity when its content changes. One issuance decision can serve many registrations and runtime presentations ({{comparison}}).
 
 ~~~
                 +--------------------------+
@@ -1211,7 +1211,7 @@ The table compares where each establishment mechanism decides trust, its input, 
 
 The bilateral mechanisms compose with statements: pre-registration or pushed registration can carry attested metadata, and approval-based registration can evaluate an issuer's decision. For one authorization server, they remain sufficient alone; portability justifies issuance. OpenID Federation supplies trust chains when pairwise issuer configuration no longer scales.
 
-OpenID for Verifiable Credential Issuance {{OID4VCI}} has a similar flow but serves wallet-held credentials presented to verifiers. A software statement describes software and is consumed by {{RFC7591}} registration. An OID4VCI profile would still need this specification's format, metadata binding, and consumption rules, although an existing ecosystem could carry the statement as a credential payload.
+OpenID for Verifiable Credential Issuance {{OID4VCI}} has a similar flow but serves wallet-held credentials presented to verifiers. A software statement describes software and is consumed by {{RFC7591}} registration or runtime presentation ({{PRESENTATION}}). An OID4VCI profile would still need this specification's format, metadata binding, and consumption rules, although an existing ecosystem could carry the statement as a credential payload.
 
 ## Why Use the Authorization Endpoint
 
@@ -1223,7 +1223,7 @@ The device authorization grant {{RFC8628}} assumes an interactive user co-presen
 
 ## Why the Issuer Is an Authorization Server Role
 
-An alternative design defines a standalone issuer and leaves the minting interface out of scope, as {{CLIENT-INSTANCE}} does for instance issuers. That works for intra-domain instance attestation. It does not work here: {{RFC7591}} already standardized presentation, so minting is the missing interface.
+An alternative design defines a standalone issuer and leaves the minting interface out of scope, as {{CLIENT-INSTANCE}} does for instance issuers. That works for intra-domain instance attestation. It does not work here: {{RFC7591}} already standardized registration-time presentation, so minting is the missing interface.
 
 The authorization server role reuses token endpoint authentication, {{DTR}} deferral, {{RFC8693}} token exchange, and {{RFC8414}} discovery. A minimal issuer needs only a token endpoint, metadata, and signing keys ({{authorization-server-metadata}}). Explicit `typ` values separate statement and instance issuers.
 

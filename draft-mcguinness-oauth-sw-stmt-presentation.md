@@ -36,14 +36,14 @@ normative:
   ISSUANCE:
     target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-software-statement-issuance
     title: "OAuth 2.0 Software Statement Issuance"
+  CLIENT-INSTANCE:
+    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-client-instance-assertion
+    title: "OAuth 2.0 Client Instance Assertion"
 
 informative:
   ABCA:
     target: https://datatracker.ietf.org/doc/draft-ietf-oauth-attestation-based-client-auth
     title: "OAuth 2.0 Attestation-Based Client Authentication"
-  CLIENT-INSTANCE:
-    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-client-instance-assertion
-    title: "OAuth 2.0 Client Instance Assertion"
 
 --- abstract
 
@@ -86,7 +86,9 @@ Presentation in an authorization request MUST use a pushed authorization request
 
 ## Grant Lifecycle {#grant-lifecycle}
 
-The establishment made at presentation persists for the grant it opens. The authorization server MUST bind the resulting `request_uri` and any authorization code to the statement identity, its `iss` and `jti`, and to the proven key; the token request that redeems the code MUST authenticate with that key, and the statement is not presented again within the grant. A statement MUST be unexpired when presented; expiry after presentation does not invalidate state already bound to it, just as expiry does not undo an {{RFC7591}} registration. On refresh-token use the authorization server MUST authenticate the same key and MAY, by local policy, require the client to hold a current unexpired statement, the control that lets an issuer's ceased renewal wind down access.
+A successful presentation creates an establishment: the validated `sub`, the statement identity and expiry, its `iss` and `jti`, the effective metadata ({{effective-metadata}}), the issuer trust decision, and the sender-constraint mechanism and proven key. The establishment persists for the grant it opens. The authorization server MUST bind the resulting `request_uri` and any authorization code to the establishment; the token request that redeems the code MUST demonstrate possession of the same proven key under the same sender-constraint mechanism, and the statement is not presented again between presentation and redemption. A statement MUST be unexpired when presented; expiry after presentation does not invalidate an establishment already bound, just as expiry does not undo an {{RFC7591}} registration.
+
+On refresh-token use the authorization server MUST verify possession of the establishment's proven key under the same sender-constraint mechanism. It MAY, by local policy, additionally require a current unexpired statement, the control that lets an issuer's ceased renewal wind down access. When policy requires one, the client presents the replacement in the `software_statement` parameter of the refresh request. The replacement MUST validate under {{ISSUANCE}} with this server in its audience, MUST have the establishment's `sub`, and MUST authorize the establishment's proven key ({{sender-constraint}}); the refreshed access MUST fall within the replacement's effective metadata, which replaces the establishment's, so a narrowed re-review takes effect mid-grant. A refresh that fails these requirements, or omits a statement that policy requires, is rejected with `invalid_grant`; the authorization server SHOULD state the reason in `error_description`.
 
 ## Effective Metadata {#effective-metadata}
 
