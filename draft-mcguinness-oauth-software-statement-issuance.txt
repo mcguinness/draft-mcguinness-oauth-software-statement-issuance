@@ -3,9 +3,9 @@
 
 
 Web Authorization Protocol                                 K. McGuinness
-Internet-Draft                                             5 August 2026
+Internet-Draft                                             6 August 2026
 Intended status: Standards Track                                        
-Expires: 6 February 2027
+Expires: 7 February 2027
 
 
                  OAuth 2.0 Software Statement Issuance
@@ -43,7 +43,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 6 February 2027.
+   This Internet-Draft will expire on 7 February 2027.
 
 Copyright Notice
 
@@ -81,33 +81,36 @@ Table of Contents
    10. Software Statement Token Response
      10.1.  Terminal Denial
    11. Software Statement Format
-   12. Multi-Instance Client Software
-     12.1.  Attesting Instance Issuers
-   13. Authorization Server Metadata
-   14. Issuer Trust Establishment
-   15. Security Considerations
-     15.1.  Client Establishment Is Not an Access Grant
-     15.2.  What Issuance Attests
-     15.3.  Client Metadata Retrieval
-     15.4.  Authorization Response Security
-     15.5.  Deferral Sender Constraint
-     15.6.  Token Exchange Considerations
-     15.7.  Statement Validation and Replay
-     15.8.  Registration Fraud and Impersonation
-     15.9.  Signing Keys and Algorithms
-     15.10. Approver Identity and Audit
-   16. Privacy Considerations
-   17. IANA Considerations
-     17.1.  OAuth Authorization Endpoint Response Types Registry
-     17.2.  OAuth URI Registry
-     17.3.  OAuth Parameters Registry
-     17.4.  OAuth Extensions Error Registry
-     17.5.  OAuth Authorization Server Metadata Registry
-     17.6.  Media Type Registration
-     17.7.  JSON Web Token Claims Registry
-   18. References
-     18.1.  Normative References
-     18.2.  Informative References
+   12. Consuming a Software Statement
+     12.1.  Registration
+     12.2.  Runtime presentation
+   13. Multi-Instance Client Software
+     13.1.  Attesting Instance Issuers
+   14. Authorization Server Metadata
+   15. Issuer Trust Establishment
+   16. Security Considerations
+     16.1.  Client Establishment Is Not an Access Grant
+     16.2.  What Issuance Attests
+     16.3.  Client Metadata Retrieval
+     16.4.  Authorization Response Security
+     16.5.  Deferral Sender Constraint
+     16.6.  Token Exchange Considerations
+     16.7.  Statement Validation and Replay
+     16.8.  Registration Fraud and Impersonation
+     16.9.  Signing Keys and Algorithms
+     16.10. Approver Identity and Audit
+   17. Privacy Considerations
+   18. IANA Considerations
+     18.1.  OAuth Authorization Endpoint Response Types Registry
+     18.2.  OAuth URI Registry
+     18.3.  OAuth Parameters Registry
+     18.4.  OAuth Extensions Error Registry
+     18.5.  OAuth Authorization Server Metadata Registry
+     18.6.  Media Type Registration
+     18.7.  JSON Web Token Claims Registry
+   19. References
+     19.1.  Normative References
+     19.2.  Informative References
    Appendix A.  Deployment Examples
      A.1.  Publisher Program: One Review, Many Customer Authorization
            Servers
@@ -158,10 +161,12 @@ Table of Contents
    publisher program, enterprise security function, or ecosystem
    operator reviews the software once; each authorization server in the
    audience can rely on the signed decision under its own policy
-   (Section 15.2, Appendix C.1, Section 1.1).
+   (Section 16.2, Appendix C.1, Section 1.1).
 
    This specification supplies the missing issuance protocol and hardens
-   the existing artifact for interoperability (Section 11).  It
+   the existing artifact for interoperability (Section 11).  It also
+   defines how a trusting server consumes the statement, through
+   [RFC7591] registration or by runtime presentation (Section 12).  It
    introduces no new client credential or federation architecture.
    Portability remains bounded by configured issuer trust, typically
    within an ecosystem or administrative domain rather than the open
@@ -277,7 +282,7 @@ Table of Contents
    [CLIENT-INSTANCE] carries per-instance identity into tokens for
    runtime instances behind one client_id.  This specification carries
    the trust decision about the client software to the trusting
-   authorization server.  Section 12 describes their composition.
+   authorization server.  Section 13 describes their composition.
 
    OpenID Federation [OPENID-FED] conveys attested metadata through
    trust chains, suiting ecosystems prepared to operate federation
@@ -527,7 +532,7 @@ Table of Contents
    changed digest marks a new trust state for the same client identifier
    and is the signal used by the re-evaluation rule above.  The digest
    also supplies the cimd_digest claim (Section 11) and audit guidance
-   (Section 15).
+   (Section 16).
 
    Byte identity deliberately detects serialization-only changes.  A
    digest mismatch is an input to policy, not a validation failure.  A
@@ -568,7 +573,7 @@ Table of Contents
       a loopback interface redirection URI in a software statement
       request.  A confidential client MAY use a loopback or private-use
       redirection URI, because redemption is bound to its client
-      authentication (Section 15.4).
+      authentication (Section 16.4).
 
    state:  REQUIRED.  An opaque value used by the client to bind the
       authorization response to its request.  The authorization server
@@ -734,7 +739,7 @@ Table of Contents
       code_challenge in the authorization request.
 
    completion_mode:  REQUIRED when the authorization server advertises
-      deferred_token_response_supported (Section 13); otherwise not
+      deferred_token_response_supported (Section 14); otherwise not
       used.  When present, the value MUST include deferred, per the
       deferral opt-in rule of Section 9.
 
@@ -793,7 +798,7 @@ Table of Contents
    using OAuth 2.0 Token Exchange [RFC8693], a pattern used by existing
    ecosystems ([UK-OPEN-BANKING], [AU-CDR]).  Support is advertised
    through software_statement_subject_token_types_supported
-   (Section 13).
+   (Section 14).
 
    The client sends a token exchange request as defined in Section 2.1
    of [RFC8693] with:
@@ -821,7 +826,7 @@ Table of Contents
       The same syntax, validation, and narrowing rules apply.
 
    completion_mode:  REQUIRED when the authorization server advertises
-      deferred_token_response_supported (Section 13); otherwise not
+      deferred_token_response_supported (Section 14); otherwise not
       used.  When present, the value MUST include deferred, per the
       deferral opt-in rule of Section 9.
 
@@ -905,7 +910,7 @@ Table of Contents
 
    *  A *deferred issuer* returns a deferred token response when a
       decision needs out-of-band processing.  It implements [DTR] and
-      advertises deferred_token_response_supported (Section 13).
+      advertises deferred_token_response_supported (Section 14).
 
    Against a deferred issuer, every deferral originates from a deferred
    token response of [DTR], issued for a software statement code
@@ -1036,8 +1041,9 @@ Table of Contents
    token, and [DTR]'s requirement that a final access token inherit the
    originating DPoP binding does not apply because none is issued.  The
    statement's replay and theft properties are those described in
-   Section 15.7, including key binding through attested jwks or jwks_uri
-   where a deployment wants proof of possession at registration.
+   Section 16.7, including key binding through attested jwks or jwks_uri
+   where a deployment wants proof of possession at registration, and the
+   mandatory sender constraint of runtime presentation (Section 12.2).
 
    For example:
 
@@ -1055,13 +1061,13 @@ Table of Contents
      "expires_in": 3600
    }
 
-   To use the issued statement for dynamic client registration, the
-   client supplies the value of access_token as the software_statement
-   member of an [RFC7591] client registration request.
+   The client consumes the issued statement, the value of access_token,
+   as described in Section 12: through an [RFC7591] registration request
+   or by runtime presentation.
 
    The access_token member is a security-token container ([RFC8693]),
    not an OAuth access token: the software statement is consumed only as
-   [RFC7591] software_statement input, MUST NOT be attached to a request
+   a software statement (Section 12), MUST NOT be attached to a request
    as an Authorization: Bearer credential, and is not subject to
    refresh.  Implementations that cache issued tokens by type SHOULD key
    this artifact on its issued_token_type so that generic access-token
@@ -1107,14 +1113,14 @@ Table of Contents
    The JOSE header MUST include kid, identifying the signing key within
    the issuer's JWK Set, and MUST include typ with the value software-
    statement+jwt, applying Section 3.11 of [RFC8725].  This value names
-   application/software-statement+jwt (Section 17.6) with the
+   application/software-statement+jwt (Section 18.6) with the
    application/ prefix omitted, as described in Section 4.1.9 of
    [RFC7515].  Explicit typing prevents confusion with other JWTs from
    the same issuer.
 
    Extensions can add claims; an incompatible revision would use a new
    type value.  Supported algorithms appear in
-   software_statement_signing_alg_values_supported (Section 13).
+   software_statement_signing_alg_values_supported (Section 14).
 
    The JWT payload MUST contain the following claims in addition to the
    approved client metadata.
@@ -1154,7 +1160,7 @@ Table of Contents
    Each metadata claim MUST be client metadata registered in the IANA
    "OAuth Dynamic Client Registration Metadata" registry, or otherwise
    recognized by the authorization server, such as instance_issuers
-   (Section 12.1).  The following authorization-server-assigned,
+   (Section 13.1).  The following authorization-server-assigned,
    credential, and recursive metadata members are not eligible for
    attestation and MUST NOT appear in a software statement issued under
    this specification: client_id, client_secret, client_id_issued_at,
@@ -1181,7 +1187,7 @@ Table of Contents
    The sub claim is the client identifier URL, not the local client_id
    assigned through [RFC7591] registration.  A trusting authorization
    server MAY use sub to correlate registrations and apply per-client
-   policy (Section 12).
+   policy (Section 13).
 
    With a stable URL across releases, sub correlates releases and
    cimd_digest distinguishes reviewed content.  With distinct release
@@ -1232,7 +1238,7 @@ Table of Contents
    *  apply the JWT validation guidance in [RFC8725].
 
    An issuer URL or JWK Set does not establish trust.  A trusting
-   authorization server accepts only configured issuers (Section 14) and
+   authorization server accepts only configured issuers (Section 15) and
    obtains their keys from authorization server metadata [RFC8414], not
    from the statement.
 
@@ -1246,9 +1252,10 @@ Table of Contents
    the statement did not attest, which leaves the attested claims
    intact, from a change to an attested member, which means the
    statement no longer describes the published document.  The server
-   then applies [RFC7591] and local registration policy.
+   then consumes the statement as described in Section 12.
 
-   Rejections are reported using the registration error codes of
+   When the statement is consumed via registration (Section 12.1),
+   rejections are reported using the registration error codes of
    Section 3.2.2 of [RFC7591].  A statement that cannot be validated,
    because it is malformed, expired, or fails signature or claim
    validation, results in invalid_software_statement.  A statement that
@@ -1257,22 +1264,160 @@ Table of Contents
    outside the issuer's configured namespaces, or its lifetime exceeds
    what the server honors, results in unapproved_software_statement.
    The distinction tells a client whether to obtain a corrected
-   statement or to approach a different issuer.
+   statement or to approach a different issuer.  A runtime presentation
+   (Section 12.2) reports the same conditions through the authorization
+   or token endpoint error responses of [RFC6749].
 
    A trusting authorization server MUST reject a statement whose
-   lifetime exceeds the maximum it records for the issuer (Section 14).
+   lifetime exceeds the maximum it records for the issuer (Section 15).
    An attested claim outside the set for which the trusting
    authorization server treats the issuer as authoritative MUST NOT take
    the [RFC7591] precedence of an attested value; the server either
    ignores the claim or treats it as client-supplied registration
    metadata, according to policy.
 
-12.  Multi-Instance Client Software
+12.  Consuming a Software Statement
+
+   A validated software statement (Section 11) is consumed in one of two
+   ways.  Both use the same artifact and the same validation and differ
+   only in whether the trusting authorization server keeps a persistent
+   client record.  An authorization server MAY support either or both,
+   and advertises runtime presentation through
+   software_statement_presentation_supported (Section 14).
+
+12.1.  Registration
+
+   The client supplies the statement as the software_statement member of
+   an [RFC7591] dynamic client registration request.  The authorization
+   server validates it (Section 11), registers a client, assigns a local
+   client_id, and applies its registration policy; rejections use the
+   [RFC7591] error codes given in Section 11.  This path consumes the
+   artifact exactly as [RFC7591] registration endpoints have since 2015
+   and requires nothing new of the consumer.
+
+12.2.  Runtime presentation
+
+   The client presents an already-issued statement in an ordinary
+   authorization request or token request, as the software_statement
+   request parameter, identified by its Client ID Metadata Document URL
+   as client_id.  The authorization server validates the statement
+   (Section 11) and uses the attested metadata as the client's effective
+   metadata for that request, creating no persistent registration.  This
+   establishes an otherwise unregistered client at request time, as
+   [CIMD] resolution does, with the issuer's review carried inline
+   instead of fetched.  Unlike an issuance request (Section 5.1),
+   presenting a statement is compatible with an access-granting request:
+   it is client establishment carried alongside the request, not a
+   request for issuance.
+
+   A runtime presentation MUST be sender-constrained, and the constraint
+   MUST chain to key material the statement attests.  The presenter
+   proves possession of a key: through a client authentication method, a
+   DPoP proof [RFC9449], or the proof-of-possession mechanism of a
+   client attestation scheme such as [ABCA].  The authorization server
+   MUST verify that the proven key is one the attested metadata
+   authorizes, either directly, because the key appears in the attested
+   jwks or at the attested jwks_uri, or by endorsement, because an
+   attestation whose subject is the statement's sub endorses the
+   instance key under the attested key material or an attested
+   instance_issuers delegation (Section 13.1).  A presentation without
+   such a proof, or whose proven key the attested metadata does not
+   authorize, MUST be rejected.  Possession of an arbitrary key
+   constrains only the request; the chain to attested material is what
+   removes the theft exposure that Section 16.7 manages for
+   registration, because a stolen statement cannot be presented without
+   a key the issuer's review covers.  A statement that attests neither
+   key material nor an instance-key delegation cannot satisfy this
+   section and is consumable only through registration.
+
+   Presentation in an authorization request MUST use a pushed
+   authorization request [RFC9126]: the statement and its proof travel
+   to the pushed authorization request endpoint, where the mechanisms
+   above apply, and no statement appears in a front-channel URL,
+   preserving the discipline of Section 6.  Presentation at the token
+   endpoint requires no additional profile.
+
+   Having validated the statement, the authorization server determines
+   the client's effective metadata for the request.  An attested member
+   has the value the statement gives it, with the precedence [RFC7591]
+   defines.  A member the statement does not attest takes its value from
+   the client's current Client ID Metadata Document, which the
+   authorization server MUST resolve when the request depends on an
+   unattested member, or from the defaults of [RFC7591].  A redirect_uri
+   MUST match an effective redirection URI, and any requested grant
+   type, response type, or scope MUST fall within the effective
+   metadata.  The client_id is the statement's sub, and the
+   authorization server assigns none.  A server that also holds a
+   persistent registration for the same software decides by local policy
+   whether to accept a runtime presentation alongside it; the
+   statement's attested members govern the presented request only.
+
+   Because every presentation consumes the statement afresh, expiry and
+   cimd_digest comparison (Section 11) apply per request: a lapsed or
+   superseded statement stops new requests at once, a continuous-
+   enforcement property that a persistent registration does not provide
+   by itself.
+
+   Rejections use the error responses of [RFC6749] for the endpoint, not
+   the registration error codes: at the token endpoint, invalid_client
+   when the statement or its proof fails to establish the client,
+   otherwise invalid_request; at the pushed authorization request
+   endpoint, the corresponding [RFC9126] responses.  This surface is
+   coarser than the registration codes and does not tell a client
+   whether to seek a corrected statement or a different issuer
+   (Section 11); the authorization server SHOULD carry that distinction
+   in error_description.  A request is either an issuance request or a
+   presentation: a request that initiates issuance (Section 5,
+   Section 8) MUST NOT carry the software_statement parameter, and the
+   authorization server rejects the combination with invalid_request.
+
+   The following non-normative example presents an already-issued
+   statement at the token endpoint, sender-constrained by a client
+   attestation [ABCA].  The OAuth-Client-Attestation and OAuth-Client-
+   Attestation-PoP headers authenticate the presenting instance, chained
+   to the statement through its attested instance_issuers delegation,
+   the software_statement parameter carries the issuer's review, and
+   client_id is the Client ID Metadata Document URL named by the
+   statement's sub.  No client record exists at this server.
+
+   POST /token HTTP/1.1
+   Host: as.example
+   Content-Type: application/x-www-form-urlencoded
+   OAuth-Client-Attestation: eyJhbGciOiJFUzI1NiIsInR5cCI6Im9hdXRoLWNsaWVu...
+   OAuth-Client-Attestation-PoP: eyJhbGciOiJFUzI1NiIsInR5cCI6Im9hdXRoLWNs...
+
+   grant_type=client_credentials
+   &scope=tools.read
+   &client_id=https%3A%2F%2Fclient.example%2Fapp
+   &software_statement=eyJ0eXAiOiJzb2Z0d2FyZS1zdGF0ZW1l...
+
+   The authorization server validates the statement (Section 11),
+   verifies that the attestation's subject is the statement's sub and
+   that its endorsement of the proven key chains from the attested
+   instance_issuers delegation, and applies the effective metadata to
+   the request: the requested scope falls within it, and the request
+   authenticates as the client the statement describes.  It keeps no
+   registration; the effective client_id is the statement's sub.  Here
+   [ABCA] supplies the sender constraint while the parameter carries the
+   statement, distinct from the profile below that carries the statement
+   within the attestation itself.
+
+   This specification defines runtime presentation through the
+   software_statement request parameter.  Carrying the statement within
+   a client attestation [ABCA], and a Client ID Metadata Document that
+   references its own current statements for out-of-band retrieval, are
+   profiles of this path that an extension can define (Appendix C.9).
+
+13.  Multi-Instance Client Software
 
    A software statement attests client software, identified by sub; it
    does not attest or identify the runtime instances of that software.
    This specification defines no instance identifier, and instances do
-   not obtain per-instance statements.
+   not obtain per-instance statements.  This section concerns the
+   registration path (Section 12.1); under runtime presentation
+   (Section 12.2) the presenter proves a key the attested metadata
+   authorizes, an instance is identified only where that key material is
+   per-instance, and no persistent registration is created.
 
    A single unexpired statement is therefore intended to be presented
    more than once: at each trusting authorization server in its audience
@@ -1310,14 +1455,14 @@ Table of Contents
       same statement supports that model only if it omits jwks and
       jwks_uri; each registration then supplies its own instance key as
       plain metadata, subject to trusting authorization server policy
-      and the presenter-proof guidance of Section 15.7.
+      and the presenter-proof guidance of Section 16.7.
 
    *  Attested delegation: the statement omits key material but attests
-      the instance_issuers delegation (Section 12.1), so instance keys
+      the instance_issuers delegation (Section 13.1), so instance keys
       are endorsed by an attested authority at the token endpoint
       instead of appearing unattested in registration metadata.
 
-12.1.  Attesting Instance Issuers
+13.1.  Attesting Instance Issuers
 
    [CLIENT-INSTANCE] defines the instance_issuers client metadata
    parameter, through which a client delegates attestation of its
@@ -1343,7 +1488,7 @@ Table of Contents
      }
    ]
 
-13.  Authorization Server Metadata
+14.  Authorization Server Metadata
 
    The issuing authorization server is a role, not necessarily a
    general-purpose OAuth deployment.  An issuer offering only token
@@ -1419,7 +1564,14 @@ Table of Contents
       statement.  Publication of this member is the discovery signal for
       the profile.
 
-14.  Issuer Trust Establishment
+   software_statement_presentation_supported:  OPTIONAL.  Boolean value
+      indicating whether the authorization server accepts a software
+      statement presented at runtime in an authorization or token
+      request (Section 12.2), rather than only through [RFC7591]
+      registration.  If omitted, the default value is false.  This
+      member describes the consuming role.
+
+15.  Issuer Trust Establishment
 
    A trusting authorization server accepts statements only from
    configured issuers.  Trust is established out of band, for example
@@ -1450,11 +1602,11 @@ Table of Contents
    *  the metadata claims for which it treats the issuer as
       authoritative; and
 
-   *  its policy on repeated and multiple registration (Section 12).
+   *  its policy on repeated and multiple registration (Section 13).
 
    These inputs, not the signature alone, define acceptance.  Because
    the issuer is an authorization server role, key retrieval reuses
-   [RFC8414] discovery (Section 13).
+   [RFC8414] discovery (Section 14).
 
    A trusting authorization server MUST derive trust from this local
    configuration and MUST NOT derive it from an iss, jku, x5u, or other
@@ -1483,9 +1635,9 @@ Table of Contents
    OpenID Federation [OPENID-FED] provides an alternative through trust
    chains.  Both are out of scope here.
 
-15.  Security Considerations
+16.  Security Considerations
 
-15.1.  Client Establishment Is Not an Access Grant
+16.1.  Client Establishment Is Not an Access Grant
 
    A software statement attests client metadata; it grants no resource
    access or consent on behalf of the software's users.  Each user still
@@ -1513,11 +1665,11 @@ Table of Contents
 
    It SHOULD present the intended lifetime, and SHOULD make narrowing
    visible when the client requested a different or broader audience.
-   Attesting instance_issuers (Section 12.1) endorses the listed
+   Attesting instance_issuers (Section 13.1) endorses the listed
    authorities to attest runtime instances and deserves particular
    scrutiny.
 
-15.2.  What Issuance Attests
+16.2.  What Issuance Attests
 
    A software statement means one thing: the issuer evaluated the exact
    document content captured in the metadata snapshot (Section 4.1),
@@ -1535,7 +1687,7 @@ Table of Contents
    decided; local registration policy determines what that decision is
    worth.
 
-15.3.  Client Metadata Retrieval
+16.3.  Client Metadata Retrieval
 
    Fetching a Client ID Metadata Document and resources referenced by it
    exposes the authorization server to server-side request forgery,
@@ -1551,7 +1703,7 @@ Table of Contents
    document for audit purposes; a re-serialized copy cannot reproduce
    the digest.
 
-15.4.  Authorization Response Security
+16.4.  Authorization Response Security
 
    The software statement is a signed credential and can contain
    sensitive deployment information.  It MUST NOT be returned through
@@ -1594,7 +1746,7 @@ Table of Contents
    Deployments sensitive to URL disclosure can use form_post
    [FORM-POST]; the fragment response mode SHOULD NOT be used.
 
-15.5.  Deferral Sender Constraint
+16.5.  Deferral Sender Constraint
 
    Every deferral is created by a token request, and every poll is bound
    to the client authentication or DPoP key fixed at origination
@@ -1603,7 +1755,7 @@ Table of Contents
    through polling.  All additional sender-constraint, polling-rate,
    replay, cancellation, and logging requirements of [DTR] apply.
 
-15.6.  Token Exchange Considerations
+16.6.  Token Exchange Considerations
 
    A token exchange reaches the token endpoint without prior user-agent
    interaction.  Validating the subject token before metadata retrieval
@@ -1629,13 +1781,16 @@ Table of Contents
    NOT treat a token exchange as implying prior user consent and MUST
    apply the same issuance and approval policy as for the redirect flow.
 
-15.7.  Statement Validation and Replay
+16.7.  Statement Validation and Replay
 
-   A software statement is reusable (Section 12) and, until expiry, so
+   A software statement is reusable (Section 13) and, until expiry, so
    is a stolen copy at every registration endpoint in its audience.
    Issuers SHOULD use the narrowest practical audience and lifetime, and
-   the registration bounds of Section 12 limit what a stolen statement
-   can create.
+   the registration bounds of Section 13 limit what a stolen statement
+   can create.  This replay exposure is specific to the registration
+   path; a runtime presentation (Section 12.2) requires proof of a key
+   the attested metadata authorizes, so a stolen statement is inert to
+   every party outside the issuer's review.
 
    When registrations derived from a statement are intended to share a
    client key, and the canonical metadata provides jwks or jwks_uri, the
@@ -1648,11 +1803,11 @@ Table of Contents
    key without conflicting with [RFC7591] precedence.
 
    A statement authorizes metadata, not its presenter.  If it omits
-   attested key material for per-instance keys (Section 12), any holder
+   attested key material for per-instance keys (Section 13), any holder
    can register its own key.  A trusting authorization server SHOULD
    require independent proof that the presenter is an authorized
    instance of the software before accepting such a registration, such
-   as [ABCA], an attested instance_issuers chain (Section 12.1), or a
+   as [ABCA], an attested instance_issuers chain (Section 13.1), or a
    registration credential the trusting server issued.  Without such
    proof, the one-registration-per-(iss, jti, local audience) default
    bounds exposure.
@@ -1669,7 +1824,7 @@ Table of Contents
    status claim for it.  Short lifetimes bound exposure; the Australian
    Consumer Data Right Register uses ten minutes ([AU-CDR]).  Scoped
    trust supports emergency removal of a compromised issuer or namespace
-   (Section 14).  An extension could add acceptance-time status, for
+   (Section 15).  An extension could add acceptance-time status, for
    example a claim referencing a Token Status List [STATUS-LIST], along
    with the processing rules a trusting authorization server would apply
    (Appendix C.9).
@@ -1680,9 +1835,9 @@ Table of Contents
 
    The explicit, scoped issuer trust configuration that acceptance
    depends on, and the requirement never to derive trust from key-
-   location values in the statement itself, are specified in Section 14.
+   location values in the statement itself, are specified in Section 15.
 
-15.8.  Registration Fraud and Impersonation
+16.8.  Registration Fraud and Impersonation
 
    Open registration permits client_name, logo_uri, and client_uri
    values that imitate trusted software on consent screens.  Requiring a
@@ -1695,12 +1850,12 @@ Table of Contents
    Statement-gated registration also makes each rotated identity require
    another issuer decision, rather than letting a discarded client
    return at no cost; sub and jti tracking bounds registrations
-   (Section 12).  Neither control makes metadata true: a client that
+   (Section 13).  Neither control makes metadata true: a client that
    misleads review can obtain a genuine statement for fraudulent
    metadata, so issuer verification depth remains decisive
-   (Section 15.2).
+   (Section 16.2).
 
-15.9.  Signing Keys and Algorithms
+16.9.  Signing Keys and Algorithms
 
    Compromise of a software-statement signing key enables an attacker to
    mint statements for every audience that trusts that key.  Issuers
@@ -1713,7 +1868,7 @@ Table of Contents
    RSASSA-PKCS1-v1_5 (RS256); ecosystem profiles that consume software
    statements commonly restrict signing to such algorithms.
 
-15.10.  Approver Identity and Audit
+16.10.  Approver Identity and Audit
 
    The software statement attests to metadata; it does not identify the
    human or system that approved issuance.  Deployments that require
@@ -1739,7 +1894,7 @@ Table of Contents
    recorded approval.  Portable, independently verifiable decision
    records are out of scope for this specification.
 
-16.  Privacy Considerations
+17.  Privacy Considerations
 
    The authorization server learns the client identifier URL, the
    canonical metadata document, and information about the party
@@ -1762,9 +1917,9 @@ Table of Contents
    records SHOULD be access-controlled and retained only as long as
    required.
 
-17.  IANA Considerations
+18.  IANA Considerations
 
-17.1.  OAuth Authorization Endpoint Response Types Registry
+18.1.  OAuth Authorization Endpoint Response Types Registry
 
    This specification requests registration of the following value in
    the IANA "OAuth Authorization Endpoint Response Types" registry
@@ -1777,7 +1932,7 @@ Table of Contents
    Specification Document(s):  This specification, Section 5 and
       Section 6
 
-17.2.  OAuth URI Registry
+18.2.  OAuth URI Registry
 
    This specification requests registration of the following values in
    the IANA "OAuth URI" registry:
@@ -1799,13 +1954,26 @@ Table of Contents
    Specification Document(s):  This specification, Section 10 and
       Section 8
 
-17.3.  OAuth Parameters Registry
+18.3.  OAuth Parameters Registry
 
    This specification requests that IANA add this specification,
    Section 5 and Section 8, as an additional reference for the existing
    audience parameter registered by [RFC8693] and extend its usage
    location to include authorization requests.  The parameter name and
    change controller are unchanged.
+
+   This specification also requests registration of the
+   software_statement parameter in the IANA "OAuth Parameters" registry
+   established by [RFC6749], for runtime presentation of the artifact
+   defined by [RFC7591]:
+
+   Parameter Name:  software_statement
+
+   Parameter Usage Location:  authorization request, token request
+
+   Change Controller:  IESG
+
+   Specification Document(s):  This specification, Section 12.2
 
    This specification also requests registration of the following value
    in the IANA "OAuth Parameters" registry established by [RFC6749]:
@@ -1819,7 +1987,7 @@ Table of Contents
    Specification Document(s):  This specification, Section 6.1 and
       Section 7
 
-17.4.  OAuth Extensions Error Registry
+18.4.  OAuth Extensions Error Registry
 
    This specification requests registration of the following error usage
    in the IANA "OAuth Extensions Error Registry" established by
@@ -1851,7 +2019,7 @@ Table of Contents
    Specification document(s):  This specification, Section 5 and
       Section 8
 
-17.5.  OAuth Authorization Server Metadata Registry
+18.5.  OAuth Authorization Server Metadata Registry
 
    This specification requests registration of the following values in
    the IANA "OAuth Authorization Server Metadata" registry established
@@ -1865,7 +2033,7 @@ Table of Contents
 
    Change Controller:  IESG
 
-   Specification Document(s):  This specification, Section 13
+   Specification Document(s):  This specification, Section 14
 
    Metadata Name:  software_statement_audiences_supported
 
@@ -1875,7 +2043,7 @@ Table of Contents
 
    Change Controller:  IESG
 
-   Specification Document(s):  This specification, Section 13
+   Specification Document(s):  This specification, Section 14
 
    Metadata Name:  software_statement_subject_token_types_supported
 
@@ -1885,10 +2053,10 @@ Table of Contents
 
    Change Controller:  IESG
 
-   Specification Document(s):  This specification, Section 13 and
+   Specification Document(s):  This specification, Section 14 and
       Section 8
 
-17.6.  Media Type Registration
+18.6.  Media Type Registration
 
    This specification requests registration of the application/software-
    statement+jwt media type in the IANA "Media Types" registry
@@ -1907,7 +2075,7 @@ Table of Contents
       separated by period ('.') characters, as registered for
       application/jwt in Section 10.3.1 of [RFC7519].
 
-   Security considerations:  See Section 15 of this specification and
+   Security considerations:  See Section 16 of this specification and
       Section 11 of [RFC7519].
 
    Interoperability considerations:  n/a
@@ -1934,7 +2102,7 @@ Table of Contents
 
    Change controller:  IETF
 
-17.7.  JSON Web Token Claims Registry
+18.7.  JSON Web Token Claims Registry
 
    This specification requests registration of the following value in
    the IANA "JSON Web Token Claims" registry established by [RFC7519]:
@@ -1949,9 +2117,9 @@ Table of Contents
 
    Specification Document(s):  This specification, Section 11
 
-18.  References
+19.  References
 
-18.1.  Normative References
+19.1.  Normative References
 
    [CIMD]     "OAuth Client ID Metadata Document", n.d.,
               <https://datatracker.ietf.org/doc/draft-ietf-oauth-client-
@@ -2060,7 +2228,7 @@ Table of Contents
               RFC 9700, DOI 10.17487/RFC9700, January 2025,
               <https://www.rfc-editor.org/rfc/rfc9700>.
 
-18.2.  Informative References
+19.2.  Informative References
 
    [ABCA]     "OAuth 2.0 Attestation-Based Client Authentication", n.d.,
               <https://datatracker.ietf.org/doc/draft-ietf-oauth-
@@ -2148,7 +2316,7 @@ A.1.  Publisher Program: One Review, Many Customer Authorization Servers
    4.  TaskFlow presents the statement at both [RFC7591] registration
        endpoints.  Each validates it and assigns a local client_id.
        Both registrations use the attested jwks_uri (Section 11,
-       Section 12).
+       Section 13).
 
    5.  Out of band, the publisher program also issued TaskFlow an
        initial access token scoped to its client identifier and both
@@ -2201,7 +2369,7 @@ A.2.  Enterprise Deployment of a Third-Party Agent
 
    3.  The final poll returns the statement.  The daemon registers once
        at each internal authorization server and supplies the
-       enterprise's instance issuer as plain metadata (Section 12).
+       enterprise's instance issuer as plain metadata (Section 13).
        Instances authenticate through that issuer, allowing shared
        registrations with per-instance token identity
        ([CLIENT-INSTANCE]).  Because the statement omits jwks and
@@ -2245,9 +2413,9 @@ A.2.  Enterprise Deployment of a Third-Party Agent
    not conflict with [RFC7591] precedence.  It is unattested, so the
    internal authorization servers accept it under local policy, having
    authenticated the enterprise's own deployment tooling as the
-   presenter (Section 15.7).  Had the agent been deployed by a party the
+   presenter (Section 16.7).  Had the agent been deployed by a party the
    internal servers did not already authenticate, the attested variant
-   of Section 12.1 would carry that delegation instead.
+   of Section 13.1 would carry that delegation instead.
 
    Before expiry, the daemon renews with the same initial access token
    and audiences; this version does not accept a prior statement as
@@ -2281,9 +2449,9 @@ Appendix B.  Issuance Across the Software Delivery Lifecycle
    begins with the absence of renewal, which stops further statement
    use; retiring the registrations already derived from a statement
    remains each trusting authorization server's own lifecycle work
-   (Section 15.7).
+   (Section 16.7).
 
-   The statement attests the software, not its instances (Section 12).
+   The statement attests the software, not its instances (Section 13).
    It does not attest binaries or build provenance, identify running
    instances ([CLIENT-INSTANCE], [ABCA]), or grant access.  It
    standardizes the vouching layer of delivery, which no other layer of
@@ -2373,7 +2541,7 @@ C.4.  Why the Issuer Is an Authorization Server Role
    The authorization server role reuses token endpoint authentication,
    [DTR] deferral, [RFC8693] token exchange, and [RFC8414] discovery.  A
    minimal issuer needs only a token endpoint, metadata, and signing
-   keys (Section 13).  Explicit typ values separate statement and
+   keys (Section 14).  Explicit typ values separate statement and
    instance issuers.
 
 C.5.  Why the Software Statement Code Is Not an Authorization Code
@@ -2441,17 +2609,17 @@ C.9.  Deliberately Deferred Capabilities
       digest claim or parameter.
 
    *  *Acceptance-time status:* lifetime is the only revocation control
-      (Section 15.7).  An extension can define a status claim, for
+      (Section 16.7).  An extension can define a status claim, for
       example over a Token Status List [STATUS-LIST], with the
       processing rules a trusting authorization server applies.
 
-   *  *CIMD-native conveyance:* a statement is presented in an [RFC7591]
-      registration request, reintroducing a registration step that
-      [CIMD] otherwise avoids.  A future version could let a metadata
-      document carry a stable reference to where a client publishes its
-      current statements, so a resolving server fetches the review out
-      of band.  This differs from embedding a statement in the document,
-      which the digest rule of Section 4.1 forbids.
+   *  *CIMD-native conveyance:* runtime presentation (Section 12.2)
+      carries the statement in the request, and the registration path
+      carries it in a registration request.  A further profile could let
+      a Client ID Metadata Document reference where a client publishes
+      its current statements, so a resolving server fetches the review
+      out of band with neither.  This differs from embedding a statement
+      in the document, which the digest rule of Section 4.1 forbids.
 
 Appendix D.  Acknowledgments
 
