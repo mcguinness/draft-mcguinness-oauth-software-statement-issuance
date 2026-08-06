@@ -706,6 +706,23 @@ A runtime presentation MUST be sender-constrained. The presenter MUST authentica
 
 Having validated the statement, the authorization server applies the attested metadata to the request: a `redirect_uri` MUST match an attested redirection URI, and any requested grant type, response type, or scope MUST fall within the attested metadata. The `client_id` is the statement's `sub`, and the authorization server assigns none. Errors use the authorization or token endpoint error responses of {{RFC6749}}, not the registration error codes.
 
+The following non-normative example presents an already-issued statement at the token endpoint, sender-constrained by a client attestation {{ABCA}}. The `OAuth-Client-Attestation` and `OAuth-Client-Attestation-PoP` headers authenticate the presenting instance, the `software_statement` parameter carries the issuer's review, and `client_id` is the Client ID Metadata Document URL named by the statement's `sub`. No client record exists at this server.
+
+~~~ http
+POST /token HTTP/1.1
+Host: as.example
+Content-Type: application/x-www-form-urlencoded
+OAuth-Client-Attestation: eyJhbGciOiJFUzI1NiIsInR5cCI6Im9hdXRoLWNsaWVu...
+OAuth-Client-Attestation-PoP: eyJhbGciOiJFUzI1NiIsInR5cCI6Im9hdXRoLWNs...
+
+grant_type=client_credentials
+&scope=tools.read
+&client_id=https%3A%2F%2Fclient.example%2Fapp
+&software_statement=eyJ0eXAiOiJzb2Z0d2FyZS1zdGF0ZW1l...
+~~~
+
+The authorization server validates the statement ({{software-statement-format}}), binds acceptance to the attested key proven by the proof-of-possession header, and applies the attested metadata to the request: the requested `scope` falls within the attested metadata, and the request authenticates as the client the statement describes. It keeps no registration; the effective `client_id` is the statement's `sub`. Here {{ABCA}} supplies the sender constraint while the parameter carries the statement, distinct from the profile below that carries the statement within the attestation itself.
+
 This specification defines runtime presentation through the `software_statement` request parameter. Carrying the statement within a client attestation {{ABCA}}, and a Client ID Metadata Document that references its own current statements for out-of-band retrieval, are profiles of this path that an extension can define ({{deferred-capabilities}}).
 
 # Multi-Instance Client Software {#multi-instance}
