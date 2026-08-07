@@ -91,6 +91,7 @@ Table of Contents
      13.1.  Attesting Instance Issuers
    14. Authorization Server Metadata
    15. Issuer Trust Establishment
+     15.1.  Issuer Roles
    16. Security Considerations
      16.1.  Client Establishment Is Not an Access Grant
      16.2.  What Issuance Attests
@@ -1645,7 +1646,9 @@ Table of Contents
       registration-validity model of [PRESENTATION];
 
    *  the metadata claims for which it treats the issuer as
-      authoritative; and
+      authoritative;
+
+   *  the role in which it accepts the issuer (Section 15.1); and
 
    *  its policy on repeated and multiple registration (Section 13).
 
@@ -1669,6 +1672,41 @@ Table of Contents
    when its signature verifies (Section 11).  For the non-CIMD shape
    (Section 11.1) the scope is an enumerated identifier set or a tenant
    rather than a URL namespace; the rejection rule is the same.
+
+15.1.  Issuer Roles
+
+   A trusting authorization server accepts an issuer in one of two
+   roles, and records which when it configures the issuer.  The roles
+   answer different questions, are held by different parties, and run on
+   separate lifecycles.
+
+   Establishment issuer:  Its statements decide which software may exist
+      as a client at this authorization server.  A marketplace publisher
+      program or an ecosystem directory holds this role.  Statements
+      from an establishment issuer are consumed at registration or at
+      runtime establishment, and govern registration validity where
+      [PRESENTATION] applies that model.  One such decision serves every
+      tenant the authorization server hosts.
+
+   Tenant approval issuer:  Its statements decide which software a
+      particular tenant permits.  The tenant's own review function holds
+      this role, and the authorization server records the tenant the
+      issuer speaks for.  Statements from a tenant approval issuer are
+      evaluated in that tenant's request context under [PRESENTATION];
+      they neither create nor renew a registration, and they bear on no
+      other tenant.
+
+   An issuer MAY hold both roles, in which case the consumption point
+   distinguishes them: a statement in a registration request is
+   establishment, and a statement accompanying a request from a client
+   already established is tenant approval.
+
+   Where an authorization server hosts multiple tenants, issuer trust is
+   configured per tenant.  The authorization server MUST resolve the
+   tenant a request belongs to and MUST evaluate only the issuers
+   configured for that tenant; accepting a tenant approval issuer's
+   statement outside the tenant it speaks for is a cross-tenant
+   escalation (Section 16).
 
    Pairwise configuration bounds a statement's reach to the issuers a
    trusting authorization server has configured, which is why a
@@ -1920,6 +1958,15 @@ Table of Contents
    The explicit, scoped issuer trust configuration that acceptance
    depends on, and the requirement never to derive trust from key-
    location values in the statement itself, are specified in Section 15.
+
+   At an authorization server hosting multiple tenants, the tenant a
+   statement is evaluated in is part of its meaning.  A tenant approval
+   issuer speaks only for its own tenant (Section 15.1), so accepting
+   its statement in another tenant's context grants one customer's
+   approval authority over another customer's data.  An authorization
+   server MUST bind each configured tenant approval issuer to its tenant
+   and resolve the tenant from the request before evaluating any
+   statement.
 
 16.8.  Registration Fraud and Impersonation
 

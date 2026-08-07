@@ -1231,6 +1231,11 @@ svg {
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15">
             <p id="section-toc.1-1.15.1"><a href="#section-15" class="auto internal xref">15</a>. <a href="#name-issuer-trust-establishment" class="internal xref">Issuer Trust Establishment</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.1">
+                <p id="section-toc.1-1.15.2.1.1"><a href="#section-15.1" class="auto internal xref">15.1</a>.  <a href="#name-issuer-roles" class="internal xref">Issuer Roles</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
             <p id="section-toc.1-1.16.1"><a href="#section-16" class="auto internal xref">16</a>. <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
@@ -2381,16 +2386,41 @@ Pragma: no-cache
           <p id="section-15-3.6.1">the maximum statement lifetime it will honor, which also caps registration validity where the server implements the registration-validity model of <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>;<a href="#section-15-3.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-3.7">
-          <p id="section-15-3.7.1">the metadata claims for which it treats the issuer as authoritative; and<a href="#section-15-3.7.1" class="pilcrow">¶</a></p>
+          <p id="section-15-3.7.1">the metadata claims for which it treats the issuer as authoritative;<a href="#section-15-3.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-3.8">
-          <p id="section-15-3.8.1">its policy on repeated and multiple registration (<a href="#multi-instance" class="auto internal xref">Section 13</a>).<a href="#section-15-3.8.1" class="pilcrow">¶</a></p>
+          <p id="section-15-3.8.1">the role in which it accepts the issuer (<a href="#issuer-roles" class="auto internal xref">Section 15.1</a>); and<a href="#section-15-3.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-3.9">
+          <p id="section-15-3.9.1">its policy on repeated and multiple registration (<a href="#multi-instance" class="auto internal xref">Section 13</a>).<a href="#section-15-3.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-15-4">These inputs, not the signature alone, define acceptance. Because the issuer is an authorization server role, key retrieval reuses <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span> discovery (<a href="#authorization-server-metadata" class="auto internal xref">Section 14</a>).<a href="#section-15-4" class="pilcrow">¶</a></p>
 <p id="section-15-5">A trusting authorization server <span class="bcp14">MUST</span> derive trust from this local configuration and <span class="bcp14">MUST NOT</span> derive it from an <code>iss</code>, <code>jku</code>, <code>x5u</code>, or other key-location value carried in a presented statement. Having established trust, it validates each statement as described in <a href="#software-statement-format" class="auto internal xref">Section 11</a>.<a href="#section-15-5" class="pilcrow">¶</a></p>
 <p id="section-15-6">Issuer trust <span class="bcp14">SHOULD</span> be scoped as well as explicit. An issuer accepted for all values of <code>sub</code> can, if compromised or over-broad, mint acceptable statements about any client software; trust configuration <span class="bcp14">SHOULD</span> therefore constrain each issuer to the client identifier namespaces it is expected to attest, for example URLs under the domains of the software publishers it serves, and a statement whose <code>sub</code> falls outside that scope <span class="bcp14">MUST</span> be rejected even when its signature verifies (<a href="#software-statement-format" class="auto internal xref">Section 11</a>). For the non-CIMD shape (<a href="#non-cimd-statements" class="auto internal xref">Section 11.1</a>) the scope is an enumerated identifier set or a tenant rather than a URL namespace; the rejection rule is the same.<a href="#section-15-6" class="pilcrow">¶</a></p>
-<p id="section-15-7">Pairwise configuration bounds a statement's reach to the issuers a trusting authorization server has configured, which is why a statement's practical audience is an ecosystem or administrative domain rather than the open web. The OAuth Identity Assertion Trust Framework <span>[<a href="#TRUST-FRAMEWORK" class="cite xref">TRUST-FRAMEWORK</a>]</span> generalizes the model: a trusting authorization server publishes the conditions an issuer must satisfy and evaluates published evidence, such as authorization by the owner of a client identifier's namespace, when a statement is presented, replacing enumeration of trusted issuers with open-world policy. OpenID Federation <span>[<a href="#OPENID-FED" class="cite xref">OPENID-FED</a>]</span> provides an alternative through trust chains. Both are out of scope here.<a href="#section-15-7" class="pilcrow">¶</a></p>
+<div id="issuer-roles">
+<section id="section-15.1">
+        <h3 id="name-issuer-roles">
+<a href="#section-15.1" class="section-number selfRef">15.1. </a><a href="#name-issuer-roles" class="section-name selfRef">Issuer Roles</a>
+        </h3>
+<p id="section-15.1-1">A trusting authorization server accepts an issuer in one of two roles, and records which when it configures the issuer. The roles answer different questions, are held by different parties, and run on separate lifecycles.<a href="#section-15.1-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-15.1-2">
+          <dt id="section-15.1-2.1">Establishment issuer:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.1-2.2">
+            <p id="section-15.1-2.2.1">Its statements decide which software may exist as a client at this authorization server. A marketplace publisher program or an ecosystem directory holds this role. Statements from an establishment issuer are consumed at registration or at runtime establishment, and govern registration validity where <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> applies that model. One such decision serves every tenant the authorization server hosts.<a href="#section-15.1-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.1-2.3">Tenant approval issuer:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.1-2.4">
+            <p id="section-15.1-2.4.1">Its statements decide which software a particular tenant permits. The tenant's own review function holds this role, and the authorization server records the tenant the issuer speaks for. Statements from a tenant approval issuer are evaluated in that tenant's request context under <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>; they neither create nor renew a registration, and they bear on no other tenant.<a href="#section-15.1-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-15.1-3">An issuer <span class="bcp14">MAY</span> hold both roles, in which case the consumption point distinguishes them: a statement in a registration request is establishment, and a statement accompanying a request from a client already established is tenant approval.<a href="#section-15.1-3" class="pilcrow">¶</a></p>
+<p id="section-15.1-4">Where an authorization server hosts multiple tenants, issuer trust is configured per tenant. The authorization server <span class="bcp14">MUST</span> resolve the tenant a request belongs to and <span class="bcp14">MUST</span> evaluate only the issuers configured for that tenant; accepting a tenant approval issuer's statement outside the tenant it speaks for is a cross-tenant escalation (<a href="#security-considerations" class="auto internal xref">Section 16</a>).<a href="#section-15.1-4" class="pilcrow">¶</a></p>
+<p id="section-15.1-5">Pairwise configuration bounds a statement's reach to the issuers a trusting authorization server has configured, which is why a statement's practical audience is an ecosystem or administrative domain rather than the open web. The OAuth Identity Assertion Trust Framework <span>[<a href="#TRUST-FRAMEWORK" class="cite xref">TRUST-FRAMEWORK</a>]</span> generalizes the model: a trusting authorization server publishes the conditions an issuer must satisfy and evaluates published evidence, such as authorization by the owner of a client identifier's namespace, when a statement is presented, replacing enumeration of trusted issuers with open-world policy. OpenID Federation <span>[<a href="#OPENID-FED" class="cite xref">OPENID-FED</a>]</span> provides an alternative through trust chains. Both are out of scope here.<a href="#section-15.1-5" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="security-considerations">
@@ -2485,6 +2515,7 @@ Pragma: no-cache
 <p id="section-16.7-5">This specification does not define online revocation, and defines no status claim for it. Short lifetimes bound exposure; the Australian Consumer Data Right Register uses ten minutes (<span>[<a href="#AU-CDR" class="cite xref">AU-CDR</a>]</span>). Scoped trust supports emergency removal of a compromised issuer or namespace (<a href="#issuer-trust" class="auto internal xref">Section 15</a>). An extension could add acceptance-time status, for example a claim referencing a Token Status List <span>[<a href="#STATUS-LIST" class="cite xref">STATUS-LIST</a>]</span>, along with the processing rules a trusting authorization server would apply (<a href="#deferred-capabilities" class="auto internal xref">Appendix C.9</a>).<a href="#section-16.7-5" class="pilcrow">¶</a></p>
 <p id="section-16.7-6">At a server that does not implement the registration-validity model of <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>, revocation does not undo registrations already derived from a statement, and responding to malicious software after registration is client lifecycle management at that server. Where that model is in force, a registration expires at the recorded <code>exp</code> unless a replacement renews it, so ceasing renewal retires the registration without per-server action.<a href="#section-16.7-6" class="pilcrow">¶</a></p>
 <p id="section-16.7-7">The explicit, scoped issuer trust configuration that acceptance depends on, and the requirement never to derive trust from key-location values in the statement itself, are specified in <a href="#issuer-trust" class="auto internal xref">Section 15</a>.<a href="#section-16.7-7" class="pilcrow">¶</a></p>
+<p id="section-16.7-8">At an authorization server hosting multiple tenants, the tenant a statement is evaluated in is part of its meaning. A tenant approval issuer speaks only for its own tenant (<a href="#issuer-roles" class="auto internal xref">Section 15.1</a>), so accepting its statement in another tenant's context grants one customer's approval authority over another customer's data. An authorization server <span class="bcp14">MUST</span> bind each configured tenant approval issuer to its tenant and resolve the tenant from the request before evaluating any statement.<a href="#section-16.7-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="registration-fraud">
