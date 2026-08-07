@@ -49,6 +49,9 @@ normative:
   CIMD:
     target: https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document
     title: "OAuth Client ID Metadata Document"
+  CLIENT-INSTANCE:
+    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-client-instance-assertion
+    title: "OAuth 2.0 Client Instance Assertion"
   OAUTH-MRT:
     target: https://openid.net/specs/oauth-v2-multiple-response-types-1_0.html
     title: "OAuth 2.0 Multiple Response Type Encoding Practices"
@@ -68,9 +71,6 @@ informative:
   AU-CDR:
     target: https://consumerdatastandardsaustralia.github.io/standards/
     title: "Consumer Data Standards (Australia)"
-  CLIENT-INSTANCE:
-    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-client-instance-assertion
-    title: "OAuth 2.0 Client Instance Assertion"
   OID4VCI:
     target: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html
     title: "OpenID for Verifiable Credential Issuance 1.0"
@@ -291,7 +291,7 @@ The client authenticates to the token endpoint using the `token_endpoint_auth_me
 
 * `none` (explicit) establishes a public client.
 * Any other value establishes a confidential client, and the authorization server MUST require exactly that method, as required by {{CIMD}}; a declared method the authorization server does not support MUST cause rejection rather than treatment as public.
-* An omitted value establishes neither: the {{RFC7591}} default is a symmetric-secret method that {{CIMD}} prohibits and an unregistered client cannot satisfy, so any request identifying such a client MUST be rejected.
+* An omitted value establishes neither: the {{RFC7591}} default is a symmetric-secret method that {{CIMD}} prohibits and an unregistered client cannot satisfy, so any request identifying such a client MUST be rejected with `invalid_request`, returned to the redirection URI validated against the document.
 
 Classification uses the singular `token_endpoint_auth_method`; this specification does not interpret a list of methods a client merely declares it supports, and a client that wants a deterministic classification for issuance declares the singular member.
 
@@ -309,17 +309,17 @@ Client metadata documents can change while a request is pending. Before returnin
 
 The authorization server MAY retrieve the document again before issuing the software statement. If it does so and detects a security-relevant change (for example, a change to `jwks`, `jwks_uri`, `redirect_uris`, or `token_endpoint_auth_method`), it MUST either re-evaluate the request under the new metadata or reject the request. It MUST NOT silently combine values from different document versions.
 
-Re-evaluation replaces the bound snapshot in full. A statement attests the snapshot in effect when it is signed, and `cimd_digest` is that snapshot's digest, so a client that observes a digest other than the one it expected knows which document content was attested. An approval recorded against a superseded snapshot does not carry forward to its replacement without a fresh issuance-policy decision. Replacing the snapshot does not alter the sender-constraint context recorded for a deferral, which remains as it was fixed at origination ({{deferred-processing}}).
+Re-evaluation replaces the bound snapshot in full. A statement attests the snapshot in effect when it is signed, and `cimd_digest` is that snapshot's digest, so a client that observes a digest other than the one it expected knows which document content was attested. An approval recorded against a superseded snapshot does not carry forward to its replacement without a fresh issuance-policy decision. Replacing the snapshot does not alter the sender-constraint context recorded for a deferral, which remains as it was fixed at origination ({{deferred-processing}}). If a replacement snapshot no longer authorizes the key material behind that context, for example because the client-authentication key is absent from the new document, the authorization server MUST invalidate the deferral; the client makes a new request under its current keys.
 
-The metadata digest is the unpadded base64url-encoded SHA-256 hash {{RFC6234}} of the retrieved representation body after removal of content coding. No transcoding, normalization, or re-serialization occurs; a byte order mark and trailing newline are included.
+The metadata digest is the unpadded base64url-encoded SHA-256 hash {{RFC6234}} of the retrieved representation body after removal of content coding. No transcoding, normalization, or re-serialization occurs; a byte order mark and trailing newline are included. Retrieval for snapshot purposes SHOULD NOT use content negotiation, and an issuance source SHOULD serve the document without negotiated variants, so that independent fetchers obtain identical bytes.
 
 Equal digests identify the same document for this specification. A changed digest marks a new trust state for the same client identifier and is the signal used by the re-evaluation rule above. The digest also supplies the `cimd_digest` claim ({{software-statement-format}}) and audit guidance ({{security-considerations}}).
 
 Byte identity deliberately detects serialization-only changes. A digest mismatch is an input to policy, not a validation failure. A publisher SHOULD serve a stable byte artifact whose octets change only with its metadata; a document rendered dynamically or served through content negotiation produces digest changes unrelated to its metadata. The authorization server MUST reject duplicate object member names, because parsers can interpret them differently despite an identical digest.
 
-An issuance source SHOULD publish keys by reference through `jwks_uri` rather than inline through `jwks`. Rotation behind a stable URI leaves the document and digest unchanged; inline rotation changes both, so the attested keys no longer match the current document and a new statement is needed. The statement attests either the key location or the inline keys.
+An issuance source SHOULD publish keys by reference through `jwks_uri` rather than inline through `jwks`. Rotation behind a stable URI leaves the document and digest unchanged; inline rotation changes both, so the attested keys no longer match the current document and a new statement is needed. The statement attests either the key location or the inline keys. The convenience cuts both ways: rotation invisible to the digest means key-host compromise is also invisible to it; {{statement-validation}} weighs the trade.
 
-A metadata document used as an issuance source MUST NOT contain a `software_statement` member, although {{CIMD}} otherwise permits one. Embedding a prior statement would change the digest on every issuance. A statement is presented in a registration request ({{consumption}}) or at runtime ({{PRESENTATION}}), never embedded in the source document.
+A metadata document used as an issuance source MUST NOT contain a `software_statement` member, although {{CIMD}} otherwise permits one. Embedding a prior statement would change the digest on every issuance; an issuing authorization server treats a document containing one as failing validation for issuance. A statement is presented in a registration request ({{consumption}}) or at runtime ({{PRESENTATION}}), never embedded in the source document.
 
 # Software Statement Authorization Request {#authorization-request}
 
@@ -332,7 +332,7 @@ The client sends an authorization request as described in Section 4.1.1 of {{RFC
 : REQUIRED. The client identifier URL described in {{client-identity}}.
 
 `redirect_uri`:
-: REQUIRED. The value MUST exactly match one of the redirection URIs in the Client ID Metadata Document, subject to the redirect URI rules of {{CIMD}}. A public client MUST use an HTTPS redirection URI and MUST NOT use a private-use URI scheme or a loopback interface redirection URI in a software statement request. A confidential client MAY use a loopback or private-use redirection URI, because redemption is bound to its client authentication ({{authorization-response-security}}).
+: REQUIRED. The value MUST exactly match one of the redirection URIs in the Client ID Metadata Document, subject to the redirect URI rules of {{CIMD}}. A public client MUST use an HTTPS redirection URI and MUST NOT use a private-use URI scheme or a loopback interface redirection URI in a software statement request. A confidential client MAY use a loopback or private-use redirection URI, because redemption is bound to its client authentication ({{authorization-response-security}}); such a request MUST also include `dpop_jkt`, since a declared confidential method proves key possession, not that the key is absent from distributed software.
 
 `state`:
 : REQUIRED. An opaque value used by the client to bind the authorization response to its request. The authorization server MUST return the exact value in the authorization response.
@@ -353,9 +353,9 @@ The client sends an authorization request as described in Section 4.1.1 of {{RFC
 : OPTIONAL. A value that includes `deferred`, sent as the advance hint {{DTR}} defines for an endpoint preceding a token request. It lets the authorization server choose a review path suited to out-of-band completion before it begins work, and does not replace the opt-in required at redemption ({{deferred-processing}}).
 
 `dpop_jkt`:
-: REQUIRED for a public client and OPTIONAL for a confidential client. The parameter has the semantics defined in Section 10 of {{RFC9449}}. When present, its value MUST be associated with the resulting software statement code and with any deferral state derived from its redemption.
+: REQUIRED for a public client and for any request whose `redirect_uri` is a loopback or private-use URI; OPTIONAL otherwise. The parameter has the semantics defined in Section 10 of {{RFC9449}}. When present, its value MUST be associated with the resulting software statement code and with any deferral state derived from its redemption.
 
-The authorization server MUST reject with `invalid_request` a request that omits a required PKCE parameter or, for a public client, omits `dpop_jkt`.
+The authorization server MUST reject with `invalid_request` a request that omits a required PKCE parameter or a required `dpop_jkt`.
 
 The following is a non-normative example of an authorization request from a confidential client; a public client would additionally include `dpop_jkt` (line breaks are for display purposes only):
 
@@ -377,7 +377,7 @@ A software statement request does not grant access to a protected resource. The 
 * `resource`, as defined by {{RFC8707}}; and
 * `authorization_details`, as defined by {{RFC9396}}.
 
-An authorization server MUST reject a request containing any of these parameters with `invalid_request`. The `audience` parameter ({{authorization-request}}) names the authorization servers at which the issued statement will be presented, a property of the requested artifact rather than a request for access, and is not prohibited by this section.
+An authorization server MUST reject a request containing any of these parameters with `invalid_request`. The same prohibition and error apply to a software statement code redemption ({{software-statement-code-redemption}}). The `audience` parameter ({{authorization-request}}) names the authorization servers at which the issued statement will be presented, a property of the requested artifact rather than a request for access, and is not prohibited by this section.
 
 Hybrid response types that combine `software_statement_code` with `code`, `token`, `id_token`, or any other response type are not defined. An authorization server MUST reject such a request with `unsupported_response_type`.
 
@@ -438,13 +438,13 @@ The client redeems a software statement code by sending an HTTP `POST` request t
 : REQUIRED. The PKCE verifier corresponding to the `code_challenge` in the authorization request.
 
 `completion_mode`:
-: REQUIRED when the authorization server advertises `deferred_token_response_supported` ({{authorization-server-metadata}}); otherwise not used. When present, the value MUST include `deferred`, per the deferral opt-in rule of {{deferred-processing}}.
+: REQUIRED when the authorization server advertises `deferred_token_response_supported` ({{authorization-server-metadata}}); otherwise not used, and a synchronous issuer ignores it ({{deferred-processing}}). When present, the value MUST include `deferred`, per the deferral opt-in rule of {{deferred-processing}}.
 
-The request MUST NOT contain `audience`; it was bound at the authorization endpoint. The client authenticates according to {{client-identity}}, and when `dpop_jkt` was included in the authorization request, the client MUST send a DPoP proof for the token endpoint using the same key.
+The request MUST NOT contain `audience`, which was bound at the authorization endpoint; a request containing it is rejected with `invalid_request`. The client authenticates according to {{client-identity}}, and when `dpop_jkt` was included in the authorization request, the client MUST send a DPoP proof for the token endpoint using the same key.
 
 The authorization server MUST validate the software statement code and all of its bindings before processing the request. An invalid, expired, previously used, or incorrectly bound code MUST result in an `invalid_grant` error; a PKCE or DPoP binding failure is handled according to {{RFC7636}} or {{RFC9449}}, respectively.
 
-Redemption consumes the software statement code in every case; the result depends on the issuance decision:
+A redemption attempt consumes the software statement code whenever the presented code value is valid, including when its PKCE, DPoP, or client-authentication bindings fail, so a live code cannot be ground down by repeated guessing; the trade, that an observer of the code value can burn it and force a restart, is accepted ({{authorization-response-security}}). A previously consumed code presented again MUST be rejected, and the authorization server SHOULD revoke any deferral derived from it ({{RFC9700}}). For a valid, unconsumed code, the result depends on the issuance decision:
 
 * **Approved:** the authorization server returns the software statement token response ({{software-statement-response}}).
 * **Denied:** it returns the terminal denial of {{terminal-denial}}.
@@ -493,7 +493,7 @@ The client sends a token exchange request as defined in Section 2.1 of {{RFC8693
 : OPTIONAL. The requested audience described in {{authorization-request}}. The same syntax, validation, and narrowing rules apply.
 
 `completion_mode`:
-: REQUIRED when the authorization server advertises `deferred_token_response_supported` ({{authorization-server-metadata}}); otherwise not used. When present, the value MUST include `deferred`, per the deferral opt-in rule of {{deferred-processing}}.
+: REQUIRED when the authorization server advertises `deferred_token_response_supported` ({{authorization-server-metadata}}); otherwise not used, and a synchronous issuer ignores it ({{deferred-processing}}). When present, the value MUST include `deferred`, per the deferral opt-in rule of {{deferred-processing}}.
 
 The request MUST NOT contain `actor_token` or `actor_token_type`, nor the `scope`, `resource`, or `authorization_details` parameters prohibited by {{prohibited-parameters}}.
 
@@ -531,7 +531,7 @@ Against a deferred issuer, every deferral originates from a deferred token respo
 
 A client contacting a deferred issuer MUST include the `completion_mode` parameter of {{DTR}} with a value that includes `deferred` on the originating request, and MUST support the polling grant; the issuer MAY still complete synchronously. A deferred issuer MUST reject an originating request that does not carry that opt-in with `invalid_request`, because {{DTR}} treats an absent or non-`deferred` value as a requirement for synchronous handling, which an issuer whose decisions can outlive a request cannot guarantee. This deliberately raises the parameter from OPTIONAL in {{DTR}} to REQUIRED here. A synchronous issuer neither requires nor processes `completion_mode`.
 
-This specification profiles polling delivery only: a client MUST NOT include the `client_notification_token` parameter of {{DTR}} on any request under this specification, and an authorization server MUST NOT deliver callback notifications for a deferral created under this specification, regardless of any `deferred_client_notification_endpoint` in the client's metadata. Polling over the authenticated token endpoint retrieves the statement without an outbound channel, so this version does not require an issuer to operate one; a future version can adopt the callback mechanism of {{DTR}} ({{deferred-capabilities}}).
+This specification profiles polling delivery only: a client MUST NOT include the `client_notification_token` parameter of {{DTR}} on any request under this specification, a request containing it is rejected with `invalid_request`, and an authorization server MUST NOT deliver callback notifications for a deferral created under this specification, regardless of any `deferred_client_notification_endpoint` in the client's metadata. Polling over the authenticated token endpoint retrieves the statement without an outbound channel, so this version does not require an issuer to operate one; a future version can adopt the callback mechanism of {{DTR}} ({{deferred-capabilities}}).
 
 When an issuer defers a request, it MUST record the sender-constraint context established at origination and bind it to the deferral:
 
@@ -553,7 +553,7 @@ The first polling request is an HTTP `POST` request to the token endpoint using 
 `deferral_code`:
 : REQUIRED. The deferral code returned in the deferred response.
 
-The polling request carries no PKCE parameter: for a redirect-flow deferral, the verifier was consumed when the software statement code was redeemed ({{software-statement-code-redemption}}). The polling request MUST NOT contain a `software_statement_code`, `code_verifier`, `redirect_uri`, `audience`, `subject_token`, `subject_token_type`, or `requested_token_type` parameter.
+The polling request carries no PKCE parameter: for a redirect-flow deferral, the verifier was consumed when the software statement code was redeemed ({{software-statement-code-redemption}}). The polling request MUST NOT contain a `software_statement_code`, `code_verifier`, `redirect_uri`, `audience`, `subject_token`, `subject_token_type`, or `requested_token_type` parameter; a polling request containing any of them is rejected with `invalid_request`.
 
 On this and every subsequent polling request, the client MUST satisfy the sender-constraint context recorded for the deferral ({{deferred-processing}}): it uses the origination client authentication method and, when that method or a DPoP sender constraint binds a key, signs with the origination key. The authorization server verifies the request against the stored context, not against the current metadata document, and MUST reject a request that does not match, including a DPoP proof whose key differs from the recorded thumbprint.
 
@@ -583,7 +583,7 @@ A successful response has HTTP status code 200, a media type of `application/jso
 
 The response MUST NOT contain `refresh_token` or `scope`. The authorization server MUST include `Cache-Control: no-store`; it SHOULD also include `Pragma: no-cache`.
 
-DPoP under this specification binds requests and deferral state, not the issued artifact: the software statement is not an OAuth access token, and {{DTR}}'s requirement that a final access token inherit the originating DPoP binding does not apply because none is issued. The statement's replay and theft properties are those described in {{statement-validation}}, including key binding through attested `jwks` or `jwks_uri` where a deployment wants proof of possession at registration, and the mandatory sender constraint of runtime presentation ({{PRESENTATION}}).
+DPoP under this specification binds requests and deferral state, not the issued artifact: the software statement is not an OAuth access token, and {{DTR}}'s requirement that a final access token inherit the originating DPoP binding does not apply because none is issued. The statement's replay and theft properties are those described in {{statement-validation}}, including key binding through attested `jwks` or `jwks_uri` where a deployment wants proof of possession at registration, and, for runtime presentation, the sender constraint {{PRESENTATION}} mandates.
 
 For example:
 
@@ -686,6 +686,7 @@ Before accepting the statement, a trusting authorization server MUST:
 * verify the signature under a key trusted for the exact `iss` value;
 * validate the presence and type of every required claim, and validate `iss`, `aud`, `iat`, and `exp`, rejecting an `iat` unreasonably far in the future according to its clock-skew policy;
 * verify that `sub` is a client identifier URL conforming to {{CIMD}};
+* verify that `sub` falls within the client identifier namespaces for which it accepts the issuer ({{issuer-trust}});
 * reject every metadata claim prohibited by this section; and
 * apply the JWT validation guidance in {{RFC8725}}.
 
@@ -693,15 +694,15 @@ An issuer URL or JWK Set does not establish trust. A trusting authorization serv
 
 A trusting authorization server MAY retrieve current client metadata and compare its digest with `cimd_digest`; if it does so, it MUST also verify that the document's `client_id` exactly equals `sub`, as required by {{CIMD}}. A mismatch indicates post-issuance change and is a policy input, not a validation failure. Because the digest covers the whole document, a mismatch signals only that something changed; a trusting authorization server SHOULD distinguish a change confined to metadata the statement did not attest, which leaves the attested claims intact, from a change to an attested member, which means the statement no longer describes the published document. The server then consumes the statement as described in {{consumption}}.
 
-When the statement is consumed via registration ({{consumption}}), rejections are reported using the registration error codes of Section 3.2.2 of {{RFC7591}}. A statement that cannot be validated, because it is malformed, expired, or fails signature or claim validation, results in `invalid_software_statement`. A statement that validates but is not acceptable here, because its issuer is not configured, its `aud` does not include this server, its `sub` falls outside the issuer's configured namespaces, or its lifetime exceeds what the server honors, results in `unapproved_software_statement`. The distinction tells a client whether to obtain a corrected statement or to approach a different issuer. A runtime presentation reports the same conditions through the error surface {{PRESENTATION}} defines.
+When the statement is consumed via registration ({{consumption}}), rejections are reported using the registration error codes of Section 3.2.2 of {{RFC7591}}. A statement that cannot be validated, because it is malformed, expired, or fails signature or claim validation, results in `invalid_software_statement`. A statement that validates but is not acceptable here, because its issuer is not configured, its `aud` does not include this server, its `sub` falls outside the issuer's configured namespaces, or its lifetime exceeds what the server honors, results in `unapproved_software_statement`. The distinction tells a client whether to obtain a corrected statement or to approach a different issuer. A runtime presentation reports the same conditions through the coarser error surface {{PRESENTATION}} defines, which preserves this distinction only in `error_description`.
 
 A trusting authorization server MUST reject a statement whose lifetime exceeds the maximum it records for the issuer ({{issuer-trust}}). An attested claim outside the set for which the trusting authorization server treats the issuer as authoritative MUST NOT take the {{RFC7591}} precedence of an attested value; the server either ignores the claim or treats it as client-supplied registration metadata, according to policy.
 
 # Consuming a Software Statement {#consumption}
 
-A validated software statement ({{software-statement-format}}) is consumed in one of two ways, which share the artifact and its validation and differ in whether the trusting authorization server keeps a persistent client record. An authorization server MAY support either or both.
+A validated software statement ({{software-statement-format}}) is consumed in one of two ways, which share the artifact and its validation and differ in whether the trusting authorization server keeps a persistent client record. An authorization server can support either or both.
 
-In registration, the client supplies the statement as the `software_statement` member of an {{RFC7591}} dynamic client registration request. The authorization server validates it ({{software-statement-format}}), registers a client, assigns a local `client_id`, and applies its registration policy; rejections use the {{RFC7591}} error codes given in {{software-statement-format}}. This path consumes the artifact exactly as {{RFC7591}} registration endpoints have since 2015 and requires nothing new of the consumer.
+In registration, the client supplies the statement as the `software_statement` member of an {{RFC7591}} dynamic client registration request. The authorization server validates it ({{software-statement-format}}), registers a client, assigns a local `client_id`, and applies its registration policy; rejections use the {{RFC7591}} error codes given in {{software-statement-format}}. This path consumes the artifact through the interface {{RFC7591}} registration endpoints have offered since 2015; what is new for the consumer is the validation this document requires ({{software-statement-format}}).
 
 In runtime presentation, defined by the companion {{PRESENTATION}}, the client presents the statement in an authorization or token request, sender-constrained by a proof that chains to the statement; the authorization server applies the attested metadata to that request and creates no persistent registration.
 
@@ -786,7 +787,7 @@ These inputs, not the signature alone, define acceptance. Because the issuer is 
 
 A trusting authorization server MUST derive trust from this local configuration and MUST NOT derive it from an `iss`, `jku`, `x5u`, or other key-location value carried in a presented statement. Having established trust, it validates each statement as described in {{software-statement-format}}.
 
-Issuer trust SHOULD be scoped as well as explicit. An issuer accepted for all values of `sub` can, if compromised or over-broad, mint acceptable statements about any client software; trust configuration SHOULD therefore constrain each issuer to the client identifier namespaces it is expected to attest, for example URLs under the domains of the software publishers it serves, and a statement whose `sub` falls outside that scope SHOULD be rejected even when its signature verifies.
+Issuer trust SHOULD be scoped as well as explicit. An issuer accepted for all values of `sub` can, if compromised or over-broad, mint acceptable statements about any client software; trust configuration SHOULD therefore constrain each issuer to the client identifier namespaces it is expected to attest, for example URLs under the domains of the software publishers it serves, and a statement whose `sub` falls outside that scope MUST be rejected even when its signature verifies ({{software-statement-format}}).
 
 Pairwise configuration bounds a statement's reach to the issuers a trusting authorization server has configured, which is why a statement's practical audience is an ecosystem or administrative domain rather than the open web. The OAuth Identity Assertion Trust Framework {{TRUST-FRAMEWORK}} generalizes the model: a trusting authorization server publishes the conditions an issuer must satisfy and evaluates published evidence, such as authorization by the owner of a client identifier's namespace, when a statement is presented, replacing enumeration of trusted issuers with open-world policy. OpenID Federation {{OPENID-FED}} provides an alternative through trust chains. Both are out of scope here.
 
@@ -803,7 +804,7 @@ When an approval interface is shown, it MUST clearly describe that the decision 
 An erroneous approval affects every authorization server in the statement's audience until expiry. The approval interface therefore MUST present:
 
 * the client identifier URL;
-* the effective metadata being attested; and
+* the metadata to be attested; and
 * the audience the issuer intends to place in the statement.
 
 It SHOULD present the intended lifetime, and SHOULD make narrowing visible when the client requested a different or broader audience. Attesting `instance_issuers` ({{attesting-instance-issuers}}) endorses the listed authorities to attest runtime instances and deserves particular scrutiny.
@@ -820,7 +821,7 @@ A trusting authorization server can conclude only what the issuer decided; local
 
 Fetching a Client ID Metadata Document and resources referenced by it exposes the authorization server to server-side request forgery, resource exhaustion, malicious content, and client impersonation risks. The validation, address filtering, response-size limits, redirect handling, caching, logo handling, and domain-trust considerations of {{CIMD}} apply.
 
-The metadata snapshot requirements in {{metadata-snapshot}} prevent a time-of-check/time-of-use change from silently altering the metadata after approval. Authorization servers SHOULD record the metadata digest ({{metadata-snapshot}}) and retain the exact retrieved octets of the approved document for audit purposes; a re-serialized copy cannot reproduce the digest.
+The metadata snapshot requirements in {{metadata-snapshot}} prevent a time-of-check/time-of-use change from silently altering the attested metadata after approval; members the statement does not attest remain live, and runtime presentation ({{PRESENTATION}}) sources them from the current document at each presentation. Authorization servers SHOULD record the metadata digest ({{metadata-snapshot}}) and retain the exact retrieved octets of the approved document for audit purposes; a re-serialized copy cannot reproduce the digest.
 
 ## Authorization Response Security {#authorization-response-security}
 
@@ -844,7 +845,7 @@ Every deferral is created by a token request, and every poll is bound to the cli
 
 ## Token Exchange Considerations {#te-considerations}
 
-A token exchange reaches the token endpoint without prior user-agent interaction. Validating the subject token before metadata retrieval or enqueueing ({{token-exchange-profile}}) limits resource consumption by unauthorized requesters. Authorization servers SHOULD still rate-limit these exchanges, cache retrieval results and failures, and bound pending deferrals per client identifier and requester. Client authentication remains mandatory when established by the Client ID Metadata Document.
+A token exchange reaches the token endpoint without prior user-agent interaction. Validating the subject token before metadata retrieval or enqueueing ({{token-exchange-profile}}) limits resource consumption by unauthorized requesters. Authorization servers SHOULD still rate-limit these exchanges, cache retrieval results and failures, and bound pending deferrals per client identifier and requester. Client authentication remains mandatory when established by the Client ID Metadata Document. The redirect flow likewise reaches the approval queue before any client-authenticated step; the same rate limits and pending-approval bounds SHOULD apply per client identifier there.
 
 A subject token is an authorization credential, not a client identifier or substitute for client authentication when the Client ID Metadata Document establishes a method. Because it appears in a form body, any component recording request bodies can expose it. Authorization servers MUST exclude subject tokens from logs, traces, error messages, and audit records; clients and authorization servers MUST protect the credential as a bearer credential unless its format provides proof of possession. The binding, lifetime, entropy, and replay requirements of {{token-exchange-profile}} limit disclosure impact.
 
@@ -852,9 +853,9 @@ No response parameter transits a browser, but there is also no in-band evidence 
 
 ## Statement Validation and Replay {#statement-validation}
 
-A software statement is reusable ({{multi-instance}}) and, until expiry, so is a stolen copy at every registration endpoint in its audience. Issuers SHOULD use the narrowest practical audience and lifetime, and the registration bounds of {{multi-instance}} limit what a stolen statement can create. This replay exposure is specific to the registration path; a runtime presentation ({{PRESENTATION}}) requires proof of a key that chains to the statement, so a stolen statement is inert to every party outside the issuer's review.
+A software statement is reusable ({{multi-instance}}) and, until expiry, so is a stolen copy at every registration endpoint in its audience. Issuers SHOULD use the narrowest practical audience and lifetime, and the registration bounds of {{multi-instance}} limit what a stolen statement can create. This replay exposure is specific to the registration path; {{PRESENTATION}} requires a runtime presentation to prove a key that chains to the statement, which makes a stolen statement inert there to every party outside the issuer's review.
 
-When registrations derived from a statement are intended to share a client key, and the canonical metadata provides `jwks` or `jwks_uri`, the issuer SHOULD include that member in the attested metadata. A trusting authorization server can then require proof of the corresponding private key during or after registration, making a stolen statement unusable without that key. When each registration is expected to supply a distinct instance key, the issuer MUST omit `jwks` and `jwks_uri` so that plain registration metadata can carry that key without conflicting with {{RFC7591}} precedence.
+When registrations derived from a statement are intended to share a client key, and the canonical metadata provides `jwks` or `jwks_uri`, the issuer SHOULD include that member in the attested metadata. A trusting authorization server can then require proof of the corresponding private key during or after registration, making a stolen statement unusable without that key. Attesting `jwks_uri` attests the location, not its contents: a compromised key host can add keys that satisfy such proofs with no digest change, so where that exposure matters, attest `jwks` inline and accept digest-visible rotation. When each registration is expected to supply a distinct instance key, the issuer MUST omit `jwks` and `jwks_uri` so that plain registration metadata can carry that key without conflicting with {{RFC7591}} precedence. Omitting key material also spends the runtime-presentation option: such a statement is presentable under {{PRESENTATION}} only through an attested `instance_issuers` delegation or scoped attester trust, so an issuer anticipating runtime presentation SHOULD attest `instance_issuers` in this model.
 
 A statement authorizes metadata, not its presenter. If it omits attested key material for per-instance keys ({{multi-instance}}), any holder can register its own key. A trusting authorization server SHOULD require independent proof that the presenter is an authorized instance of the software before accepting such a registration, such as {{ABCA}}, an attested `instance_issuers` chain ({{attesting-instance-issuers}}), or a registration credential the trusting server issued. Without such proof, the one-registration-per-(`iss`, `jti`, local audience) default bounds exposure.
 
@@ -1256,7 +1257,7 @@ This version omits seven capabilities, each with an extension point:
 * **Request-time metadata selection:** only issuer-side narrowing is supported ({{software-statement-format}}). An extension can define a selection parameter.
 * **Callback delivery:** this version permits polling only ({{deferred-processing}}). A future version can adopt {{DTR}} callbacks.
 * **Canonicalized digests:** serialization changes alter the octet digest ({{metadata-snapshot}}). An extension can define a canonicalized digest claim or parameter.
-* **Acceptance-time status:** lifetime is the only revocation control ({{statement-validation}}). An extension can define a status claim, for example over a Token Status List {{STATUS-LIST}}, with the processing rules a trusting authorization server applies.
+* **Acceptance-time status:** lifetime is the only in-band revocation control ({{statement-validation}}); {{PRESENTATION}} adds a policy-dependent wind-down at refresh. An extension can define a status claim, for example over a Token Status List {{STATUS-LIST}}, with the processing rules a trusting authorization server applies.
 * **CIMD-native conveyance:** runtime presentation ({{PRESENTATION}}) carries the statement in the request, and the registration path carries it in a registration request. A further profile could let a Client ID Metadata Document reference where a client publishes its current statements, so a resolving server fetches the review out of band with neither; {{PRESENTATION}} lists it as an extension point. This differs from embedding a statement in the document, which the digest rule of {{metadata-snapshot}} forbids.
 
 # Acknowledgments
