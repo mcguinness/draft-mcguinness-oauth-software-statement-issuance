@@ -165,12 +165,15 @@ Table of Contents
 3.1.  Presentable Statement
 
    Runtime presentation consumes a software statement conforming to the
-   format of [ISSUANCE].  How the client acquired it is out of scope:
-   the issuance flows of [ISSUANCE] are one way to obtain a presentable
-   statement, not a requirement of presentation.  Each element below is
-   consumed by a specific mechanism of this specification, so a
-   statement missing any of them cannot be presented at runtime,
-   whatever a registration endpoint might still accept:
+   CIMD-anchored format of [ISSUANCE]; its registration-only shape for
+   non-CIMD clients cannot be presented, because the machinery of this
+   specification assumes the document the subject names.  How the client
+   acquired it is out of scope: the issuance flows of [ISSUANCE] are one
+   way to obtain a presentable statement, not a requirement of
+   presentation.  Each element below is consumed by a specific mechanism
+   of this specification, so a statement missing any of them cannot be
+   presented at runtime, whatever a registration endpoint might still
+   accept:
 
    typ header:  software-statement+jwt; explicit typing prevents
       confusion with other JWTs from the same issuer.

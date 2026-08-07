@@ -85,6 +85,7 @@ Table of Contents
    10. Software Statement Token Response
      10.1.  Terminal Denial
    11. Software Statement Format
+     11.1.  Statements for Non-CIMD Clients
    12. Consuming a Software Statement
    13. Multi-Instance Client Software
      13.1.  Attesting Instance Issuers
@@ -1190,12 +1191,14 @@ Table of Contents
    jti:  REQUIRED.  A unique identifier for the statement within the
       issuer's namespace.
 
-   cimd_digest:  REQUIRED.  The metadata digest (Section 4.1) of the
-      Client ID Metadata Document from which the metadata snapshot was
-      derived.  This claim binds the statement to the exact document
-      content evaluated during issuance and lets any party determine
-      whether the client's currently published metadata still matches
-      what was attested.
+   cimd_digest:  REQUIRED in a CIMD-anchored statement; Section 11.1
+      defines the registration-only shape without it, and its presence
+      or absence discriminates the two.  The metadata digest
+      (Section 4.1) of the Client ID Metadata Document from which the
+      metadata snapshot was derived.  This claim binds the statement to
+      the exact document content evaluated during issuance and lets any
+      party determine whether the client's currently published metadata
+      still matches what was attested.
 
    Each metadata claim MUST be client metadata registered in the IANA
    "OAuth Dynamic Client Registration Metadata" registry, or otherwise
@@ -1228,6 +1231,46 @@ Table of Contents
    assigned through [RFC7591] registration.  A trusting authorization
    server MAY use sub to correlate registrations and apply per-client
    policy (Section 13).
+
+11.1.  Statements for Non-CIMD Clients
+
+   The format above anchors its subject in a Client ID Metadata
+   Document.  Clients without one, registered statically at an
+   authorization server or through plain [RFC7591] registration, are
+   also subjects of portable review: an enterprise allowlist keys on
+   identifiers its providers already know, not on hosted metadata.  A
+   statement for such a client conforms to this section's shape,
+   discriminated from the CIMD-anchored shape by the absence of
+   cimd_digest.
+
+   The signing, header, and typing rules are unchanged, as are iss, aud,
+   iat, exp, and jti.  The differences:
+
+   sub:  REQUIRED.  The client software identifier agreed between issuer
+      and audience: an [RFC7591] software_id, or a client identifier
+      already registered at the authorization server named in aud.  It
+      is not a Client ID Metadata Document URL, and no retrieval is
+      implied.
+
+   cimd_digest:  MUST be absent.  There is no canonical document to
+      bind; the statement's own claims carry the entire reviewed
+      content.
+
+   Attested metadata is inline only: the snapshot-subset rule above does
+   not apply, and the issuer attests exactly the members its review
+   covered, which take [RFC7591] precedence at registration as usual.
+   Issuer scoping uses an enumerated identifier set or a tenant rather
+   than a URL namespace (Section 15).
+
+   A statement in this shape is consumable through registration
+   (Section 12) or as direct policy import at an authorization server
+   that already knows the identifier; it cannot be presented at runtime,
+   because the machinery of [PRESENTATION] assumes the document the
+   CIMD-anchored subject names.  The issuance flows of this document
+   identify clients by their metadata document and therefore produce
+   only CIMD-anchored statements; a statement in this shape is issued by
+   an out-of-band process, such as an enterprise review console or an
+   ecosystem directory, and consumed under this contract.
 
    With a stable URL across releases, sub correlates releases and
    cimd_digest distinguishes reviewed content.  With distinct release
@@ -1271,10 +1314,13 @@ Table of Contents
       validate iss, aud, iat, and exp, rejecting an iat unreasonably far
       in the future according to its clock-skew policy;
 
-   *  verify that sub is a client identifier URL conforming to [CIMD];
+   *  verify that sub matches the statement's shape: a client identifier
+      URL conforming to [CIMD] when cimd_digest is present, an agreed
+      software identifier otherwise (Section 11.1);
 
-   *  verify that sub falls within the client identifier namespaces for
-      which it accepts the issuer (Section 15);
+   *  verify that sub falls within the identifier scope for which it
+      accepts the issuer, URL namespaces for the CIMD-anchored shape, an
+      enumerated identifier set or tenant otherwise (Section 15);
 
    *  reject every metadata claim prohibited by this section; and
 
@@ -1335,16 +1381,17 @@ Table of Contents
    in Section 11.  This path consumes the artifact through the interface
    [RFC7591] registration endpoints have offered since 2015; what is new
    for the consumer is the validation this document requires
-   (Section 11).
+   (Section 11).  Both statement shapes are consumable here, CIMD-
+   anchored and non-CIMD (Section 11.1).
 
    In runtime presentation, defined by the companion [PRESENTATION], the
    client presents the statement in an authorization or token request,
    sender-constrained by a proof that chains to the statement; the
    authorization server applies the attested metadata to that request
    and creates no persistent registration.  That path consumes any
-   statement conforming to this document's format (Section 11);
-   obtaining one through the issuance flows defined here is one way, not
-   a requirement of presentation.
+   statement conforming to this document's CIMD-anchored format
+   (Section 11); obtaining one through the issuance flows defined here
+   is one way, not a requirement of presentation.
 
 13.  Multi-Instance Client Software
 
@@ -1552,7 +1599,9 @@ Table of Contents
    identifier namespaces it is expected to attest, for example URLs
    under the domains of the software publishers it serves, and a
    statement whose sub falls outside that scope MUST be rejected even
-   when its signature verifies (Section 11).
+   when its signature verifies (Section 11).  For the non-CIMD shape
+   (Section 11.1) the scope is an enumerated identifier set or a tenant
+   rather than a URL namespace; the rejection rule is the same.
 
    Pairwise configuration bounds a statement's reach to the issuers a
    trusting authorization server has configured, which is why a
