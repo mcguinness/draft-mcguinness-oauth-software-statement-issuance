@@ -57,7 +57,7 @@ A software statement ({{RFC7591}}, Section 2.3) is a signed JWT in which an issu
 
 {{CIMD}} established that a client can be resolved at request time, with no registration ceremony, from metadata it publishes itself. What resolution alone cannot carry is anyone else's review of that metadata. Runtime presentation closes the gap between the two models: the client presents its statement inside an ordinary authorization or token request, the authorization server verifies the issuer's review and applies the attested metadata to that request, and no client record is created.
 
-This specification defines the `software_statement` request parameter for authorization and token requests ({{runtime-presentation}}), the processing rules a trusting authorization server applies ({{processing}}), the lifecycle of a grant opened by a presentation ({{grant-lifecycle}}), error reporting ({{errors}}), and a discovery signal ({{authorization-server-metadata}}). Statement format, issuance, and validation are defined by {{ISSUANCE}} and are not modified here; {{presentable-statement}} states the claim contract a presentation consumes, and decouples it from how the statement was acquired.
+This specification defines the `software_statement` request parameter for authorization and token requests ({{runtime-presentation}}), the processing rules a trusting authorization server applies ({{processing}}), its relationship to registered clients ({{relationship-to-registration}}), the lifecycle of a grant opened by a presentation ({{grant-lifecycle}}), error reporting ({{errors}}), and a discovery signal ({{authorization-server-metadata}}). Statement format, issuance, and validation are defined by {{ISSUANCE}} and are not modified here; {{presentable-statement}} states the claim contract a presentation consumes, and decouples it from how the statement was acquired.
 
 A statement authorizes metadata, not its presenter. Runtime proof of the presenter is what the sender-constraint rules of {{sender-constraint}} supply, and nothing in this specification attests software instances or binaries.
 
@@ -134,6 +134,20 @@ Presentation in an authorization request MUST use a pushed authorization request
 
 Presentation at the token endpoint requires no additional profile: the client includes the parameter in the token request alongside the grant.
 
+# Relationship to Dynamic Client Registration {#relationship-to-registration}
+
+Presentation and registration are distinct consumption paths for the same artifact, and a request is unambiguously on one of them.
+
+A presentation identifies its client by the statement's `sub`, the Client ID Metadata Document URL ({{runtime-presentation}}). A request that identifies a client by a server-assigned {{RFC7591}} `client_id` is not a presentation: the `software_statement` parameter is not defined for such a request, and the authorization server MUST reject one that carries it with `invalid_request`, except as {{registered-delivery}} provides. A client registered without a Client ID Metadata Document identity, including every client of the non-CIMD statement shape of {{ISSUANCE}}, therefore consumes statements only at registration, and its statement lifecycle is the registration path's.
+
+A client can be registered at an authorization server under its Client ID Metadata Document URL as its `client_id` and also present at runtime. Local policy decides whether to accept presentations alongside the registration. When both exist, the registration record governs requests that do not carry a statement, and the presented statement's effective metadata governs the presented request only.
+
+## Statement Delivery for Registered Clients {#registered-delivery}
+
+A deployment can require a registered client to hold a current software statement, extending to registered clients the wind-down control {{refresh}} defines for presentation-opened grants. For a client registered under its Client ID Metadata Document URL as its `client_id`, the authorization server MAY, by local policy, require a current unexpired statement on token requests; the client then delivers it in the `software_statement` parameter of the token request.
+
+The delivered statement MUST validate under {{ISSUANCE}} with this server in its audience, and its `sub` MUST equal the registered `client_id`. The request authenticates as the registered client, under the registration's own method. The delivered statement satisfies the currency requirement; it does not alter the registration, whose management remains the registration path's. A token request that omits a statement this policy requires, or delivers one failing these rules, is rejected with `invalid_grant`; the authorization server SHOULD state the reason in `error_description`.
+
 # Presentation Processing {#processing}
 
 On receiving a presentation, the authorization server proceeds as follows, rejecting as {{errors}} defines at the first failure:
@@ -170,8 +184,6 @@ Having validated the statement and its proof, the authorization server derives t
 The effective metadata is therefore attested member by member, not wholesale. The authorization server MAY require specific members, notably the redirection URIs of a redirect flow, to be attested, rejecting a presentation whose statement omits them.
 
 The request is evaluated against the effective metadata: a `redirect_uri` MUST match an effective redirection URI, and any requested grant type, response type, or scope MUST fall within the effective metadata.
-
-A server that also holds a persistent registration for the same software decides by local policy whether to accept a runtime presentation alongside it; the statement's attested members govern the presented request only.
 
 A trusting authorization server SHOULD use the statement's `sub`, `iss`, and `jti` to inventory the establishments derived from one statement and MAY bound their concurrent number.
 
@@ -217,7 +229,7 @@ A rejected presentation uses the error responses of {{RFC6749}} for the endpoint
 `invalid_request`:
 : any other rejection, including a redemption or issuance request carrying the `software_statement` parameter ({{runtime-presentation}}, {{grant-lifecycle}}).
 
-At the pushed authorization request endpoint, the corresponding {{RFC9126}} error responses apply. On refresh-token use, {{refresh}} takes precedence: statement and proof failures there are `invalid_grant`, the grant's continuation failing rather than client establishment.
+At the pushed authorization request endpoint, the corresponding {{RFC9126}} error responses apply. On refresh-token use, {{refresh}} takes precedence, and the registered-client statement policy of {{registered-delivery}} follows the same rule: failures there are `invalid_grant`, the grant's continuation failing rather than client establishment.
 
 This surface is coarser than the registration codes and does not tell a client whether to seek a corrected statement or a different issuer; the authorization server SHOULD carry that distinction in `error_description`.
 
@@ -269,7 +281,7 @@ The `jwks_uri` chain verifies keys at an attested location, not attested keys: `
 
 ## Enforcement Bounds
 
-Expiry is enforced at every presentation, so a lapsed statement stops new grants at once, a continuous-enforcement property a persistent registration does not provide by itself. Grants already open continue under {{grant-lifecycle}}; the refresh-time statement requirement of {{refresh}} is the policy lever that winds down existing access when an issuer ceases renewal, and a narrowed re-review takes effect mid-grant through the replacement's effective metadata. Detection of post-issuance metadata change depends on the server's retrieval policy: it stops requests only where the server retrieves the current document and rejects the change, and change detection on every grant costs a retrieval per presentation and an availability dependence on the client's metadata host.
+Expiry is enforced at every presentation, so a lapsed statement stops new grants at once, a continuous-enforcement property a persistent registration does not provide by itself. Grants already open continue under {{grant-lifecycle}}; the refresh-time statement requirement of {{refresh}} is the policy lever that winds down existing access when an issuer ceases renewal, extended to registered clients by {{registered-delivery}}, and a narrowed re-review takes effect mid-grant through the replacement's effective metadata. Detection of post-issuance metadata change depends on the server's retrieval policy: it stops requests only where the server retrieves the current document and rejects the change, and change detection on every grant costs a retrieval per presentation and an availability dependence on the client's metadata host.
 
 ## Client-Asserted Metadata
 
