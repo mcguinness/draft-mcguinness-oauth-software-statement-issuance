@@ -1341,7 +1341,10 @@ Table of Contents
    client presents the statement in an authorization or token request,
    sender-constrained by a proof that chains to the statement; the
    authorization server applies the attested metadata to that request
-   and creates no persistent registration.
+   and creates no persistent registration.  That path consumes any
+   statement conforming to this document's format (Section 11);
+   obtaining one through the issuance flows defined here is one way, not
+   a requirement of presentation.
 
 13.  Multi-Instance Client Software
 
