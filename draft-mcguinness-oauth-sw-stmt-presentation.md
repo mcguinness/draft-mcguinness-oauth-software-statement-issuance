@@ -57,7 +57,7 @@ A software statement ({{RFC7591}}, Section 2.3) is a signed JWT in which an issu
 
 {{CIMD}} established that a client can be resolved at request time, with no registration ceremony, from metadata it publishes itself. What resolution alone cannot carry is anyone else's review of that metadata. Runtime presentation closes the gap between the two models: the client presents its statement inside an ordinary authorization or token request, the authorization server verifies the issuer's review and applies the attested metadata to that request, and no client record is created. The review travels inline, at the moment it is needed, to servers that may never have seen the client before.
 
-This specification defines the `software_statement` request parameter for authorization and token requests, the sender-constraint chain that makes presentation safe, the lifecycle of a grant opened by a presentation, the derivation of the client's effective metadata, error reporting, and a discovery signal. Statement format, issuance, and validation are defined by {{ISSUANCE}} and are not modified here. A statement authorizes metadata, not its presenter; runtime proof of the presenter is exactly what the sender-constraint chain supplies, and nothing in this specification attests software instances or binaries.
+This specification defines the `software_statement` request parameter for authorization and token requests, the sender-constraint chain that makes presentation safe, the lifecycle of a grant opened by a presentation, the derivation of the client's effective metadata, error reporting, and a discovery signal. Statement format, issuance, and validation are defined by {{ISSUANCE}} and are not modified here; {{presentable-statement}} states the claim contract a presentation consumes, and decouples it from how the statement was acquired. A statement authorizes metadata, not its presenter; runtime proof of the presenter is exactly what the sender-constraint chain supplies, and nothing in this specification attests software instances or binaries.
 
 # Conventions and Definitions
 
@@ -78,6 +78,33 @@ Establishment:
 The client presents an already-issued statement in an ordinary authorization request or token request, as the `software_statement` request parameter, identified by its Client ID Metadata Document URL as `client_id`. The authorization server validates the statement under the format, issuer trust, audience, lifetime, and namespace rules of {{ISSUANCE}}, with digest comparison as the policy input those rules define, and uses the attested metadata as the client's effective metadata for that request, creating no persistent registration. The request's `client_id` MUST exactly equal the statement's `sub`; a presentation where they differ MUST be rejected. This establishes an otherwise unregistered client at request time, as {{CIMD}} resolution does, with the issuer's review carried inline instead of fetched. Unlike a statement issuance request, which cannot ask for access ({{ISSUANCE}}), presenting a statement is compatible with an access-granting request: it is client establishment carried alongside the request, not a request for issuance.
 
 An authorization server advertises support through `software_statement_presentation_supported` ({{authorization-server-metadata}}).
+
+## Presentable Statement {#presentable-statement}
+
+Runtime presentation consumes a software statement conforming to the format of {{ISSUANCE}}. How the client acquired it is out of scope: the issuance flows of {{ISSUANCE}} are one way to obtain a presentable statement, not a requirement of presentation. Each element below is consumed by a specific mechanism of this specification, so a statement missing any of them cannot be presented at runtime, whatever a registration endpoint might still accept:
+
+`typ` header:
+: `software-statement+jwt`; explicit typing prevents confusion with other JWTs from the same issuer.
+
+`iss`:
+: identifies the issuer for trust, claim-authority, and namespace decisions, and forms half of the establishment identity ({{grant-lifecycle}}).
+
+`sub`:
+: the client's Client ID Metadata Document URL; the request's `client_id` equals it, by the rule of {{runtime-presentation}}.
+
+`aud`:
+: scopes which authorization servers may accept the presentation; without it a statement would be presentable at every server that trusts the issuer.
+
+`exp`:
+: checked at every presentation ({{effective-metadata}}) and at the validity points of {{grant-lifecycle}}.
+
+`jti`:
+: the other half of the establishment identity; the inventory, concurrency bounds, and replacement matching of this specification key on it.
+
+`cimd_digest`:
+: binds the issuer's review to the exact document bytes evaluated and feeds the post-issuance change policy of {{ISSUANCE}}.
+
+The syntax, validation, and semantics of every element are those of {{ISSUANCE}}; this section adds no claim rules, only the statement of which elements the runtime path cannot function without. A presented statement failing this contract is rejected as {{errors}} defines for an invalid statement.
 
 ## Sender Constraint {#sender-constraint}
 

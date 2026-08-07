@@ -704,7 +704,7 @@ A validated software statement ({{software-statement-format}}) is consumed in on
 
 In registration, the client supplies the statement as the `software_statement` member of an {{RFC7591}} dynamic client registration request. The authorization server validates it ({{software-statement-format}}), registers a client, assigns a local `client_id`, and applies its registration policy; rejections use the {{RFC7591}} error codes given in {{software-statement-format}}. This path consumes the artifact through the interface {{RFC7591}} registration endpoints have offered since 2015; what is new for the consumer is the validation this document requires ({{software-statement-format}}).
 
-In runtime presentation, defined by the companion {{PRESENTATION}}, the client presents the statement in an authorization or token request, sender-constrained by a proof that chains to the statement; the authorization server applies the attested metadata to that request and creates no persistent registration.
+In runtime presentation, defined by the companion {{PRESENTATION}}, the client presents the statement in an authorization or token request, sender-constrained by a proof that chains to the statement; the authorization server applies the attested metadata to that request and creates no persistent registration. That path consumes any statement conforming to this document's format ({{software-statement-format}}); obtaining one through the issuance flows defined here is one way, not a requirement of presentation.
 
 # Multi-Instance Client Software {#multi-instance}
 
