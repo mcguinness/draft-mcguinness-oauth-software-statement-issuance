@@ -16,6 +16,10 @@ This repository also hosts the companion Internet-Draft, "OAuth 2.0 Software Sta
 * [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-sw-stmt-presentation.txt)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-sw-stmt-presentation/) (after first submission)
 
+## Deployment Model
+
+[Marketplace Listing and Enterprise Approval](deployment-model.md) sketches the end-to-end scenario the two drafts are built for: a provider marketplace deciding which software may exist as a client, an enterprise deciding which of it may operate in its tenant, and the four layers that keep those decisions separate. Non-normative.
+
 ## Related Drafts
 
 * [OAuth Client ID Metadata Document](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/) (normative dependency)
