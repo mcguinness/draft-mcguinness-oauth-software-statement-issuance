@@ -66,15 +66,15 @@ That leaves responsiveness coupled to lifetime. An issuer that wants a withdrawa
 
 The coupling is unnecessary, because the parties are already in a configured relationship. A trusting authorization server records each issuer's identifier, key source, scope, and role in order to accept its statements at all ({{ISSUANCE}}). This specification uses that relationship to carry lifecycle events over the Shared Signals Framework {{SSF}}: the statement issuer transmits, the trusting authorization server receives, and events are Security Event Tokens {{RFC8417}} delivered by the framework's push {{RFC8935}} or poll {{RFC8936}} bindings.
 
-This specification defines the subject identification, event types, payload claims, and receiver processing rules for those events, and an optional reverse-direction event by which a consuming authorization server reports where a statement is in force. It defines no new endpoint, transport, subject identifier format, or trust establishment mechanism.
+This specification defines the subject identification, event types, payload claims, the durable records a receiver keeps, and its processing rules. It defines no new endpoint, transport, subject identifier format, or trust establishment mechanism.
 
-Two properties bound what the mechanism can do, and are normative in {{processing}}: an event can only reduce standing, and a receiver that misses events enforces expiry exactly as it does today. Deployments therefore keep bounded statement lifetimes, and neither {{ISSUANCE}} nor {{PRESENTATION}} depends on this specification.
+Two properties bound what the mechanism can do, and are normative in {{processing}}: an event can only reduce standing, and a receiver that misses events enforces expiry exactly as it does today. A withdrawal is durable rather than momentary, which {{withdrawal-records}} specifies, so a client holding an unexpired statement cannot restore what an event ended. Deployments therefore keep bounded statement lifetimes, and neither {{ISSUANCE}} nor {{PRESENTATION}} depends on this specification.
 
 # Conventions and Definitions
 
 {::boilerplate bcp14-tagged}
 
-Transmitter, Receiver, Stream, and the delivery and configuration mechanisms are defined by {{SSF}}. Security Event Token, or SET, is defined by {{RFC8417}}. Subject identifier formats are defined by {{RFC9493}}. Software statement, issuer roles, and statement validation are defined by {{ISSUANCE}}. Establishment, tenant approval, registration validity, and runtime presentation are defined by {{PRESENTATION}}.
+Transmitter, Receiver, Stream, and the delivery and configuration mechanisms are defined by {{SSF}}. Security Event Token, or SET, is defined by {{RFC8417}}. Subject identifier formats are defined by {{RFC9493}}. Software statement, issuer roles including the establishment and tenant approval roles, and statement validation are defined by {{ISSUANCE}}. Registration validity, runtime presentation, tenant approval evaluation, and the per-grant establishment state are defined by {{PRESENTATION}}.
 
 This specification additionally defines the following terms:
 
@@ -84,13 +84,21 @@ Statement Issuer:
 Consuming Authorization Server:
 : A trusting authorization server that has configured the statement issuer, acting as a Receiver of the events defined here.
 
+Standing:
+: What a client may do at a consuming authorization server by virtue of a software statement: its registration and that registration's validity ({{PRESENTATION}}), its establishment at request time, and any tenant approval in force. Standing is created and extended only by statements, never by the events defined here.
+
+Withdrawal Record:
+: The state a receiver retains when it applies a withdrawal event, defined in {{withdrawal-records}}.
+
 # Relationship to the Statement Family {#relationship}
 
 The events defined here carry no authority of their own. They report that a decision the issuer already had the authority to make has ended earlier than its expiry announced.
 
-The scope of an event's effect follows the role in which the consuming authorization server accepts the transmitting issuer ({{ISSUANCE}}), exactly as the scope of a statement's effect does. An event from an issuer accepted in the establishment role bears on the client's existence at that server, for every tenant. An event from an issuer accepted in the tenant approval role bears only on the tenant that issuer speaks for. An event carries no tenant identifier; the receiver resolves scope from its own configuration.
+The scope of an event's effect follows the event type, which names the layer it bears on. An `establishment-withdrawn` event bears on the client's existence at that server, for every tenant. An `approval-withdrawn` event bears only on the tenant its transmitting issuer speaks for, which the receiver resolves from its own configuration; events carry no tenant identifier. A receiver MUST reject an event whose type names a layer for which it does not accept the transmitting issuer, and where an issuer holds both roles ({{ISSUANCE}}) the event type alone determines scope.
 
 A consuming authorization server MUST NOT accept an event from an issuer it has not configured, and MUST verify the SET using keys obtained as it obtains that issuer's statement verification keys, from the issuer's authorization server metadata {{RFC8414}}. It MUST NOT derive event trust from any key-location value carried in the event.
+
+A SET carrying an event defined here MUST use the explicit `typ` header value `secevent+jwt` ({{RFC8417}}), so that a receiver validating JWTs from a configured issuer distinguishes an event from a software statement, whose own typing {{ISSUANCE}} fixes. Its `aud` MUST contain the receiving authorization server's issuer identifier as defined by {{RFC8414}}, which is the value that appears in a statement's `aud`; a stream audience negotiated under {{SSF}} does not replace it.
 
 # Subject Identification {#subjects}
 
@@ -99,7 +107,26 @@ The subject of every event defined here is client software, identified as the `s
 * Software identified by a Client ID Metadata Document URL {{CIMD}} uses the `uri` format, whose `uri` member carries that URL exactly as it appears in the statement's `sub`.
 * Software identified by an {{RFC7591}} `software_id` uses the `iss_sub` format, whose `iss` member carries the statement issuer's identifier and whose `sub` member carries the `software_id`.
 
-A consuming authorization server MUST match the subject by exact comparison against the `sub` of the statements it holds, and MUST NOT treat a subject it does not recognize as an error.
+A consuming authorization server MUST match the subject by exact comparison, including the `iss` member of an `iss_sub` identifier, against the `sub` of the statements it holds and the subjects of its Withdrawal Records. A statement whose `sub` is a client identifier already registered at the authorization server ({{ISSUANCE}}) has no subject identifier format defined here and is outside this specification.
+
+A receiver MUST record a withdrawal for a subject it does not currently recognize ({{withdrawal-records}}) rather than discarding the event. A subject unknown at the time of an event is the ordinary case in the runtime profile, where a receiver holds no state for software until it is first presented.
+
+# Withdrawal Records {#withdrawal-records}
+
+A withdrawal event names a decision that ended. Its effect is durable, and a receiver that only ceases some current activity has not applied it: in the runtime profile there is no current activity to cease, and in the registration profile the client holds a statement that would otherwise restore what the event withdrew.
+
+On applying `statement-revoked`, `approval-withdrawn`, or `establishment-withdrawn`, a consuming authorization server MUST create or update a Withdrawal Record holding the transmitting issuer, the subject, the event type, the event's `event_timestamp`, and, for `statement-revoked`, the revoked `jti`.
+
+While a Withdrawal Record is retained, the receiver MUST refuse a statement matching it:
+
+* a `statement-revoked` record refuses the statement with that `jti`, whatever its `iat`;
+* an `approval-withdrawn` or `establishment-withdrawn` record refuses every statement from that issuer for that subject whose `iat` is at or before the record's `event_timestamp`.
+
+A statement from that issuer for that subject with an `iat` after the record's `event_timestamp` is a later decision by the same authority. It is accepted under the ordinary rules of {{ISSUANCE}} and {{PRESENTATION}}, and restores what the withdrawal ended. This is the only recovery path, and it requires the issuer to act.
+
+A refusal under this section takes effect wherever the statement would otherwise be consumed: a registration governed by a refused statement is expired as {{PRESENTATION}} defines for a lapsed registration, a runtime presentation carrying one fails as it does for a statement that is not current, and a tenant approval carrying one is treated as absent.
+
+A receiver MAY discard a `statement-revoked` record once the revoked statement's `exp` has passed, and MAY discard any Withdrawal Record once every statement it could refuse has expired, which a receiver that does not retain statement lifetimes bounds by the maximum lifetime it honors for that issuer ({{ISSUANCE}}). Discarding a record earlier reopens the withdrawal.
 
 # Event Types {#events}
 
@@ -118,55 +145,55 @@ Each event is a member of the SET `events` claim, whose value is the event paylo
 
 The issuer withdraws a specific statement before its expiry, for example because it was mis-issued or its holder's key was compromised. `software_statement_jti` is REQUIRED for this event type.
 
-A receiver MUST stop honoring the named statement. Where that statement governs a registration's validity ({{PRESENTATION}}), the registration is expired as though its recorded `exp` had passed, and a replacement statement restores it under the revalidation rules of that specification.
+A receiver MUST record the revocation ({{withdrawal-records}}) and stop honoring the named statement. Where that statement governs a registration's validity ({{PRESENTATION}}) at a server implementing that model, the registration is expired as though its recorded `exp` had passed. A replacement statement restores it under the revalidation rules of that specification, subject to the refusal rules of {{withdrawal-records}}, which prevent the revoked statement itself from serving as the replacement.
 
 ## Approval Withdrawn {#approval-withdrawn}
 
 A tenant approval issuer withdraws its tenant's approval of the subject software.
 
-A receiver MUST stop treating the subject as approved for that issuer's tenant, with the effect the tenant approval rules of {{PRESENTATION}} give an absent approval. The client's establishment, and every other tenant, are unaffected.
+A receiver MUST record the withdrawal ({{withdrawal-records}}) and stop treating the subject as approved for that issuer's tenant, with the effect the tenant approval rules of {{PRESENTATION}} give an absent approval. Where the receiver holds a recorded tenant approval, it is discarded. The client's establishment, and every other tenant, are unaffected.
 
 ## Establishment Withdrawn {#establishment-withdrawn}
 
 An establishment issuer withdraws the subject software's listing, for example on removal from a marketplace.
 
-A receiver MUST stop treating the subject as established. Registrations governed by statements from that issuer for that subject are expired, and runtime presentation of those statements fails as {{PRESENTATION}} defines for a statement that is not current. The effect reaches every tenant at that authorization server.
+A receiver MUST record the withdrawal ({{withdrawal-records}}) and stop treating the subject as established. At a server implementing the registration-validity model of {{PRESENTATION}}, registrations governed by statements from that issuer for that subject are expired; at a server that does not, the registrations remain subject to that server's own client lifecycle, and the record still refuses further statements. Runtime presentation of a refused statement fails as {{PRESENTATION}} defines for a statement that is not current. The effect reaches every tenant at that authorization server.
 
 ## Metadata Changed {#metadata-changed}
 
 The issuer reports that the software's published metadata no longer matches what it reviewed. This event carries information a receiver could otherwise learn only by retrieval, and is advisory: the issuer is not withdrawing its decision.
 
-`cimd_digest`:
-: OPTIONAL. The digest the issuer now observes at the subject's Client ID Metadata Document, in the encoding {{ISSUANCE}} defines.
+`observed_cimd_digest`:
+: OPTIONAL. The digest the issuer now observes at the subject's Client ID Metadata Document, in the encoding {{ISSUANCE}} defines. It is not the statement's attested `cimd_digest`, and MUST NOT be recorded as one.
 
-A receiver applies its post-issuance change policy ({{ISSUANCE}}) as though it had retrieved the document and observed the mismatch. It MUST NOT treat the event as attesting the new metadata.
+`observed_software_version`:
+: OPTIONAL. The {{RFC7591}} `software_version` the issuer now observes, for a subject whose statements attest that member rather than a digest ({{ISSUANCE}}).
 
-## Consumption Reported {#consumption-reported}
+A receiver that retrieves and compares metadata ({{ISSUANCE}}) applies its post-issuance change policy as though it had made that observation itself. A receiver that does not implement retrieval and comparison MAY ignore this event.
 
-This event travels in the reverse direction: the Transmitter is the consuming authorization server and the Receiver is the statement issuer. Support is OPTIONAL for both parties, and a consuming authorization server MUST NOT transmit it unless configured to do so for that issuer.
+The event can only add a reason to distrust current metadata. A receiver MUST NOT treat it as attesting metadata, and MUST NOT use it to clear a restriction already applied, including where an observed value matches what a statement attests; only a retrieval the receiver performs itself, or a later statement, can do that.
 
-The event reports that the issuer's statement for the subject was consumed, so that an issuer can inventory where its decisions are in force. Its payload carries `event_timestamp` and `software_statement_jti`, and:
+## Reverse-Direction Reporting
 
-`consumption`:
-: REQUIRED. One of `registration`, `presentation`, `delivery`, or `refused`, naming the consumption point of {{PRESENTATION}} at which the statement was used, or that it was refused.
-
-The event conveys no authority in either direction, and a statement issuer MUST NOT treat its absence as evidence that a statement is unused.
+A consuming authorization server reporting back to an issuer where its statements are consumed would give the issuer an inventory it cannot otherwise obtain. It is not defined here: the direction reverses the roles, so the authorization server would publish transmitter configuration, the issuer would discover it and create a stream, and the processing rules of {{processing}} would need a counterpart for the issuer as receiver. That is a separate profile, with privacy considerations of its own, since presentation-time reporting would carry near-real-time authorization activity per tenant.
 
 # Receiver Processing {#processing}
 
 A consuming authorization server that receives an event defined here MUST:
 
-1. verify the SET as {{RFC8417}} requires, and verify that its issuer is configured and its keys were obtained as {{relationship}} requires;
-2. reject an event whose `aud` does not include an identifier of this authorization server, and an event whose `jti` it has already processed;
-3. resolve the subject ({{subjects}}) and the scope of the effect from the transmitting issuer's configured role ({{relationship}}); and
-4. apply the effect the event type defines, at the scope resolved in step 3.
+1. verify the SET as {{RFC8417}} requires, including its `typ`, and verify that its issuer is configured and its keys were obtained as {{relationship}} requires;
+2. reject an event whose `aud` does not contain its issuer identifier ({{relationship}}), and an event whose type it does not recognize or whose type names a layer it does not accept that issuer for;
+3. resolve the subject ({{subjects}}) and the scope of the effect from the event type ({{relationship}}); and
+4. apply the effect the event type defines, recording it as {{withdrawal-records}} requires.
+
+A receiver MUST treat an event it has already applied as successfully delivered and acknowledge it as {{RFC8935}} or {{RFC8936}} requires, rather than reporting a delivery error; duplicate delivery is ordinary retry behavior and rejecting it can stall or disable a stream carrying later withdrawals. Duplicate detection is per transmitting issuer, since SET `jti` values are unique only within an issuer, and a receiver MAY bound the identifiers it retains for that purpose by the maximum statement lifetime it honors for the issuer.
 
 Two constraints bound every event:
 
 * An event MUST NOT create standing, extend a statement's lifetime, restore a statement previously revoked, or otherwise increase what a client may do. A receiver MUST ignore any payload member that would have such an effect. Restoring standing requires a statement, presented or delivered as {{PRESENTATION}} defines.
 * A receiver MUST continue to enforce statement expiry independently of this mechanism. Stream loss, transmitter unavailability, or delivery failure leaves standing to end at expiry, which remains the floor.
 
-Events may arrive out of order or be duplicated. A receiver MUST NOT reverse an effect on the basis of an event whose `event_timestamp` precedes the event that produced it, and SHOULD retain the timestamp of the last applied event per subject and issuer for that comparison.
+Events may arrive out of order or be duplicated. A receiver MUST apply every withdrawal event it accepts, whatever its `event_timestamp` relative to events already applied, since withdrawals accumulate and an older one may name a statement a newer one does not. The ordering rule constrains reversal only: a receiver MUST NOT discard or narrow a Withdrawal Record on the basis of an event whose `event_timestamp` precedes the event that created it. Records are kept per subject and issuer, and per `jti` for `statement-revoked`, so that a later event never silently supersedes an earlier one of a different kind.
 
 An effect applied by an event does not revoke access tokens already issued. A receiver applies its own grant and token lifetime policy, as it does when a statement expires.
 
@@ -174,17 +201,19 @@ An effect applied by an event does not revoke access tokens already issued. A re
 
 A statement issuer supporting this specification publishes Transmitter configuration metadata as {{SSF}} defines, discoverable from the issuer identifier the consuming authorization server has already configured. Stream creation, subject management, verification, and delivery follow {{SSF}}; this specification adds no configuration mechanism.
 
-A consuming authorization server SHOULD create one stream per configured issuer and SHOULD request every event type this specification defines that the issuer's role can produce. A transmitter MUST NOT require a receiver to accept the reverse-direction event of {{consumption-reported}} as a condition of receiving the others.
+A consuming authorization server SHOULD create one stream per configured issuer, and that stream MUST cover every subject the issuer attests rather than an enumerated subject set. A receiver cannot enumerate subjects: in the runtime profile it holds no state for software until first presentation, which is exactly when an unenumerated withdrawal would already have been missed. A transmitter that supports this specification MUST accept a stream request that names no subjects and MUST NOT require subject enumeration as a condition of delivery.
+
+A receiver SHOULD request every event type this specification defines that the transmitting issuer's roles can produce, and SHOULD use the stream verification facility of {{SSF}} on a schedule, since a stream delivering nothing because it was misconfigured is otherwise indistinguishable from an issuer with nothing to report.
 
 # Security Considerations
 
 ## What an Event Cannot Do
 
-The constraints of {{processing}} are the security argument for this mechanism. A forged, replayed, or reordered event cannot grant a client anything, because no event increases standing. Its worst outcome is the premature loss of a legitimate client's standing, which is an availability failure the issuer corrects by issuing a fresh statement, and which the receiver can bound by rate-limiting a transmitter's events.
+The constraints of {{processing}} are the security argument for this mechanism. A forged, replayed, or reordered event cannot grant a client anything, because no event increases standing, and {{withdrawal-records}} makes the reduction durable rather than momentary. Its worst outcome is the premature loss of a legitimate client's standing, which the issuer corrects by issuing a statement with a later `iat`. Forging an event requires the issuer's key, against which rate limiting is not a control; a receiver bounds the resource cost of event processing instead, and MUST NOT discard events it has accepted in order to shed load, since discarding a withdrawal is the suppression this mechanism exists to avoid.
 
 ## Expiry Remains the Floor
 
-Because a receiver enforces expiry independently, an attacker who suppresses events, by disrupting delivery or the transmitter, delays a withdrawal at most until the affected statements expire. Deployments therefore choose lifetimes they would accept without this mechanism, and treat event delivery as an accelerator. A receiver SHOULD alert on stream loss rather than assume quiescence, since a healthy stream and a suppressed one are indistinguishable from the absence of events.
+Because a receiver enforces expiry independently, an attacker who suppresses events, by disrupting delivery or the transmitter, delays a withdrawal at most until the affected statements expire. Deployments therefore choose lifetimes they would accept without this mechanism, and treat event delivery as an accelerator. A receiver SHOULD alert on stream loss rather than assume quiescence, since a healthy stream and a suppressed one are indistinguishable from the absence of events. Periodic stream verification ({{configuration}}) is what makes the difference observable.
 
 ## Key Separation and Compromise
 
@@ -198,17 +227,17 @@ A status mechanism such as {{STATUS-LIST}} lets a receiver pull a statement's st
 
 Subject identifiers in these events name software an issuer has reviewed and, in aggregate, describe an organization's approved software estate. A transmitter SHOULD scope each stream to the subjects the receiving authorization server can act on, and a receiver SHOULD apply to event logs the handling it applies to statements ({{ISSUANCE}}).
 
-The reverse-direction event of {{consumption-reported}} tells an issuer where its statements are consumed, which for an enterprise issuer is its own estate but for a marketplace issuer reveals customer deployment activity at the provider. A consuming authorization server MUST treat transmission of that event as disclosure subject to its own tenant policy, and MAY omit it for any issuer or tenant.
+Withdrawal Records ({{withdrawal-records}}) persist an issuer's negative decisions at every receiver, in some cases beyond the lifetime of the statements they concern. A receiver SHOULD retain them no longer than the refusal rules require and SHOULD apply to them the handling it applies to statements.
 
 # IANA Considerations
 
 ## Event Type Assignment
 
-The event types defined in {{events}} require URI identifiers under a namespace this specification does not yet control. This version uses the placeholder base `https://schemas.openid.net/secevent/sw-stmt/event-type/` with the terminal segments `statement-revoked`, `approval-withdrawn`, `establishment-withdrawn`, `metadata-changed`, and `consumption-reported`. Assignment of the final base URI, and registration where the publishing body maintains a registry of security event types, is to be resolved before publication.
+The event types defined in {{events}} require URI identifiers under a namespace this specification does not yet control. This version uses the placeholder base `https://schemas.openid.net/secevent/sw-stmt/event-type/` with the terminal segments `statement-revoked`, `approval-withdrawn`, `establishment-withdrawn`, and `metadata-changed`. Assignment of the final base URI, and registration where the publishing body maintains a registry of security event types, is to be resolved before publication.
 
 ## SET Payload Claims
 
-The payload claims `software_statement_jti`, `consumption`, and `cimd_digest` are defined by this specification for use in the event payloads of {{events}}. Registration in a registry of SET payload claims, where the publishing body maintains one, is to be resolved before publication. The `event_timestamp` and `reason_admin` members are used as {{CAEP}} defines them.
+The payload claims `software_statement_jti`, `observed_cimd_digest`, and `observed_software_version` are defined by this specification for use in the event payloads of {{events}}. Registration in a registry of SET payload claims, where the publishing body maintains one, is to be resolved before publication. The `event_timestamp` and `reason_admin` members are used as {{CAEP}} defines them.
 
 --- back
 

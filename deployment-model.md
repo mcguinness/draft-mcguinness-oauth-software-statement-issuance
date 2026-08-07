@@ -1,9 +1,10 @@
 # Deployment Model: Marketplace Listing and Enterprise Approval
 
-This is a non-normative companion to the two drafts in this repository. It sketches one end-to-end deployment, names the actors, and shows which part of each draft carries which decision. Nothing here is normative; where this document and a draft disagree, the draft wins.
+This is a non-normative companion to the three drafts in this repository. It sketches one end-to-end deployment, names the actors, and shows which part of each draft carries which decision. Nothing here is normative; where this document and a draft disagree, the draft wins.
 
 * [OAuth 2.0 Software Statement Issuance](draft-mcguinness-oauth-software-statement-issuance.md), referred to below as the issuance draft.
 * [OAuth 2.0 Software Statement Consumption and Runtime Presentation](draft-mcguinness-oauth-sw-stmt-presentation.md), referred to below as the consumption draft.
+* [Shared Signals Events for OAuth Software Statements](draft-mcguinness-oauth-sw-stmt-signals.md), referred to below as the signals draft, which is optional to both.
 
 ## The situation being addressed
 
@@ -24,7 +25,7 @@ Neither substitutes for the other. An application can be listed on a marketplace
 | --- | --- | --- | --- | --- |
 | Establishment | Which software may exist as a client here? | Provider, through its marketplace | Establishment statement | Listing review and renewal |
 | Tenant approval | Which established software may operate in my tenant? | Customer | Tenant approval statement | Customer review and renewal |
-| Presenter proof | Which instance is making this request? | Cryptography | Client authentication, DPoP proof, client attestation, instance assertion | Per request |
+| Presenter proof | Which instance is making this request? | The statement, which fixes the accepted proof; the provider, which configures any attester it trusts | Client authentication, DPoP proof, client attestation, instance assertion | Per request |
 | User grant | What may it access, for whom? | Resource owner and local policy | Access grant, or a cross-domain identity assertion | Grant and token lifetime |
 
 The consumption draft keeps these apart rather than collapsing them into one decision. Establishment and tenant approval are distinguished by the role in which an authorization server accepts an issuer, which the issuance draft defines under Issuer Roles; the wire carries at most one statement per request.
@@ -52,7 +53,7 @@ The marketplace evaluates the software once and signs a statement naming the sof
 
 ### 3. The application registers once
 
-The application registers at the provider, carrying the establishment statement. The provider records the governing statement's identity and expiry with the registration, so the registration is valid for as long as the listing is current. That single registration serves every tenant on the platform. A vendor onboarding a new customer provisions nothing new, which is what makes the marketplace model work at scale.
+The application registers at the provider, carrying the establishment statement. Where the provider implements the registration-validity model and advertises it, which the consumption draft makes optional, it records the governing statement's identity and expiry with the registration, so the registration is valid for as long as the listing is current. A provider that does not implement it consumes the statement as ordinary registration input and its registrations remain permanent. That single registration serves every tenant on the platform, so onboarding a customer requires no new registration. Platforms already do this today without a signed artifact; what the statement adds is a listing decision the provider can verify and expire, which matters most when the listing authority is not the provider itself.
 
 Where the application has no registration and is identified by its metadata URL, it can instead be established at request time by presenting its statement, with no persistent record created.
 
@@ -62,9 +63,11 @@ The enterprise reviews the application through its own process and its issuer si
 
 This is one decision, made once, in the enterprise's own system of record.
 
+Getting it to a provider takes one of two paths the consumption draft defines, and the choice is the main deployment decision on the customer side. The application can carry the statement, which requires it to be a client of that customer's issuer and to renew on that customer's cadence, a relationship per customer that the vendor must establish. Or the customer's administrator can record the statement at the provider through the provider's own interface, in which case the application carries nothing and the provider holds the approval with its expiry. The second path is closest to how consoles work today and is the practical migration route; the first suits software the customer runs itself.
+
 ### 5. The customer onboards a provider
 
-At each provider, the enterprise configures its issuer once: the issuer identifier, the tenant approval role, the identifier scope, the metadata the provider will treat it as authoritative for, and a maximum lifetime. That is the entire per-provider cost, and it does not recur per application.
+At each provider, the enterprise configures its issuer once: the issuer identifier, the tenant approval role, the identifier scope, the metadata the provider will treat it as authoritative for, and a maximum lifetime. The provider also configures whatever attester trust the applications' proof modes require, and the tenant decides whether it will require approval statements at all. Adding a provider does not require re-entering the application estate by hand, but approvals name their audiences, so statements issued before that provider existed do not name it and become usable there as the issuer's next renewal cycle includes it.
 
 Where the provider already trusts the enterprise identity provider for single sign-on or for cross-domain assertions, this adds a role to an existing relationship rather than establishing a new one ([Composition with ID-JAG](#composition-with-id-jag)).
 
@@ -80,8 +83,8 @@ sequenceDiagram
     AS->>AS: Resolve tenant from request context
     AS->>AS: Establishment: registration valid, listing current?
     AS->>AS: Tenant approval: issuer configured for this tenant, unexpired?
+    AS->>AS: Presenter proof: key the statement or registration authorizes
     AS->>AS: Effective policy = establishment ∩ tenant approval
-    AS->>AS: Presenter proof: key chains to the statement or registration
     AS->>AS: Grant: what the resource owner authorized
     AS-->>App: Access token, or an error naming the layer that failed
 ```
@@ -94,11 +97,11 @@ The marketplace renews listings on its own cadence. The enterprise renews approv
 
 ### 8. Offboarding
 
-The enterprise stops renewing an application's approval. At its recorded expiry the application stops working in that enterprise's tenant, at every provider where the enterprise configured its issuer, with no console visits. The vendor's listing is untouched and every other customer is unaffected.
+The enterprise stops renewing an application's approval. At its recorded expiry the application stops making new requests in that enterprise's tenant, at every provider where the enterprise configured its issuer, with no console visits. Existing grants stop refreshing only where the provider evaluates tenant approval on refresh, which the consumption draft requires for tenants that require approval; providers that do not are left with grants that continue until their refresh tokens expire. The vendor's listing is untouched and every other customer is unaffected.
 
 The marketplace stops renewing a listing. The registration expires at the provider, and the application stops working for everyone there.
 
-Neither revokes tokens already issued. Access winds down as those tokens expire, and a provider that wants an immediate stop uses its own local controls, which it retains throughout.
+Neither revokes tokens already issued. Access winds down as those tokens expire and, where refresh is gated on currency, as refresh fails; a provider that wants an immediate stop uses its own local controls, which it retains throughout. Both levers are bounded by lifetime unless the provider also consumes the signals draft's events.
 
 ## Variants
 
@@ -110,7 +113,7 @@ Neither revokes tokens already issued. Access winds down as those tokens expire,
 
 **Application to application.** No user is present. The calling application establishes itself as a client, presents tenant approval for the customer it is acting for, and proves its key. Who it acts on behalf of, as opposed to what it is, belongs to delegation mechanisms outside these drafts.
 
-**Managed and unmanaged devices.** Device posture belongs to the presenter-proof layer, where a client attestation can carry it, not to either review layer. Approval stays device-independent, and posture is enforced where the request is made.
+**Managed and unmanaged devices.** None of the drafts addresses device posture. Its natural home is the presenter-proof layer, where an attestation scheme can carry device signals if it defines them, rather than either review layer: approval stays device-independent, and posture is enforced where the request is made.
 
 ## Composition with ID-JAG
 
@@ -138,7 +141,7 @@ They compose: an assertion-carried digest can establish a client just in time wh
 
 ### Enforcement cadence
 
-Because an ID-JAG assertion is validated at every grant, ceasing assertion issuance stops new grants at once, which is the sharpest lever the enterprise holds, with existing access winding down as tokens expire. Statement expiry works on a slower clock: it governs the currency of establishment and approval, and takes effect at the next presentation, registration validity boundary, or refresh where a current statement is required. An enterprise offboarding an application uses both, stopping assertions to end new grants immediately and stopping approval renewal so the application lapses everywhere at its recorded expiry.
+Because an ID-JAG assertion is validated at every grant, ceasing assertion issuance stops new grants at once, with existing access winding down as tokens expire. It is the sharpest lever available, and it reaches only the grants that traverse ID-JAG; the authorization-code and refresh traffic in the walkthrough above does not, and is governed by the approval and signal mechanisms instead. Statement expiry works on a slower clock: it governs the currency of establishment and approval, and takes effect at the next presentation, registration validity boundary, or refresh where a current statement is required. An enterprise offboarding an application uses both, stopping assertions to end new grants immediately and stopping approval renewal so the application lapses everywhere at its recorded expiry.
 
 ## Composition with Shared Signals
 
@@ -150,20 +153,20 @@ Four events carry the semantics this deployment needs:
 
 | Event | Meaning | Layer | Effect and blast radius |
 | --- | --- | --- | --- |
-| Statement revoked | This artifact, by `jti`, is no longer good | Whichever layer issued it | Stop honoring that statement before its expiry |
-| Approval withdrawn | The tenant no longer approves this software | Tenant approval | Block that tenant's requests now; other tenants and the listing unaffected |
-| Listing withdrawn | The software is no longer established here | Establishment | Expire the registration early, for every tenant at that provider |
-| Metadata changed | The published metadata no longer matches what was reviewed | Establishment or approval | Re-resolve, compare the digest, and apply the server's change policy |
+| Statement revoked | This artifact, by `jti`, is no longer good | Whichever layer issued it | Refuse that statement before its expiry, durably |
+| Approval withdrawn | The tenant no longer approves this software | Tenant approval | Refuse its approval statements and block that tenant's requests now; other tenants and the listing unaffected |
+| Establishment withdrawn | The software is no longer established here | Establishment | Refuse its statements and expire the registration early, for every tenant at that provider |
+| Metadata changed | The published metadata no longer matches what was reviewed | Advisory | Apply the server's change policy as though it had observed the change; it can add a reason to distrust, never clear one |
 
 Two properties make this safe to add without weakening what is already specified.
 
-Signals can only reduce standing. An event can end an approval, a listing, or a statement early. No event creates standing, extends a lifetime, or substitutes for a valid statement, so a forged or replayed event cannot grant anything, and the worst outcome of a spurious event is an availability failure the issuer can correct by issuing a fresh statement.
+Signals can only reduce standing, and the reduction is durable. A receiver records the withdrawal and refuses statements issued at or before it, so a client holding an unexpired statement cannot restore what the event ended; only a statement issued after the withdrawal, which is a fresh decision by the same authority, restores it. No event creates standing, extends a lifetime, or substitutes for a valid statement, so a forged or replayed event cannot grant anything, and the worst outcome of a spurious event is an availability failure the issuer corrects by issuing a later statement.
 
 Missed signals fail closed against the clock. A receiver that loses its stream, or an issuer whose transmitter is down, falls back to exactly the behavior specified today: standing ends at expiry. The bounded lifetime stays mandatory and remains the floor; signals only shorten the interval between a decision and its effect. This is why the two drafts do not depend on the framework, and why they remain implementable without it.
 
 The consequence is that lifetime and responsiveness stop being the same dial. An issuer can choose a lifetime that suits its renewal capacity, days rather than minutes, and still revoke in seconds. Offboarding becomes a signal, with the absence of renewal as the durable backstop for receivers that never got it.
 
-The stream is useful in the other direction too. A provider transmitting consumption events, a statement accepted, a registration created from it, a presentation refused, gives the enterprise something it cannot get today: an inventory of where its approvals are actually in force, across providers, without asking each one.
+A stream in the other direction, by which a provider reports where an issuer's statements are consumed, would give an enterprise an inventory it cannot get today. It reverses the transmitter and receiver roles and needs its own profile, and the signals draft names it as future work rather than defining it.
 
 The profile is a separate document rather than part of either draft, since it composes with both and neither requires it.
 
@@ -194,10 +197,18 @@ The profile is a separate document rather than part of either draft, since it co
 | Onboarding a provider means re-entering the application estate | Onboarding a provider is one issuer configuration |
 | A new application needs per-provider setup | A listed application arrives carrying its listing; the customer's approval arrives with it |
 
+## Operational realities
+
+**Who runs the issuer.** An enterprise issuer is an authorization server role, not a new system to build: the natural operator is whoever already runs the enterprise's identity provider, which is why the composition with ID-JAG matters more than it first appears. An enterprise that does not want to operate one keeps using each provider's console; the tenant approval layer is then expressed locally, and nothing else in this model changes.
+
+**Issuer availability is now in the path.** Approvals renew on a schedule, so an issuer outage longer than the remaining lifetime lapses every approval it maintains, at every provider, at once. Lifetimes of days rather than minutes, staggered expiries, and renewal well ahead of the boundary are what keep that from being a self-inflicted outage; the drafts state the staggering duty on issuers for the same reason.
+
+**Coexisting with what exists.** Nothing here requires a provider to remove its console or an enterprise to abandon its allowlists. A provider consuming statements alongside its own toggles applies both, and the narrower answer governs. A practical migration runs the statement path in parallel, compares its decisions against the console for a cycle, and only then makes the console the exception path.
+
 ## What these drafts do not solve
 
 * **Immediate revocation.** As specified, enforcement is bounded by statement lifetime plus the provider's own controls, and shorter lifetimes tighten the loop at the cost of renewal traffic. [Composition with Shared Signals](#composition-with-shared-signals) sketches the profile that would remove that trade; an acceptance-time status claim is the pull-based alternative named in the issuance draft.
 * **Identifier trustworthiness for non-hosted software.** A metadata URL is domain-anchored; an `software_id` is a vendor-asserted string. Approvals keyed on the latter are meaningful only within an issuer's enumerated scope.
 * **Discovery of policy.** There is no in-band way to learn which issuers a provider accepts, or that a tenant requires an approval. Trust configuration is deliberately out of band, and error responses guide the client.
 * **Delegation.** These drafts establish what the client is and whether it is approved. Which user or organization it acts for, and with what authority, is separate work; see [Composition with ID-JAG](#composition-with-id-jag) for the cross-domain case.
-* **Device posture.** Referenced as a presenter-layer concern, not defined here.
+* **Device posture.** Not addressed by any of the drafts, and placed at the presenter-proof layer here only as guidance.

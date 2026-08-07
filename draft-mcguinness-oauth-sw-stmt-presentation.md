@@ -46,6 +46,8 @@ normative:
   ABCA:
     target: https://datatracker.ietf.org/doc/draft-ietf-oauth-attestation-based-client-auth
     title: "OAuth 2.0 Attestation-Based Client Authentication"
+
+informative:
   SIGNALS:
     target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-sw-stmt-signals
     title: "Shared Signals Events for OAuth Software Statements"
@@ -128,7 +130,7 @@ Statement-Governed Registration:
 : An {{RFC7591}} client registration, at a server advertising `software_statement_registration_validity_supported`, whose validity is bound to a software statement's `exp` and renewed by replacement statements ({{registration-validity}}).
 
 Establishment:
-: The durable state a successful runtime presentation creates for the grant it opens, enumerated in {{grant-lifecycle}}.
+: The durable state a successful runtime presentation creates for the grant it opens, enumerated in {{grant-lifecycle}}. This specification uses the term only in that sense; the establishment issuer role of {{ISSUANCE}}, and the layer it names, are the separate sense used when discussing which software may exist as a client.
 
 Proven Key:
 : The key for which the presenter demonstrates possession during runtime presentation. The accepted proof path binds this key to the statement as specified in {{sender-constraint}}.
@@ -211,7 +213,7 @@ A delivery that fails the rules above under a still-valid registration leaves th
 
 ## Version Changes {#version-changes}
 
-A review covers the software the issuer evaluated, and `software_version` is the DCR profile's change signal: its value changes on any update to the software. When the statement attests it, the binding rules of {{ISSUANCE}} reject a registration request whose `software_version` differs. A replacement delivered outside a registration request carries no such member, so the authorization server MUST instead compare the replacement's attested `software_version` with the value recorded for the registration: a replacement attesting a different version is a version change, not a renewal, and the authorization server rejects it unless its registration policy accepts the new version and updates the record. A new version therefore requires a new review and a statement covering it. A version string is a vendor-asserted label, not a byte binding; the guarantee is review-of-what-the-vendor-calls-that-version.
+A review covers the software the issuer evaluated, and `software_version` is the DCR profile's change signal: its value changes on any update to the software. When the statement attests it, the binding rules of {{ISSUANCE}} reject a registration request whose `software_version` differs. A replacement delivered outside a registration request carries no such member, so the authorization server MUST instead compare the replacement's attested `software_version` with the value recorded for the registration: a replacement attesting a different version is a version change, not a renewal. The authorization server MUST reject it as a renewal, and MAY instead treat it as a new registration decision under its registration policy, updating the recorded version if it accepts one. A new version therefore requires a new review and a statement covering it. A version string is a vendor-asserted label, not a byte binding; the guarantee is review-of-what-the-vendor-calls-that-version.
 
 The CIMD profile's change signal is `cimd_digest`, which is byte-exact: a mismatch against the currently published document is a policy input under {{ISSUANCE}}, and re-issuance against the new document is the remedy. In both profiles the statement's bounded lifetime caps how stale a review can get: drift the change signal misses still expires with the statement.
 
@@ -224,13 +226,13 @@ Under the CIMD profile, the client presents its statement in the request. The au
 A client presents a software statement by including the following parameter in a token request or a pushed authorization request:
 
 `software_statement`:
-: REQUIRED for presentation. The software statement ({{cimd-profile}}).
+: REQUIRED for presentation. The software statement ({{cimd-profile}}). A request carries at most one; an authorization server MUST reject a request carrying more than one value with `invalid_request`.
 
 The request's `client_id` is the client's Client ID Metadata Document URL. It MUST exactly equal the statement's `sub`; the authorization server MUST reject a presentation where they differ. The effective `client_id` is the statement's `sub`, and the authorization server assigns none.
 
 The request MUST also carry the proof inputs required by the accepted sender-constraint mode: client authentication parameters, a DPoP proof, the fields defined by {{ABCA}}, or a Client Instance Assertion as permitted by {{CLIENT-INSTANCE}}. A successful presentation establishes the client for the request and for the grant state derived from it ({{grant-lifecycle}}).
 
-At the token endpoint, a runtime presentation is valid only on a request that can open a new grant or directly issue access under a grant not already bound to an establishment. Authorization-code redemption and refresh-token use continue an existing grant and follow {{grant-lifecycle}} and {{refresh}} instead. A request that initiates issuance under {{ISSUANCE}} MUST NOT carry the `software_statement` parameter; the authorization server rejects the combination with `invalid_request`. Such a request is recognized before validation by its issuance signals: `response_type=software_statement_code` at the authorization endpoint, and the software statement `requested_token_type` at the token endpoint ({{ISSUANCE}}). A request that carries the parameter and is none of a runtime presentation, a refresh replacement ({{refresh}}), a revalidation delivery ({{revalidation}}), or a tenant approval ({{tenant-approval}}) is rejected with `invalid_request`. Which of these a statement-carrying request is follows from the role in which the authorization server accepts the statement's issuer ({{ISSUANCE}}), not from the shape of the request.
+At the token endpoint, a runtime presentation is valid only on a request that can open a new grant or directly issue access under a grant not already bound to an establishment. Authorization-code redemption and refresh-token use continue an existing grant and follow {{grant-lifecycle}} and {{refresh}} instead. A request that initiates issuance under {{ISSUANCE}} MUST NOT carry the `software_statement` parameter; the authorization server rejects the combination with `invalid_request`. Such a request is recognized before validation by its issuance signals: `response_type=software_statement_code` at the authorization endpoint, and the software statement `requested_token_type` at the token endpoint ({{ISSUANCE}}). A request that carries the parameter and is none of a runtime presentation, a refresh replacement ({{refresh}}), a revalidation delivery ({{revalidation}}), or a tenant approval ({{tenant-approval}}) is rejected with `invalid_request`. Which of these a statement-carrying request is follows from the role in which the authorization server accepts the statement's issuer ({{ISSUANCE}}); where an issuer holds both roles, the consumption point distinguishes them as {{ISSUANCE}} describes.
 
 An authorization server advertises support through `software_statement_presentation_supported` ({{authorization-server-metadata}}).
 
@@ -285,7 +287,7 @@ The effective metadata is therefore attested member by member, not wholesale. Th
 
 The request is evaluated against the effective metadata: a `redirect_uri` MUST match an effective redirection URI, and any requested grant type, response type, or scope MUST fall within the effective metadata. A grant or response type supported by the authorization server but not authorized by the effective metadata fails with `unauthorized_client`; a scope outside the effective metadata fails with `invalid_scope`.
 
-A trusting authorization server SHOULD use the statement's `sub`, `iss`, and `jti` to inventory the establishments derived from one statement and MAY bound their concurrent number. A presentation refused because that bound is reached is rejected with `invalid_client`; the statement and its proof are sound, so the authorization server SHOULD say so in `error_description`, and the client can retry once earlier establishments are released.
+A trusting authorization server SHOULD use the statement's `sub`, `iss`, and `jti` to inventory the establishments derived from one statement and SHOULD bound their concurrent number, as {{ISSUANCE}} bounds registrations derived from one statement. A presentation refused because that bound is reached is rejected with `invalid_client`; the statement and its proof are sound, so the authorization server SHOULD say so in `error_description`, and the client can retry once earlier establishments are released.
 
 ## Grant Lifecycle {#grant-lifecycle}
 
@@ -304,6 +306,8 @@ A statement MUST be unexpired when presented. Expiry after presentation does not
 ### Refresh {#refresh}
 
 On refresh-token use the authorization server MUST verify possession of the establishment's Proven Key under the same sender-constraint mechanism. It MAY, by local policy, additionally require a current unexpired statement, and SHOULD require one once the establishment's recorded statement has expired, since that requirement is what makes ceased renewal end an existing grant ({{enforcement-bounds}}).
+
+Where the grant was opened for a tenant that requires approval ({{tenant-approval}}), the authorization server MUST also evaluate that tenant's approval on refresh: a recorded approval that has expired, or a required carried approval that is absent or fails validation, ends the grant's continuation with `invalid_grant`. Without this, ceasing approval renewal stops new grants while existing ones refresh for the life of their refresh tokens.
 
 When policy requires one, the client presents the replacement in the `software_statement` parameter of the refresh request. The replacement:
 
@@ -337,6 +341,13 @@ Tenant approval constrains the request; it does not establish the client:
 * Expiry bears on that tenant alone. A lapsed tenant approval stops that tenant's requests and leaves the client's registration, and every other tenant, untouched.
 
 Whether a tenant requires an approval statement is that tenant's policy. A tenant that expresses approval through the authorization server's own administrative interface needs no statement; the artifact is how a decision made once travels to every authorization server where the tenant has configured its issuer.
+
+A tenant approval statement reaches the authorization server by one of two paths, and a deployment chooses:
+
+* Carried by the client, in the `software_statement` parameter of a request it makes for that tenant. The client obtains the statement from the tenant's issuer under {{ISSUANCE}}, which requires it to be a client of that issuer, a relationship the client establishes with each tenant whose approval it carries.
+* Recorded at the authorization server, supplied through the server's administrative interface by the tenant, in which case the client carries nothing. The authorization server validates the statement as it would a carried one, records it with the tenant, and applies it to that tenant's requests for the client the statement names.
+
+A recorded tenant approval has the validity its `exp` gives it. On expiry the authorization server MUST treat the tenant as having no approval for that client, with the same effect as an absent approval, and the tenant restores it by recording a replacement whose `iat` is no earlier than the recorded one. Retrieval of a replacement by the authorization server from the tenant's issuer is not defined here.
 
 Where the client is not established at the authorization server at all, one statement can serve both roles if the tenant's issuer is also accepted for establishment: the presentation establishes the client under {{cimd-presentation}} and carries the tenant's approval in the same act.
 
@@ -456,7 +467,7 @@ Presentation reaches these retrievals before any client is registered or any use
 
 ## Enforcement Bounds {#enforcement-bounds}
 
-Expiry is enforced at every presentation and every statement-governed registration, so a lapsed statement stops new runtime establishment and causes registration-backed requests to fail at the recorded `exp`. It does not retroactively invalidate an establishment, revoke an access token, or terminate an outstanding grant. Requiring a current statement on refresh under {{refresh}} is the control that makes issuer non-renewal end runtime-established grants, and a deployment that does not adopt it retains grants for the life of their refresh tokens whatever the statement lifetime; registration-backed grants remain subject to the server's grant policy after the registration expires. A narrowed re-review takes effect through replacement effective metadata or an updated registration. Detection of post-issuance metadata change depends on the signal each profile carries: `software_version` is a vendor-asserted label, while `cimd_digest` covers exact bytes but requires retrieval for comparison. The bounded statement lifetime limits what either signal can miss for new establishment. {{SIGNALS}} defines an optional event mechanism by which an issuer ends a decision before its expiry; expiry remains the floor, and this specification does not depend on it.
+Expiry is enforced at every presentation and every statement-governed registration, so a lapsed statement stops new runtime establishment and causes registration-backed requests to fail at the recorded `exp`. It does not retroactively invalidate an establishment, revoke an access token, or terminate an outstanding grant. Requiring a current statement on refresh under {{refresh}} is the control that makes issuer non-renewal end runtime-established grants, and the tenant approval evaluation in that section is what makes a customer's ceased renewal end them; a deployment that adopts neither retains grants for the life of their refresh tokens whatever the statement lifetime; registration-backed grants remain subject to the server's grant policy after the registration expires. A narrowed re-review takes effect through replacement effective metadata or an updated registration. Detection of post-issuance metadata change depends on the signal each profile carries: `software_version` is a vendor-asserted label, while `cimd_digest` covers exact bytes but requires retrieval for comparison. The bounded statement lifetime limits what either signal can miss for new establishment. {{SIGNALS}} defines an optional event mechanism by which an issuer ends a decision before its expiry; expiry remains the floor, and this specification does not depend on it.
 
 Renewal cadence is a deployment trade: short lifetimes tighten the issuer's control loop and increase issuance and delivery traffic, and a fleet of registrations issued together expires together, so issuers SHOULD stagger expiries or renew ahead of the boundary to avoid synchronized lapses.
 
