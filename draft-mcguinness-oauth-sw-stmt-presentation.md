@@ -86,6 +86,28 @@ Runtime presentation (CIMD profile):
 3. The request proceeds under the effective metadata. No persistent registration is created.
 4. The state the rest of the grant depends on persists as an establishment ({{grant-lifecycle}}).
 
+## Relationship to Client Attestation {#relationship-attestation}
+
+This section is non-normative.
+
+A software statement is an attestation. It is a signed assertion by a third party about a client, accepted by an authorization server that has configured trust in the signer, and it is no more than that: an attributable claim bounded by the signer's process, not proof that what it says is true ({{ISSUANCE}}). It differs from the client attestation of {{ABCA}} and the client instance assertion of {{CLIENT-INSTANCE}} in subject, authority, lifetime, and effect, not in kind.
+
+Subject:
+: A software statement attests client software and the metadata a reviewer evaluated. A client attestation attests a running instance and the key it holds.
+
+Authority:
+: A software statement is signed by a review authority whose scope is a set of client identifiers. A client attestation is signed by a client attester whose scope is a deployment of the software; the two are configured independently by the authorization server.
+
+Lifetime and audience:
+: A software statement carries an audience and an expiry the reviewer chose, and the same statement is consumed at every server in that audience. A client attestation is short-lived and bound to the request it accompanies.
+
+Effect:
+: A software statement supplies establishment: which client this is, and what metadata a named reviewer stands behind. A client attestation supplies presenter proof: that the party sending this request holds a key someone vouches for. Neither grants access, and neither substitutes for the other.
+
+The two therefore compose. A deployment holding only a client attestation knows what is running but not whether anyone approved it; a deployment holding only a software statement knows the software was reviewed but not that this sender is running it. Runtime presentation always requires both halves: the statement carries the review, and a proof carries the presenter, supplied either by a key the statement itself attests or, where it attests none, by a client attestation or instance assertion ({{sender-constraint}}).
+
+This specification defines no new attestation format and no new attester role. It defines how a review attestation is consumed, and how a presenter attestation defined elsewhere is bound to it.
+
 # Conventions and Definitions
 
 {::boilerplate bcp14-tagged}
