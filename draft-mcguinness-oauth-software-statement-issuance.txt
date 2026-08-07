@@ -1249,32 +1249,36 @@ Table of Contents
    sub:  REQUIRED.  The client software identifier agreed between issuer
       and audience.  For software registered through [RFC7591], the
       subject is the software_id, the identifier that holds across
-      registrations and versions; a registration request that supplies
-      software_id MUST supply a value equal to sub for the statement to
-      apply, and a request that omits it inherits the attested value
-      through ordinary statement precedence.  For import at an
-      authorization server where no vendor identifier exists, sub is a
-      client identifier already registered at the server named in aud.
-      It is never a Client ID Metadata Document URL, and no retrieval is
-      implied.
+      registrations and versions.  For import at an authorization server
+      where no vendor identifier exists, sub is a client identifier
+      already registered at the server named in aud.  It is never a
+      Client ID Metadata Document URL, and no retrieval is implied.
 
    cimd_digest:  MUST be absent.  There is no canonical document to
       bind; the statement's own claims carry the entire reviewed
       content.
 
    software_version:  OPTIONAL.  When attested, the [RFC7591]
-      software_version the review covered; it takes attested precedence
-      at registration, and a new version of the software requires re-
-      issuance.  A version string is a vendor-asserted label, not a byte
-      binding, so this binds the review to what the vendor calls that
-      version, a weaker guarantee than cimd_digest gives the CIMD-
-      anchored shape.
+      software_version the review covered; a new version of the software
+      requires re-issuance.  A version string is a vendor-asserted
+      label, not a byte binding, so this binds the review to what the
+      vendor calls that version, a weaker guarantee than cimd_digest
+      gives the CIMD-anchored shape.
 
    Attested metadata is inline only: the snapshot-subset rule above does
    not apply, and the issuer attests exactly the members its review
    covered, which take [RFC7591] precedence at registration as usual.
    Issuer scoping uses an enumerated identifier set or a tenant rather
    than a URL namespace (Section 15).
+
+   The statement binds to a registration request through these
+   identifiers.  A trusting authorization server MUST reject a
+   registration request whose software_id differs from the statement's
+   sub and, where the statement attests software_version, MUST reject a
+   request whose software_version differs from the attested value, in
+   both cases with invalid_software_statement: the statement does not
+   describe the registering software.  A request that omits either
+   member inherits the attested value through [RFC7591] precedence.
 
    A statement in this shape is consumable through registration
    (Section 12) or as direct policy import at an authorization server
@@ -1396,7 +1400,8 @@ Table of Contents
    [RFC7591] registration endpoints have offered since 2015; what is new
    for the consumer is the validation this document requires
    (Section 11).  Both statement shapes are consumable here, CIMD-
-   anchored and non-CIMD (Section 11.1).
+   anchored and non-CIMD; the latter binds to the registration request
+   through its identifiers (Section 11.1).
 
    In runtime presentation, defined by the companion [PRESENTATION], the
    client presents the statement in an authorization or token request,
