@@ -1284,11 +1284,14 @@ Table of Contents
    (Section 12) or as direct policy import at an authorization server
    that already knows the identifier; it cannot be presented at runtime,
    because the machinery of [PRESENTATION] assumes the document the
-   CIMD-anchored subject names.  The issuance flows of this document
-   identify clients by their metadata document and therefore produce
-   only CIMD-anchored statements; a statement in this shape is issued by
-   an out-of-band process, such as an enterprise review console or an
-   ecosystem directory, and consumed under this contract.
+   CIMD-anchored subject names.  [PRESENTATION] profiles its consumption
+   as the DCR profile, including the registration-validity and
+   revalidation model that binds a registration's lifetime to the
+   statement's expiry.  The issuance flows of this document identify
+   clients by their metadata document and therefore produce only CIMD-
+   anchored statements; a statement in this shape is issued by an out-
+   of-band process, such as an enterprise review console or an ecosystem
+   directory, and consumed under this contract.
 
    With a stable URL across releases, sub correlates releases and
    cimd_digest distinguishes reviewed content.  With distinct release

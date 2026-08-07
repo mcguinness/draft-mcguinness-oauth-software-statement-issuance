@@ -8,21 +8,28 @@ Intended status: Standards Track
 Expires: 8 February 2027
 
 
-           OAuth 2.0 Software Statement Runtime Presentation
+               OAuth 2.0 Software Statement Presentation
            draft-mcguinness-oauth-sw-stmt-presentation-latest
 
 Abstract
 
-   RFC 7591 defines the software statement and how a dynamic client
-   registration endpoint consumes it.  This specification defines a
-   second consumption path, runtime presentation: a client identified by
-   a Client ID Metadata Document URL presents an already-issued software
-   statement in an authorization or token request through the
-   software_statement parameter, and the authorization server applies
-   the attested metadata to that request without creating a persistent
-   registration.  Every presentation proves possession of a key directly
-   attested by the statement or covered by an accepted endorsement
-   chain, so possession of the statement alone is insufficient.
+   RFC 7591 defines the software statement but leaves its consumption
+   underdefined: a statement is evaluated once at registration, and the
+   registration then outlives the review it was based on.  This
+   specification profiles the software statement for two client identity
+   models and defines consumption that keeps the review current.  A
+   statement bound to an RFC 7591 software_id governs a dynamic client
+   registration, giving the registration the statement's expiry as its
+   validity, renewed by delivering a replacement.  A statement bound to
+   a Client ID Metadata Document URL is presented at runtime in an
+   authorization or token request, establishing an unregistered client
+   for that request alone; every runtime presentation proves possession
+   of a key directly attested by the statement or covered by an accepted
+   endorsement chain, so possession of the statement alone is
+   insufficient.  In both models the statement issuer's expiry and
+   renewal decisions govern the client's standing at every authorization
+   server in the statement's audience, so one issuer can centrally
+   curate the approved software across many servers.
 
 Status of This Memo
 
@@ -60,92 +67,141 @@ Table of Contents
    1.  Introduction
      1.1.  Protocol Overview
    2.  Conventions and Definitions
-   3.  Presentable Statement
-   4.  Presentation Request
-     4.1.  Authorization Endpoint
-     4.2.  Token Endpoint
-   5.  Relationship to Dynamic Client Registration
-     5.1.  Statement Delivery for Registered Clients
-   6.  Presentation Processing
-     6.1.  Sender Constraint
-     6.2.  Effective Metadata
-   7.  Grant Lifecycle
-     7.1.  Refresh
-   8.  Error Responses
-   9.  Example
-   10. Authorization Server Metadata
-   11. Extension Points
-   12. Security Considerations
-     12.1.  Statement Theft
-     12.2.  Validation Scope
-     12.3.  Key Location versus Keys
-     12.4.  External Retrieval and Resource Exhaustion
-     12.5.  Enforcement Bounds
-     12.6.  Client-Asserted Metadata
-     12.7.  Statement Handling
-   13. Privacy Considerations
-   14. IANA Considerations
-     14.1.  OAuth Parameters Registry
-     14.2.  OAuth Authorization Server Metadata Registry
-   15. Normative References
+   3.  Statement Profiles
+     3.1.  Common Elements
+     3.2.  DCR Profile
+     3.3.  CIMD Profile
+   4.  Presentation at Registration
+     4.1.  Registration Validity
+     4.2.  Revalidation
+     4.3.  Version Changes
+   5.  Runtime Presentation
+     5.1.  Presentation Request
+       5.1.1.  Authorization Endpoint
+       5.1.2.  Token Endpoint
+     5.2.  Presentation Processing
+     5.3.  Sender Constraint
+     5.4.  Effective Metadata
+     5.5.  Grant Lifecycle
+       5.5.1.  Refresh
+     5.6.  Registered CIMD Clients
+   6.  Deployment Model: Centrally Curated Software
+   7.  Error Responses
+   8.  Examples
+     8.1.  Revalidating a Statement-Governed Registration
+     8.2.  Presenting at the Token Endpoint
+   9.  Authorization Server Metadata
+   10. Extension Points
+   11. Security Considerations
+     11.1.  Statement Theft
+     11.2.  Validation Scope
+     11.3.  Key Location versus Keys
+     11.4.  External Retrieval and Resource Exhaustion
+     11.5.  Enforcement Bounds
+     11.6.  Client-Asserted Metadata
+     11.7.  Statement Handling
+   12. Privacy Considerations
+   13. IANA Considerations
+     13.1.  OAuth Parameters Registry
+     13.2.  OAuth Authorization Server Metadata Registry
+   14. References
+     14.1.  Normative References
+     14.2.  Informative References
    Acknowledgments
    Author's Address
 
 1.  Introduction
 
-   A software statement ([RFC7591], Section 2.3) is a signed JWT in
-   which an issuer attests client metadata.  [ISSUANCE] defines how a
-   client obtains one for a client identified by a Client ID Metadata
-   Document URL [CIMD], and hardens the artifact with a subject bound to
-   that URL, a digest of the reviewed document, an explicit audience,
-   and a bounded lifetime.  Until now the statement has had one
-   consumption path: an [RFC7591] registration request, after which the
-   client's standing at the server is carried by a persistent
-   registration.
+   An [RFC7591] dynamic client registration is permanent by default.  A
+   software statement ([RFC7591], Section 2.3) can carry a reviewer's
+   approval into the registration request, but [RFC7591] leaves the
+   statement's content and lifecycle largely undefined: nothing standard
+   says which claims it must carry, what binds it to the registering
+   software, or what happens when the review it represents goes stale.
+   The registration outlives the approval.  An organization that reviews
+   and approves client software therefore has no standard way to bound
+   that approval in time, or to withdraw it, at the authorization
+   servers that relied on it, and every server it works with accumulates
+   its own drifting allowlist.
 
-   [CIMD] established that a client can be resolved at request time,
-   with no registration ceremony, from metadata it publishes itself.
-   What resolution alone cannot carry is anyone else's review of that
-   metadata.  Runtime presentation closes the gap between the two
-   models: the client presents its statement inside an ordinary
-   authorization or token request, the authorization server validates
-   the statement under policy for a trusted issuer and applies the
-   attested metadata to that request, and no persistent client
-   registration is created.  The authorization server does retain the
-   grant-bound establishment state defined in Section 7.
+   This specification closes that gap by making the statement issuer's
+   decisions govern client standing continuously:
 
-   This specification defines the software_statement request parameter
-   for authorization and token requests (Section 4), the processing
-   rules a trusting authorization server applies (Section 6), its
-   relationship to registered clients (Section 5), the lifecycle of a
-   grant opened by a presentation (Section 7), error reporting
-   (Section 8), and a discovery signal (Section 10).  Statement format,
-   issuance, and validation are defined by [ISSUANCE] and are not
-   modified here; Section 3 states the claim contract a presentation
-   consumes, and decouples it from how the statement was acquired.
+   *  The issuer sets the statement's exp, and a registration governed
+      by a statement takes that expiry as its validity (Section 4.1).
+      The client renews by delivering a replacement statement
+      (Section 4.2); a registration whose statement lapses expires.
 
-   A statement authorizes metadata, not its presenter.  Runtime proof of
-   the presenter is what the sender-constraint rules of Section 6.1
-   supply, and nothing in this specification attests software instances
-   or binaries.
+   *  An issuer that stops renewing a client's statements thereby winds
+      down that client at every authorization server in the statements'
+      audience, with no per-server deprovisioning.  One issuer can
+      centrally manage and curate the approved software estate across
+      many authorization servers; an enterprise operating its own issuer
+      is the motivating deployment (Section 6).
+
+   Two client identity models are profiled (Section 3), because clients
+   arrive at authorization servers in two ways:
+
+   *  *DCR profile* (Section 3.2): the client is registered through
+      [RFC7591] and identified by its software_id.  The statement is
+      consumed at registration and at renewal, and it governs the
+      registration's validity.
+
+   *  *CIMD profile* (Section 3.3): the client is identified by a Client
+      ID Metadata Document URL [CIMD] and may be entirely unregistered.
+      The statement is presented at runtime, inside an authorization or
+      token request, establishing the client for that request alone
+      (Section 5.1); no persistent registration is created, though the
+      authorization server retains the grant-bound establishment state
+      defined in Section 5.5.
+
+   Statement format, issuance, and validation are defined by [ISSUANCE]
+   and are not modified here; the profiles in this document state which
+   elements each consumption model requires, and how the client acquired
+   its statement is out of scope.  A statement authorizes metadata, not
+   its presenter.  Runtime proof of the presenter is what the sender-
+   constraint rules of Section 5.3 supply, and nothing in this
+   specification attests software instances or binaries.
 
 1.1.  Protocol Overview
 
-   The following non-normative sequence summarizes a presentation:
+   The following non-normative sequences summarize the two models.
+
+   Registration governed by a statement (DCR profile):
+
+   1.  The client registers through [RFC7591], carrying a DCR-profile
+       statement in the software_statement member; the statement binds
+       to the registration by software_id and, when attested,
+       software_version ([ISSUANCE]).
+
+   2.  The authorization server records the statement's identity and exp
+       with the registration; the registration is valid until that
+       expiry.
+
+   3.  Before expiry, the client delivers a replacement statement, in a
+       token request or a new registration request; the registration's
+       validity extends to the replacement's exp.
+
+   4.  If no replacement arrives, the registration expires and requests
+       under it fail; an issuer that ceases renewal has offboarded the
+       client here and at every other server in its statements'
+       audience.
+
+   Runtime presentation (CIMD profile):
 
    1.  The client includes the software_statement parameter in a token
        request, or in a pushed authorization request for a redirect
        flow, with its Client ID Metadata Document URL as client_id.
 
-   2.  The authorization server validates the statement (Section 3),
-       verifies the sender-constraint chain (Section 6.1), and derives
-       the client's effective metadata for the request (Section 6.2).
+   2.  The authorization server validates the statement (Section 3.3),
+       verifies the sender-constraint chain (Section 5.3), and derives
+       the client's effective metadata for the request (Section 5.4).
 
    3.  The request proceeds under the effective metadata.  No persistent
        registration is created.
 
    4.  The state the rest of the grant depends on persists as an
-       establishment (Section 7).
+       establishment (Section 5.5).
 
 2.  Conventions and Definitions
 
@@ -169,64 +225,185 @@ Table of Contents
       attested metadata to that request without creating a persistent
       client registration.
 
+   Statement-Governed Registration:  An [RFC7591] client registration
+      whose validity is bound to a software statement's exp and renewed
+      by replacement statements (Section 4.1).
+
    Establishment:  The durable state a successful runtime presentation
-      creates for the grant it opens, enumerated in Section 7.
+      creates for the grant it opens, enumerated in Section 5.5.
 
    Proven Key:  The key for which the presenter demonstrates possession
       during runtime presentation.  The accepted proof path binds this
-      key to the statement as specified in Section 6.1.
+      key to the statement as specified in Section 5.3.
 
-3.  Presentable Statement
+3.  Statement Profiles
 
-   Runtime presentation consumes a software statement conforming to the
-   CIMD-anchored format of [ISSUANCE].  The registration-only shape for
-   non-CIMD clients defined there cannot be presented; the processing
-   rules of this specification assume the document the subject names.
-   How the client acquired the statement is out of scope: the issuance
-   flows of [ISSUANCE] are one way to obtain a presentable statement,
-   not a requirement of presentation.
+   This document consumes the two statement shapes [ISSUANCE] defines,
+   discriminated by the presence of cimd_digest: the DCR profile is its
+   non-CIMD shape, the CIMD profile its CIMD-anchored shape.  The
+   syntax, validation, and semantics of every element are those of
+   [ISSUANCE]; this section states which elements each profile requires
+   and what each is consumed for.  How the client acquired the statement
+   is out of scope: the issuance flows of [ISSUANCE] produce CIMD-
+   profile statements, DCR-profile statements are issued by out-of-band
+   processes such as an enterprise review console, and neither profile
+   requires a particular acquisition path.
 
-   Each element below is consumed by a specific mechanism of this
-   specification; a statement lacking any of them cannot be presented at
-   runtime, whatever a registration endpoint might still accept:
+3.1.  Common Elements
 
-   typ header:  software-statement+jwt; explicit typing prevents
-      confusion with other JWTs from the same issuer.
+   Both profiles require the following, in addition to the typ header
+   value software-statement+jwt, whose explicit typing prevents
+   confusion with other JWTs from the same issuer:
 
-   iss:  identifies the issuer for trust, claim-authority, and namespace
-      decisions, and forms part of the statement identity recorded in
-      the establishment (Section 7).
+   iss:  REQUIRED.  Identifies the issuer for trust, claim-authority,
+      and scope decisions, and forms part of the statement identity
+      recorded with a registration or establishment.
 
-   sub:  the client's Client ID Metadata Document URL; the request's
-      client_id equals it, by the rule of Section 4.
+   aud:  REQUIRED.  Scopes which authorization servers may accept the
+      statement; without it a statement would be usable at every server
+      that trusts the issuer.
 
-   aud:  scopes which authorization servers may accept the presentation;
-      without it a statement would be presentable at every server that
-      trusts the issuer.
+   iat:  REQUIRED.  The issuance time.
 
-   exp:  checked at every presentation and at the validity points of
-      Section 7.
+   exp:  REQUIRED.  The expiry the issuer chose.  Under the DCR profile
+      it is the registration's validity (Section 4.1); under the CIMD
+      profile it is checked at every presentation and at the validity
+      points of Section 5.5.  In both profiles it is the issuer's
+      continuous-governance lever: renewal extends standing, ceased
+      renewal ends it.
 
-   jti:  identifies the statement within the issuer's namespace; the
-      inventory and concurrency bounds of this specification can key on
-      the iss and jti pair.  A replacement statement has its own jti, so
-      replacement matching does not key on this value.
+   jti:  REQUIRED.  Identifies the statement within the issuer's
+      namespace; inventory and concurrency bounds can key on the iss and
+      jti pair.  A replacement statement has its own jti, so replacement
+      matching does not key on this value.
 
-   cimd_digest:  binds the issuer's review to the exact document bytes
-      evaluated and feeds the post-issuance change policy of [ISSUANCE].
+3.2.  DCR Profile
 
-   The syntax, validation, and semantics of every element are those of
-   [ISSUANCE]; this section adds no claim rules.  A presented statement
-   failing this contract is rejected as Section 8 defines for an invalid
-   statement.
+   For client software registered through [RFC7591] and identified by
+   software_id:
 
-4.  Presentation Request
+   sub:  REQUIRED.  The software's [RFC7591] software_id.  The statement
+      binds to a registration request by the identifier rules of
+      [ISSUANCE]: a request whose software_id differs from sub is
+      rejected.
+
+   software_version:  OPTIONAL.  The version the review covered; when
+      attested, a request whose software_version differs is rejected
+      ([ISSUANCE]), and a new version requires re-issuance
+      (Section 4.3).
+
+   cimd_digest:  MUST be absent; its absence is what marks this profile.
+      Attested metadata is inline only, and the statement's own claims
+      carry the entire reviewed content.
+
+   A DCR-profile statement is consumed at registration and at renewal
+   (Section 4).  It cannot be presented at runtime: the runtime rules
+   assume the document a CIMD subject names.
+
+3.3.  CIMD Profile
+
+   For a client identified by a Client ID Metadata Document URL, each
+   element is consumed by a specific runtime mechanism, and a statement
+   lacking any of them cannot be presented:
+
+   sub:  REQUIRED.  The client's Client ID Metadata Document URL; the
+      request's client_id equals it, by the rule of Section 5.1.
+
+   cimd_digest:  REQUIRED.  Binds the issuer's review to the exact
+      document bytes evaluated and feeds the post-issuance change policy
+      of [ISSUANCE].
+
+   A CIMD-profile statement is presented at runtime (Section 5.1), and
+   also serves a registered client whose client_id is its CIMD URL
+   (Section 5.6).  A statement failing this profile is rejected as
+   Section 7 defines for an invalid statement.
+
+4.  Presentation at Registration
+
+   Under the DCR profile, the statement is consumed where [RFC7591]
+   always put it: the software_statement member of a registration
+   request, validated and bound as [ISSUANCE] requires, with rejections
+   using the [RFC7591] error codes given there.  This section adds what
+   [RFC7591] left undefined: the registration's relationship to the
+   statement's lifetime.
+
+4.1.  Registration Validity
+
+   An authorization server operating statement-governed registrations
+   MUST record the governing statement's identity, its iss, jti, and
+   sub, and its exp with the registration.  The registration is valid
+   until that exp: when it passes without a replacement (Section 4.2),
+   the authorization server MUST treat the registration as expired, and
+   requests under an expired registration fail as for an unknown client,
+   invalid_client at the token endpoint.  Registration expiry does not
+   revoke tokens already issued; outstanding grants are local policy,
+   and short access token lifetimes bound the tail.
+
+   The client needs no new signal to learn its registration's validity:
+   it holds the statement, and the registration's validity is the
+   statement's exp.  Whether to operate registrations under this model
+   is deployment policy; a server that does not adopt it consumes the
+   statement as plain [RFC7591] input and this section does not apply.
+
+4.2.  Revalidation
+
+   The client renews a statement-governed registration by delivering a
+   replacement statement, in either of two ways:
+
+   *  in the software_statement parameter of a token request under the
+      registration, authenticated as the registered client under the
+      registration's own method; or
+
+   *  in a new [RFC7591] registration request, or an update where the
+      deployment offers [RFC7592] registration management.
+
+   The replacement MUST validate under [ISSUANCE] with this server in
+   its audience and MUST have the governing statement's iss and sub.  On
+   success the authorization server MUST replace the recorded statement
+   identity and exp atomically; the registration's validity extends to
+   the replacement's exp.  Whether attested changes in the replacement
+   update the registration record is local registration policy.  A
+   refresh-token request that omits a replacement the validity model
+   requires, or delivers one failing these rules, is rejected with
+   invalid_grant; any other token request under an expired registration
+   is rejected with invalid_client.
+
+4.3.  Version Changes
+
+   A review covers the software the issuer evaluated, and
+   software_version is the DCR profile's change signal: its value
+   changes on any update to the software.  When the statement attests
+   it, the binding rules of [ISSUANCE] reject a registration or
+   replacement whose software_version differs, so a new version requires
+   a new review and a statement covering it, and the client updates its
+   registration alongside.  A version string is a vendor-asserted label,
+   not a byte binding; the guarantee is review-of-what-the-vendor-calls-
+   that-version.
+
+   The CIMD profile's change signal is cimd_digest, which is byte-exact:
+   a mismatch against the currently published document is a policy input
+   under [ISSUANCE], and re-issuance against the new document is the
+   remedy.  In both profiles the statement's bounded lifetime caps how
+   stale a review can get: drift the change signal misses still expires
+   with the statement.
+
+5.  Runtime Presentation
+
+   Under the CIMD profile, the client presents its statement inside the
+   request itself, and the authorization server validates the statement
+   under policy for a trusted issuer and applies the attested metadata
+   to that request, creating no persistent client registration.  This
+   establishes an otherwise unregistered client at request time, as
+   [CIMD] resolution does, with the issuer's review carried inline
+   instead of fetched.
+
+5.1.  Presentation Request
 
    A client presents a software statement by including the following
    parameter in a token request or a pushed authorization request:
 
    software_statement:  REQUIRED for presentation.  The software
-      statement (Section 3).
+      statement (Section 3.3).
 
    The request's client_id is the client's Client ID Metadata Document
    URL.  It MUST exactly equal the statement's sub; the authorization
@@ -244,75 +421,34 @@ Table of Contents
    client establishment carried alongside the request, not a request for
    issuance.  A request that initiates issuance under [ISSUANCE] MUST
    NOT carry the software_statement parameter; the authorization server
-   rejects the combination with invalid_request.
+   rejects the combination with invalid_request.  A request that carries
+   the parameter and is neither a presentation, a revalidation delivery
+   (Section 4.2), nor a registered-client delivery (Section 5.6) is
+   rejected with invalid_request.
 
    An authorization server advertises support through
-   software_statement_presentation_supported (Section 10).
+   software_statement_presentation_supported (Section 9).
 
-4.1.  Authorization Endpoint
+5.1.1.  Authorization Endpoint
 
    Presentation in an authorization request MUST use a pushed
    authorization request [RFC9126].  The statement and its proof are
    sent to the pushed authorization request endpoint, where the
-   processing rules of Section 6 apply.  The subsequent authorization
+   processing rules of Section 5.2 apply.  The subsequent authorization
    request MUST use a client_id exactly equal to the establishment's
    sub.  A statement never appears in a front-channel URL, just as
    [ISSUANCE] keeps the issued statement out of authorization responses.
 
-4.2.  Token Endpoint
+5.1.2.  Token Endpoint
 
    Presentation at the token endpoint requires no additional profile:
    the client includes the parameter in the token request alongside the
    grant.
 
-5.  Relationship to Dynamic Client Registration
-
-   Presentation and registration are distinct consumption paths for the
-   same artifact, and a request is unambiguously on one of them.
-
-   A presentation identifies its client by the statement's sub, the
-   Client ID Metadata Document URL (Section 4).  A request that
-   identifies a client by a server-assigned [RFC7591] client_id is not a
-   presentation: the software_statement parameter is not defined for
-   such a request, and the authorization server MUST reject one that
-   carries it with invalid_request, except as Section 5.1 provides.  A
-   client registered without a Client ID Metadata Document identity
-   therefore consumes statements only at registration, under the non-
-   CIMD statement shape of [ISSUANCE], which binds the statement to the
-   registering software by software_id and, when attested,
-   software_version; its statement lifecycle is the registration path's.
-
-   A client can be registered at an authorization server under its
-   Client ID Metadata Document URL as its client_id and also present at
-   runtime.  Local policy decides whether to accept presentations
-   alongside the registration.  When both exist, the registration record
-   governs requests that do not carry a statement, and the presented
-   statement's effective metadata governs the presented request only.
-
-5.1.  Statement Delivery for Registered Clients
-
-   A deployment can require a registered client to hold a current
-   software statement, extending to registered clients the wind-down
-   control Section 7.1 defines for presentation-opened grants.  For a
-   client registered under its Client ID Metadata Document URL as its
-   client_id, the authorization server MAY, by local policy, require a
-   current unexpired statement on token requests; the client then
-   delivers it in the software_statement parameter of the token request.
-
-   The delivered statement MUST validate under [ISSUANCE] with this
-   server in its audience, and its sub MUST equal the registered
-   client_id.  The request authenticates as the registered client, under
-   the registration's own method.  The delivered statement satisfies the
-   currency requirement; it does not alter the registration, whose
-   management remains the registration path's.  A refresh-token request
-   that omits a statement this policy requires, or delivers one failing
-   these rules, is rejected with invalid_grant.  Any other token request
-   failing the currency requirement is rejected with invalid_client.
-
-6.  Presentation Processing
+5.2.  Presentation Processing
 
    On receiving a presentation, the authorization server proceeds as
-   follows, rejecting as Section 8 defines at the first failure:
+   follows, rejecting as Section 7 defines at the first failure:
 
    1.  Validate the statement under [ISSUANCE]: format, issuer trust,
        audience, lifetime, and namespace, with digest comparison as the
@@ -320,17 +456,17 @@ Table of Contents
        not require a client-controlled network retrieval before
        performing such a retrieval.
 
-   2.  Verify the contract of Section 3 and the client_id rule of
-       Section 4.
+   2.  Verify the profile of Section 3.3 and the client_id rule of
+       Section 5.1.
 
-   3.  Verify the sender-constraint chain (Section 6.1).
+   3.  Verify the sender-constraint chain (Section 5.3).
 
    4.  Derive the effective metadata and evaluate the request against it
-       (Section 6.2).
+       (Section 5.4).
 
-   5.  On success, create the establishment (Section 7).
+   5.  On success, create the establishment (Section 5.5).
 
-6.1.  Sender Constraint
+5.3.  Sender Constraint
 
    A runtime presentation MUST be sender-constrained, and the constraint
    MUST chain to the statement.  The presenter proves possession of the
@@ -382,9 +518,9 @@ Table of Contents
    presentation time.  A fetch failure leaves the chain unverified, and
    the presentation is rejected as invalid_client; the server MUST NOT
    fall back to a weaker mode.  A server MAY reuse a recently retrieved
-   key set within ordinary HTTP caching bounds (Section 12.4).
+   key set within ordinary HTTP caching bounds (Section 11.4).
 
-6.2.  Effective Metadata
+5.4.  Effective Metadata
 
    Having validated the statement and its proof, the authorization
    server derives the client's effective metadata for the request:
@@ -425,7 +561,7 @@ Table of Contents
    and jti to inventory the establishments derived from one statement
    and MAY bound their concurrent number.
 
-7.  Grant Lifecycle
+5.5.  Grant Lifecycle
 
    A successful presentation creates an establishment comprising:
 
@@ -433,7 +569,7 @@ Table of Contents
 
    *  the statement identity, its iss and jti, and its expiry;
 
-   *  the effective metadata (Section 6.2);
+   *  the effective metadata (Section 5.4);
 
    *  the issuer trust decision; and
 
@@ -453,7 +589,7 @@ Table of Contents
    presentation does not invalidate an establishment already bound, just
    as expiry does not undo an [RFC7591] registration.
 
-7.1.  Refresh
+5.5.1.  Refresh
 
    On refresh-token use the authorization server MUST verify possession
    of the establishment's Proven Key under the same sender-constraint
@@ -468,7 +604,7 @@ Table of Contents
 
    *  MUST have the establishment's iss and sub; and
 
-   *  MUST authorize the establishment's Proven Key (Section 6.1).
+   *  MUST authorize the establishment's Proven Key (Section 5.3).
 
    The refreshed access MUST fall within the replacement's effective
    metadata; the grant never widens beyond the original authorization.
@@ -481,15 +617,63 @@ Table of Contents
    statement that policy requires, is rejected with invalid_grant and
    leaves the establishment unchanged.
 
-8.  Error Responses
+5.6.  Registered CIMD Clients
 
-   A rejected presentation uses the error responses of [RFC6749] for the
-   endpoint at which it was presented, not the registration error codes
-   of [RFC7591].  At the token endpoint:
+   A client can be registered at an authorization server under its
+   Client ID Metadata Document URL as its client_id and also present at
+   runtime.  Local policy decides whether to accept presentations
+   alongside the registration.  When both exist, the registration record
+   governs requests that do not carry a statement, and the presented
+   statement's effective metadata governs the presented request only.
+
+   Such a registration can also be statement-governed: the validity and
+   revalidation model of Section 4.1 and Section 4.2 applies, with the
+   delivered statement's sub equal to the registered client_id and
+   validated under the CIMD profile.  The request authenticates as the
+   registered client, under the registration's own method; the delivered
+   statement renews validity and does not otherwise alter the
+   registration.  A refresh-token request that omits a statement this
+   policy requires, or delivers one failing these rules, is rejected
+   with invalid_grant; any other token request failing the currency
+   requirement is rejected with invalid_client.
+
+6.  Deployment Model: Centrally Curated Software
+
+   This section is non-normative.
+
+   An enterprise that reviews and approves client software operates a
+   statement issuer.  Approval of an application is the issuance of a
+   short-lived statement: the DCR profile for software its providers
+   register through [RFC7591], the CIMD profile for software with hosted
+   metadata, each with aud naming the authorization servers of the
+   providers where the approval should hold.  Renewal is automatic while
+   the approval stands, so registrations stay valid and presentations
+   keep succeeding.
+
+   The controls fall out of the lifetime machinery.  Onboarding a
+   provider is one trust configuration, the issuer and its identifier
+   scope, after which every approved application arrives carrying its
+   approval instead of being re-keyed into a console.  Offboarding an
+   application is ceasing renewal: its registrations expire at their
+   recorded exp at every provider simultaneously, and its presentations
+   stop at the same boundary, with no per-server deprovisioning.
+   Narrowing an approval is re-issuing with narrower attested metadata,
+   which takes effect at the next revalidation or refresh.  The
+   enterprise's allowlist stops being N console configurations that
+   drift and becomes one issuance policy that every trusting
+   authorization server enforces on schedule.
+
+7.  Error Responses
+
+   A statement consumed at registration is rejected with the [RFC7591]
+   error codes as [ISSUANCE] defines.  A rejected presentation or
+   delivery uses the error responses of [RFC6749] for the endpoint at
+   which it was presented.  At the token endpoint:
 
    invalid_client:  the statement or its proof fails to establish the
-      client, including a failed contract (Section 3), chain
-      (Section 6.1), or jwks_uri retrieval.
+      client, including a failed profile (Section 3), chain
+      (Section 5.3), or jwks_uri retrieval; also any request under an
+      expired statement-governed registration (Section 4.1).
 
    invalid_scope:  a requested scope falls outside the effective
       metadata.
@@ -500,13 +684,13 @@ Table of Contents
 
    invalid_request:  any other rejection, including a redemption or
       issuance request carrying the software_statement parameter
-      (Section 4, Section 7).
+      (Section 5.1, Section 5.5).
 
    At the pushed authorization request endpoint, the corresponding
-   [RFC9126] error responses apply.  On refresh-token use, Section 7.1
-   takes precedence, and the registered-client statement policy of
-   Section 5.1 follows the same rule: failures there are invalid_grant,
-   the grant's continuation failing rather than client establishment.
+   [RFC9126] error responses apply.  On refresh-token use,
+   Section 5.5.1, Section 4.2, and Section 5.6 take precedence: failures
+   there are invalid_grant, the grant's continuation failing rather than
+   client establishment.
 
    When an otherwise valid proof protocol defines a recoverable, proof-
    specific error, including an error that supplies a DPoP nonce or
@@ -521,17 +705,42 @@ Table of Contents
    reveal issuer-trust, subject-namespace, or attester-policy details to
    an unauthenticated requester.
 
-9.  Example
+8.  Examples
 
-   The following non-normative example presents an already-issued
-   statement at the token endpoint, sender-constrained by a client
-   attestation [ABCA].  The OAuth-Client-Attestation header carries an
-   attestation of the instance key from a client attester the server
-   trusts for the statement's sub, with that sub as its subject; the
-   OAuth-Client-Attestation-PoP header proves that key; the
-   software_statement parameter carries the issuer's review; and
-   client_id is the Client ID Metadata Document URL named by the
-   statement's sub.  No client record exists at this server.
+   Both examples are non-normative.
+
+8.1.  Revalidating a Statement-Governed Registration
+
+   A registered client, client_id s6BhdRkqt3, renews its registration's
+   validity by delivering a replacement DCR-profile statement on an
+   ordinary refresh, authenticated under its registered method:
+
+   POST /token HTTP/1.1
+   Host: as.example
+   Content-Type: application/x-www-form-urlencoded
+   Authorization: Basic czZCaGRSa3F0Mzo3RmpmcDBaQnIxS3REUmJuZlZkbUl3
+
+   grant_type=refresh_token
+   &refresh_token=tGzv3JOkF0XG5Qx2TlKWIA
+   &software_statement=eyJ0eXAiOiJzb2Z0d2FyZS1zdGF0ZW1l...
+
+   The authorization server validates the replacement, matches its iss
+   and sub to the registration's governing statement, and atomically
+   extends the registration's validity to the replacement's exp.  Had
+   the request arrived after expiry without a replacement, it would have
+   failed with invalid_grant.
+
+8.2.  Presenting at the Token Endpoint
+
+   The following presents an already-issued CIMD-profile statement at
+   the token endpoint, sender-constrained by a client attestation
+   [ABCA].  The OAuth-Client-Attestation header carries an attestation
+   of the instance key from a client attester the server trusts for the
+   statement's sub, with that sub as its subject; the OAuth-Client-
+   Attestation-PoP header proves that key; the software_statement
+   parameter carries the issuer's review; and client_id is the Client ID
+   Metadata Document URL named by the statement's sub.  No client record
+   exists at this server.
 
    POST /token HTTP/1.1
    Host: as.example
@@ -553,9 +762,9 @@ Table of Contents
    keeps no registration; the effective client_id is the statement's
    sub.  Here [ABCA] supplies the sender constraint while the parameter
    carries the statement, distinct from a profile that carries the
-   statement within the attestation itself (Section 11).
+   statement within the attestation itself (Section 10).
 
-10.  Authorization Server Metadata
+9.  Authorization Server Metadata
 
    This specification defines the following authorization server
    metadata [RFC8414] value:
@@ -563,20 +772,22 @@ Table of Contents
    software_statement_presentation_supported:  OPTIONAL.  Boolean value
       indicating whether the authorization server accepts a software
       statement presented at runtime in an authorization or token
-      request (Section 4), rather than only through [RFC7591]
+      request (Section 5.1), rather than only through [RFC7591]
       registration.  If omitted, the default value is false.  This
       member describes the consuming role.  A value of true advertises
       the path as this specification defines it, at every endpoint the
       server's supported grant types make applicable; there is no per-
       endpoint signal.  It does not imply acceptance of any particular
       statement issuer, subject namespace, attested member, or sender-
-      constraint mode.  A client also examines the authorization server
-      metadata for the proof mechanism it intends to use, including
-      client-authentication and DPoP metadata,
+      constraint mode, and it does not signal the registration-validity
+      model of Section 4.1, which needs no signal because the client
+      holds the statement whose exp bounds it.  A client also examines
+      the authorization server metadata for the proof mechanism it
+      intends to use, including client-authentication and DPoP metadata,
       client_attestation_pop_methods_supported from [ABCA], and
       client_instance_assertion_supported from [CLIENT-INSTANCE].
 
-11.  Extension Points
+10.  Extension Points
 
    This specification defines runtime presentation through the
    software_statement request parameter.  Additional endpoint-specific
@@ -590,9 +801,9 @@ Table of Contents
    software_statement_presentation_supported, advertising which chains a
    server accepts, is likewise left to an extension.
 
-12.  Security Considerations
+11.  Security Considerations
 
-12.1.  Statement Theft
+11.1.  Statement Theft
 
    A runtime presentation is safe for an unregistered presenter because
    the proof chains to the statement.  Possession of an arbitrary key
@@ -601,27 +812,30 @@ Table of Contents
    also controls a key covered by a mode the authorization server
    accepts.  The registration path cannot offer this property;
    [ISSUANCE] bounds a stolen statement's use there through audience,
-   lifetime, and registration limits instead.
+   lifetime, and registration limits instead, and a stolen DCR-profile
+   statement is additionally inert at servers where the software is
+   already registered, since the binding rules match it to an existing
+   registration rather than creating standing.
 
    Restricting the accepted chain by what the statement attests prevents
    downgrade: when key material is attested, no other chain is accepted,
    so a reviewed key cannot be bypassed by a presenter selecting a
-   weaker proof form.  The authority gates of Section 6.1 serve the same
+   weaker proof form.  The authority gates of Section 5.3 serve the same
    end: an issuer trusted for other metadata, or an attester trusted for
    other subjects, does not authorize runtime keys.
 
-12.2.  Validation Scope
+11.2.  Validation Scope
 
-   The presented statement is validated under the full ruleset of
+   A consumed statement is validated under the full ruleset of
    [ISSUANCE]: configured issuer trust with keys obtained from
    authorization server metadata and never from the statement, audience
-   and lifetime checks, and namespace authorization for the sub; digest
-   comparison remains the policy input [ISSUANCE] defines.  Nothing in
-   runtime presentation relaxes those rules; this specification adds the
-   sender-constraint chain and the grant bindings of Section 7 on top of
-   them.
+   and lifetime checks, and identifier-scope authorization for the sub;
+   digest comparison remains the policy input [ISSUANCE] defines.
+   Nothing in this specification relaxes those rules; it adds the
+   sender-constraint chain, the grant bindings of Section 5.5, and the
+   registration-validity model on top of them.
 
-12.3.  Key Location versus Keys
+11.3.  Key Location versus Keys
 
    The jwks_uri chain verifies keys at an attested location, not
    attested keys: cimd_digest binds the metadata document's bytes and
@@ -630,10 +844,10 @@ Table of Contents
    Deployments for which that exposure is unacceptable prefer statements
    that attest jwks inline, at the cost of digest-visible rotation, or
    pin observed keys and alert on change.  A server reusing a cached key
-   set under Section 6.1 additionally accepts that a just-removed key
+   set under Section 5.3 additionally accepts that a just-removed key
    can briefly continue to verify.
 
-12.4.  External Retrieval and Resource Exhaustion
+11.4.  External Retrieval and Resource Exhaustion
 
    Runtime presentation can cause the authorization server to retrieve
    the Client ID Metadata Document, an attested jwks_uri, or keys and
@@ -654,27 +868,34 @@ Table of Contents
    or proof chain unverified; the authorization server MUST reject the
    request and MUST NOT fall back to a weaker sender-constraint mode.
 
-12.5.  Enforcement Bounds
+11.5.  Enforcement Bounds
 
-   Expiry is enforced at every presentation, so a lapsed statement stops
-   new grants at once, a continuous-enforcement property a persistent
-   registration does not provide by itself.  Grants already open
-   continue under Section 7; the refresh-time statement requirement of
-   Section 7.1 is the policy lever that winds down existing access when
-   an issuer ceases renewal, extended to registered clients by
-   Section 5.1, and a narrowed re-review takes effect mid-grant through
-   the replacement's effective metadata.  Detection of post-issuance
-   metadata change depends on the server's retrieval policy: it stops
-   requests only where the server retrieves the current document and
-   rejects the change, and change detection on every grant costs a
-   retrieval per presentation and an availability dependence on the
-   client's metadata host.
+   Expiry is enforced at every presentation and at every statement-
+   governed registration, so a lapsed statement stops new grants at once
+   and lapses the registration at its recorded exp, a continuous-
+   enforcement property a plain persistent registration does not
+   provide.  Grants already open continue under Section 5.5; the
+   refresh-time statement requirements of Section 5.5.1, Section 4.2,
+   and Section 5.6 are the policy levers that wind down existing access
+   when an issuer ceases renewal, and a narrowed re-review takes effect
+   through the replacement's effective metadata or the updated
+   registration.  Detection of post-issuance metadata change depends on
+   the change signal each profile carries, software_version as a vendor-
+   asserted label, cimd_digest as exact bytes with retrieval-dependent
+   enforcement, and the statement's bounded lifetime caps what either
+   signal misses.
 
-12.6.  Client-Asserted Metadata
+   Renewal cadence is a deployment trade: short lifetimes tighten the
+   issuer's control loop and increase issuance and delivery traffic, and
+   a fleet of registrations issued together expires together, so issuers
+   SHOULD stagger expiries or renew ahead of the boundary to avoid
+   synchronized lapses.
+
+11.6.  Client-Asserted Metadata
 
    Members the statement does not attest are client-asserted, and
    omission can mean the issuer declined to attest a value.  The
-   attested-members-required policy of Section 6.2 is the control for
+   attested-members-required policy of Section 5.4 is the control for
    deployments that do not want client-asserted values, notably
    redirection URIs, entering effective metadata.  Resolving a Client ID
    Metadata Document for unattested members inherits the resolution
@@ -683,7 +904,7 @@ Table of Contents
    document's caching directives, and the statement's digest binds the
    review to specific bytes regardless of cache state.
 
-12.7.  Statement Handling
+11.7.  Statement Handling
 
    A software statement remains a sensitive artifact in transit and at
    rest: possession alone does not enable presentation, but statements
@@ -691,27 +912,30 @@ Table of Contents
    SHOULD avoid logging them.
 
    Error responses can also disclose trust configuration.  The
-   restrictions in Section 8 prevent unauthenticated probing of issuer,
+   restrictions in Section 7 prevent unauthenticated probing of issuer,
    namespace, and attester policy.
 
-13.  Privacy Considerations
+12.  Privacy Considerations
 
-   A presentation reveals to the authorization server the client's
-   issuer relationship and the full attested metadata, including the
-   audience list, which names the other authorization servers the client
-   intends to establish relationships with.  Issuers can bound the
-   disclosure by keeping audiences narrow, as [ISSUANCE] recommends.
-   The pushed authorization request requirement of Section 4.1 keeps
-   statements out of browser history, referrers, and front-channel logs.
+   A presentation or delivery reveals to the authorization server the
+   client's issuer relationship and the full attested metadata,
+   including the audience list, which names the other authorization
+   servers the client intends to establish relationships with.  Issuers
+   can bound the disclosure by keeping audiences narrow, as [ISSUANCE]
+   recommends.  The pushed authorization request requirement of
+   Section 5.1.1 keeps statements out of browser history, referrers, and
+   front-channel logs.  A central issuer additionally learns, through
+   renewal requests, which of its statements are in active use; issuance
+   and renewal logs deserve the same care as the statements themselves.
 
-14.  IANA Considerations
+13.  IANA Considerations
 
-14.1.  OAuth Parameters Registry
+13.1.  OAuth Parameters Registry
 
    This specification requests registration of the software_statement
    parameter in the IANA "OAuth Parameters" registry established by
-   [RFC6749], for runtime presentation of the artifact defined by
-   [RFC7591]:
+   [RFC6749], for runtime presentation and statement delivery of the
+   artifact defined by [RFC7591]:
 
    The Dynamic Client Registration Metadata registry already contains a
    metadata member with the same name.  That entry is in a different
@@ -723,9 +947,9 @@ Table of Contents
 
    Change Controller:  IESG
 
-   Specification Document(s):  This specification, Section 4
+   Specification Document(s):  This specification, Section 5.1
 
-14.2.  OAuth Authorization Server Metadata Registry
+13.2.  OAuth Authorization Server Metadata Registry
 
    This specification requests registration of the following value in
    the IANA "OAuth Authorization Server Metadata" registry established
@@ -739,9 +963,11 @@ Table of Contents
 
    Change Controller:  IESG
 
-   Specification Document(s):  This specification, Section 10
+   Specification Document(s):  This specification, Section 9
 
-15.  Normative References
+14.  References
+
+14.1.  Normative References
 
    [ABCA]     "OAuth 2.0 Attestation-Based Client Authentication", n.d.,
               <https://datatracker.ietf.org/doc/draft-ietf-oauth-
@@ -792,6 +1018,13 @@ Table of Contents
               Jones, M., and D. Waite, "OAuth 2.0 Demonstrating Proof of
               Possession (DPoP)", RFC 9449, DOI 10.17487/RFC9449,
               September 2023, <https://www.rfc-editor.org/rfc/rfc9449>.
+
+14.2.  Informative References
+
+   [RFC7592]  Richer, J., Ed., Jones, M., Bradley, J., and M. Machulak,
+              "OAuth 2.0 Dynamic Client Registration Management
+              Protocol", RFC 7592, DOI 10.17487/RFC7592, July 2015,
+              <https://www.rfc-editor.org/rfc/rfc7592>.
 
 Acknowledgments
 
