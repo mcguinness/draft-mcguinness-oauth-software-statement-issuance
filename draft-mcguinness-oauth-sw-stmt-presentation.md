@@ -39,15 +39,13 @@ normative:
   CLIENT-INSTANCE:
     target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-client-instance-assertion
     title: "OAuth 2.0 Client Instance Assertion"
-
-informative:
   ABCA:
     target: https://datatracker.ietf.org/doc/draft-ietf-oauth-attestation-based-client-auth
     title: "OAuth 2.0 Attestation-Based Client Authentication"
 
 --- abstract
 
-RFC 7591 defines the software statement and how a dynamic client registration endpoint consumes it. This specification defines a second consumption path, runtime presentation: a client identified by a Client ID Metadata Document URL presents an already-issued software statement in an authorization or token request through the `software_statement` parameter, and the authorization server applies the attested metadata to that request without creating a persistent registration. Every presentation is sender-constrained by a proof that chains to the statement, so a stolen statement cannot be presented.
+RFC 7591 defines the software statement and how a dynamic client registration endpoint consumes it. This specification defines a second consumption path, runtime presentation: a client identified by a Client ID Metadata Document URL presents an already-issued software statement in an authorization or token request through the `software_statement` parameter, and the authorization server applies the attested metadata to that request without creating a persistent registration. Every presentation proves possession of a key directly attested by the statement or covered by an accepted endorsement chain, so possession of the statement alone is insufficient.
 
 --- middle
 
@@ -55,7 +53,7 @@ RFC 7591 defines the software statement and how a dynamic client registration en
 
 A software statement ({{RFC7591}}, Section 2.3) is a signed JWT in which an issuer attests client metadata. {{ISSUANCE}} defines how a client obtains one for a client identified by a Client ID Metadata Document URL {{CIMD}}, and hardens the artifact with a subject bound to that URL, a digest of the reviewed document, an explicit audience, and a bounded lifetime. Until now the statement has had one consumption path: an {{RFC7591}} registration request, after which the client's standing at the server is carried by a persistent registration.
 
-{{CIMD}} established that a client can be resolved at request time, with no registration ceremony, from metadata it publishes itself. What resolution alone cannot carry is anyone else's review of that metadata. Runtime presentation closes the gap between the two models: the client presents its statement inside an ordinary authorization or token request, the authorization server verifies the issuer's review and applies the attested metadata to that request, and no client record is created.
+{{CIMD}} established that a client can be resolved at request time, with no registration ceremony, from metadata it publishes itself. What resolution alone cannot carry is anyone else's review of that metadata. Runtime presentation closes the gap between the two models: the client presents its statement inside an ordinary authorization or token request, the authorization server validates the statement under policy for a trusted issuer and applies the attested metadata to that request, and no persistent client registration is created. The authorization server does retain the grant-bound establishment state defined in {{grant-lifecycle}}.
 
 This specification defines the `software_statement` request parameter for authorization and token requests ({{runtime-presentation}}), the processing rules a trusting authorization server applies ({{processing}}), its relationship to registered clients ({{relationship-to-registration}}), the lifecycle of a grant opened by a presentation ({{grant-lifecycle}}), error reporting ({{errors}}), and a discovery signal ({{authorization-server-metadata}}). Statement format, issuance, and validation are defined by {{ISSUANCE}} and are not modified here; {{presentable-statement}} states the claim contract a presentation consumes, and decouples it from how the statement was acquired.
 
@@ -84,6 +82,9 @@ Runtime Presentation:
 Establishment:
 : The durable state a successful runtime presentation creates for the grant it opens, enumerated in {{grant-lifecycle}}.
 
+Proven Key:
+: The key for which the presenter demonstrates possession during runtime presentation. The accepted proof path binds this key to the statement as specified in {{sender-constraint}}.
+
 # Presentable Statement {#presentable-statement}
 
 Runtime presentation consumes a software statement conforming to the CIMD-anchored format of {{ISSUANCE}}. The registration-only shape for non-CIMD clients defined there cannot be presented; the processing rules of this specification assume the document the subject names. How the client acquired the statement is out of scope: the issuance flows of {{ISSUANCE}} are one way to obtain a presentable statement, not a requirement of presentation.
@@ -94,7 +95,7 @@ Each element below is consumed by a specific mechanism of this specification; a 
 : `software-statement+jwt`; explicit typing prevents confusion with other JWTs from the same issuer.
 
 `iss`:
-: identifies the issuer for trust, claim-authority, and namespace decisions, and forms half of the establishment identity ({{grant-lifecycle}}).
+: identifies the issuer for trust, claim-authority, and namespace decisions, and forms part of the statement identity recorded in the establishment ({{grant-lifecycle}}).
 
 `sub`:
 : the client's Client ID Metadata Document URL; the request's `client_id` equals it, by the rule of {{runtime-presentation}}.
@@ -106,7 +107,7 @@ Each element below is consumed by a specific mechanism of this specification; a 
 : checked at every presentation and at the validity points of {{grant-lifecycle}}.
 
 `jti`:
-: the other half of the establishment identity; the inventory, concurrency bounds, and replacement matching of this specification key on it.
+: identifies the statement within the issuer's namespace; the inventory and concurrency bounds of this specification can key on the `iss` and `jti` pair. A replacement statement has its own `jti`, so replacement matching does not key on this value.
 
 `cimd_digest`:
 : binds the issuer's review to the exact document bytes evaluated and feeds the post-issuance change policy of {{ISSUANCE}}.
@@ -122,13 +123,15 @@ A client presents a software statement by including the following parameter in a
 
 The request's `client_id` is the client's Client ID Metadata Document URL. It MUST exactly equal the statement's `sub`; the authorization server MUST reject a presentation where they differ. The effective `client_id` is the statement's `sub`, and the authorization server assigns none.
 
+The request MUST also carry the proof inputs required by the accepted sender-constraint mode: client authentication parameters, a DPoP proof, the fields defined by {{ABCA}}, or a Client Instance Assertion as permitted by {{CLIENT-INSTANCE}}. A successful presentation establishes the client only for the request and the grant it opens.
+
 A presentation is compatible with an access-granting request: it is client establishment carried alongside the request, not a request for issuance. A request that initiates issuance under {{ISSUANCE}} MUST NOT carry the `software_statement` parameter; the authorization server rejects the combination with `invalid_request`.
 
 An authorization server advertises support through `software_statement_presentation_supported` ({{authorization-server-metadata}}).
 
 ## Authorization Endpoint {#authorization-requests}
 
-Presentation in an authorization request MUST use a pushed authorization request {{RFC9126}}. The statement and its proof are sent to the pushed authorization request endpoint, where the processing rules of {{processing}} apply. A statement never appears in a front-channel URL, just as {{ISSUANCE}} keeps the issued statement out of authorization responses.
+Presentation in an authorization request MUST use a pushed authorization request {{RFC9126}}. The statement and its proof are sent to the pushed authorization request endpoint, where the processing rules of {{processing}} apply. The subsequent authorization request MUST use a `client_id` exactly equal to the establishment's `sub`. A statement never appears in a front-channel URL, just as {{ISSUANCE}} keeps the issued statement out of authorization responses.
 
 ## Token Endpoint
 
@@ -138,7 +141,7 @@ Presentation at the token endpoint requires no additional profile: the client in
 
 Presentation and registration are distinct consumption paths for the same artifact, and a request is unambiguously on one of them.
 
-A presentation identifies its client by the statement's `sub`, the Client ID Metadata Document URL ({{runtime-presentation}}). A request that identifies a client by a server-assigned {{RFC7591}} `client_id` is not a presentation: the `software_statement` parameter is not defined for such a request, and the authorization server MUST reject one that carries it with `invalid_request`, except as {{registered-delivery}} provides. A client registered without a Client ID Metadata Document identity, including every client of the non-CIMD statement shape of {{ISSUANCE}}, therefore consumes statements only at registration, and its statement lifecycle is the registration path's.
+A presentation identifies its client by the statement's `sub`, the Client ID Metadata Document URL ({{runtime-presentation}}). A request that identifies a client by a server-assigned {{RFC7591}} `client_id` is not a presentation: the `software_statement` parameter is not defined for such a request, and the authorization server MUST reject one that carries it with `invalid_request`, except as {{registered-delivery}} provides. A client registered without a Client ID Metadata Document identity therefore consumes statements only at registration, under the non-CIMD statement shape of {{ISSUANCE}}, which binds the statement to the registering software by `software_id` and, when attested, `software_version`; its statement lifecycle is the registration path's.
 
 A client can be registered at an authorization server under its Client ID Metadata Document URL as its `client_id` and also present at runtime. Local policy decides whether to accept presentations alongside the registration. When both exist, the registration record governs requests that do not carry a statement, and the presented statement's effective metadata governs the presented request only.
 
@@ -146,13 +149,13 @@ A client can be registered at an authorization server under its Client ID Metada
 
 A deployment can require a registered client to hold a current software statement, extending to registered clients the wind-down control {{refresh}} defines for presentation-opened grants. For a client registered under its Client ID Metadata Document URL as its `client_id`, the authorization server MAY, by local policy, require a current unexpired statement on token requests; the client then delivers it in the `software_statement` parameter of the token request.
 
-The delivered statement MUST validate under {{ISSUANCE}} with this server in its audience, and its `sub` MUST equal the registered `client_id`. The request authenticates as the registered client, under the registration's own method. The delivered statement satisfies the currency requirement; it does not alter the registration, whose management remains the registration path's. A token request that omits a statement this policy requires, or delivers one failing these rules, is rejected with `invalid_grant`; the authorization server SHOULD state the reason in `error_description`.
+The delivered statement MUST validate under {{ISSUANCE}} with this server in its audience, and its `sub` MUST equal the registered `client_id`. The request authenticates as the registered client, under the registration's own method. The delivered statement satisfies the currency requirement; it does not alter the registration, whose management remains the registration path's. A refresh-token request that omits a statement this policy requires, or delivers one failing these rules, is rejected with `invalid_grant`. Any other token request failing the currency requirement is rejected with `invalid_client`.
 
 # Presentation Processing {#processing}
 
 On receiving a presentation, the authorization server proceeds as follows, rejecting as {{errors}} defines at the first failure:
 
-1. Validate the statement under {{ISSUANCE}}: format, issuer trust, audience, lifetime, and namespace, with digest comparison as the policy input defined there.
+1. Validate the statement under {{ISSUANCE}}: format, issuer trust, audience, lifetime, and namespace, with digest comparison as the policy input defined there. Complete all validation that does not require a client-controlled network retrieval before performing such a retrieval.
 2. Verify the contract of {{presentable-statement}} and the `client_id` rule of {{runtime-presentation}}.
 3. Verify the sender-constraint chain ({{sender-constraint}}).
 4. Derive the effective metadata and evaluate the request against it ({{effective-metadata}}).
@@ -160,18 +163,22 @@ On receiving a presentation, the authorization server proceeds as follows, rejec
 
 ## Sender Constraint {#sender-constraint}
 
-A runtime presentation MUST be sender-constrained, and the constraint MUST chain to the statement. The presenter proves possession of a key through a client authentication method, a DPoP proof {{RFC9449}}, or the proof-of-possession mechanism of a client attestation scheme such as {{ABCA}}.
+A runtime presentation MUST be sender-constrained, and the constraint MUST chain to the statement. The presenter proves possession of the Proven Key through the applicable client authentication method, a DPoP proof {{RFC9449}}, or a proof-of-possession mechanism defined by {{ABCA}} or {{CLIENT-INSTANCE}}. The authorization server accepts exactly one of the following modes:
 
-Which chain the authorization server accepts depends on what the statement attests:
+Directly Attested Key:
+: If the statement authoritatively attests `jwks` or `jwks_uri`, the Proven Key MUST appear in that key set. When effective metadata specifies a client authentication method, the presenter MUST use that method. A DPoP proof by itself is sufficient only when its key is directly attested and the effective metadata does not require another authentication method. No endorsement mode can bypass authoritatively attested key material.
 
-* When the statement attests key material, the proven key MUST appear in the attested `jwks` or at the attested `jwks_uri`, and the presenter MUST authenticate with the effective `token_endpoint_auth_method` where one applies. No other chain is accepted.
-* When the statement attests no key material, the authorization server MUST verify one of two endorsement chains: an attestation of the proven key whose subject is the statement's `sub`, from a client attester the server trusts for that `sub` or its namespace ({{ABCA}}); or an endorsement of the proven key from an issuer named by the attested `instance_issuers` delegation, in the assertion format that delegation's specification defines ({{CLIENT-INSTANCE}}; {{ISSUANCE}} defines how the delegation is attested).
+Locally Trusted Client Attestation:
+: This mode is available only when the statement does not authoritatively attest key material. The authorization server MUST validate the client attestation and its proof according to {{ABCA}}. The attestation subject MUST exactly equal the statement's `sub`, its confirmation claim MUST identify the Proven Key, and the client attester MUST be trusted for that exact subject or its configured namespace.
 
-Each chain is gated by the authority behind it: an attested member counts only where the server treats the statement issuer as authoritative for that member ({{ISSUANCE}}), and attester trust counts only within its configured `sub` scope. The authorization server MUST reject a presentation without such a proof, or whose proven key no accepted chain covers.
+Attested Instance Issuer:
+: This mode is available only when the statement does not authoritatively attest key material and authoritatively attests `instance_issuers`. At the token endpoint, the request MAY carry a Client Instance Assertion as specified by {{CLIENT-INSTANCE}}. The authorization server MUST validate it against an attested issuer descriptor, and the assertion's sender key is the Proven Key. This specification does not define this mode at the pushed authorization request endpoint because {{CLIENT-INSTANCE}} does not define its wire parameters there.
+
+Each mode is gated by the authority behind it: an attested member counts only where the server treats the statement issuer as authoritative for that member ({{ISSUANCE}}), and attester trust counts only within its configured `sub` scope. The authorization server MUST reject a presentation without such a proof, or whose Proven Key no accepted mode covers.
 
 A statement that attests neither key material nor an instance-key delegation, presented at a server whose attester trust does not cover its `sub`, cannot satisfy this section and is consumable only through registration.
 
-Verifying a key at the attested `jwks_uri` is a retrieval at presentation time. A fetch failure leaves the chain unverified, and the presentation is rejected as `invalid_client`. A server MAY reuse a recently retrieved key set within ordinary HTTP caching bounds ({{security-considerations}}).
+Verifying a key at the attested `jwks_uri` is a retrieval at presentation time. A fetch failure leaves the chain unverified, and the presentation is rejected as `invalid_client`; the server MUST NOT fall back to a weaker mode. A server MAY reuse a recently retrieved key set within ordinary HTTP caching bounds ({{external-retrieval}}).
 
 ## Effective Metadata {#effective-metadata}
 
@@ -179,11 +186,11 @@ Having validated the statement and its proof, the authorization server derives t
 
 * An attested member for which the server treats the issuer as authoritative ({{ISSUANCE}}) has the value the statement gives it, with the precedence {{RFC7591}} defines.
 * An attested member outside that set does not take attested precedence; per the policy rule of {{ISSUANCE}}, the server ignores it or treats it as client-asserted.
-* A member the statement does not attest takes its value from the client's current Client ID Metadata Document, the document at the statement's `sub`, or from the defaults of {{RFC7591}}. Such a member is client-asserted metadata, not part of the review. The authorization server MUST resolve that document when the request depends on an unattested member.
+* A member the statement does not attest takes its value from the client's current Client ID Metadata Document, the document at the statement's `sub`, or from a default defined by {{RFC7591}} where that default is compatible with {{CIMD}} and this runtime model. Such a member is client-asserted metadata, not part of the review. The authorization server MUST resolve that document when the request depends on an unattested member. In particular, a shared-secret authentication method cannot be inferred because no client secret is assigned by presentation and {{CIMD}} does not support shared-secret client authentication.
 
 The effective metadata is therefore attested member by member, not wholesale. The authorization server MAY require specific members, notably the redirection URIs of a redirect flow, to be attested, rejecting a presentation whose statement omits them.
 
-The request is evaluated against the effective metadata: a `redirect_uri` MUST match an effective redirection URI, and any requested grant type, response type, or scope MUST fall within the effective metadata.
+The request is evaluated against the effective metadata: a `redirect_uri` MUST match an effective redirection URI, and any requested grant type, response type, or scope MUST fall within the effective metadata. A grant or response type supported by the authorization server but not authorized by the effective metadata fails with `unauthorized_client`; a scope outside the effective metadata fails with `invalid_scope`.
 
 A trusting authorization server SHOULD use the statement's `sub`, `iss`, and `jti` to inventory the establishments derived from one statement and MAY bound their concurrent number.
 
@@ -195,23 +202,23 @@ A successful presentation creates an establishment comprising:
 * the statement identity, its `iss` and `jti`, and its expiry;
 * the effective metadata ({{effective-metadata}});
 * the issuer trust decision; and
-* the sender-constraint mechanism and proven key.
+* the sender-constraint mechanism and Proven Key.
 
-The establishment persists for the grant it opens. The authorization server MUST bind the resulting `request_uri` and any authorization code to the establishment. The token request that redeems the code MUST demonstrate possession of the same proven key under the same sender-constraint mechanism, and MUST NOT carry the `software_statement` parameter; a redemption carrying one is rejected with `invalid_request`.
+The establishment persists for the grant it opens. The authorization server MUST bind the resulting `request_uri` and any authorization code to the establishment. The token request that redeems the code MUST have a `client_id` exactly equal to the establishment's `sub`, MUST demonstrate possession of the same Proven Key under the same sender-constraint mechanism, and MUST NOT carry the `software_statement` parameter. A redemption carrying a statement is rejected with `invalid_request`; a wrong client identifier or failed key binding is rejected with `invalid_grant`.
 
 A statement MUST be unexpired when presented. Expiry after presentation does not invalidate an establishment already bound, just as expiry does not undo an {{RFC7591}} registration.
 
 ## Refresh {#refresh}
 
-On refresh-token use the authorization server MUST verify possession of the establishment's proven key under the same sender-constraint mechanism. It MAY, by local policy, additionally require a current unexpired statement.
+On refresh-token use the authorization server MUST verify possession of the establishment's Proven Key under the same sender-constraint mechanism. It MAY, by local policy, additionally require a current unexpired statement.
 
 When policy requires one, the client presents the replacement in the `software_statement` parameter of the refresh request. The replacement:
 
 * MUST validate under {{ISSUANCE}} with this server in its audience;
 * MUST have the establishment's `iss` and `sub`; and
-* MUST authorize the establishment's proven key ({{sender-constraint}}).
+* MUST authorize the establishment's Proven Key ({{sender-constraint}}).
 
-The refreshed access MUST fall within the replacement's effective metadata; the grant never widens beyond the original authorization. On success, the establishment's statement identity, expiry, effective metadata, and trust decision are replaced atomically. A refresh that fails these requirements, or omits a statement that policy requires, is rejected with `invalid_grant` and leaves the establishment unchanged; the authorization server SHOULD state the reason in `error_description`.
+The refreshed access MUST fall within the replacement's effective metadata; the grant never widens beyond the original authorization. Because the replacement must authorize the existing Proven Key, this operation does not rotate the establishment's key. A client that needs a new key performs a new presentation and opens a new establishment. On success, the establishment's statement identity, expiry, effective metadata, and trust decision are replaced atomically. A refresh that fails these requirements, or omits a statement that policy requires, is rejected with `invalid_grant` and leaves the establishment unchanged.
 
 # Error Responses {#errors}
 
@@ -223,15 +230,17 @@ A rejected presentation uses the error responses of {{RFC6749}} for the endpoint
 `invalid_scope`:
 : a requested scope falls outside the effective metadata.
 
-`unsupported_grant_type`:
-: the requested grant type falls outside the effective metadata.
+`unauthorized_client`:
+: the client is not permitted by its effective metadata to use the requested grant type or response type, although the authorization server supports it.
 
 `invalid_request`:
 : any other rejection, including a redemption or issuance request carrying the `software_statement` parameter ({{runtime-presentation}}, {{grant-lifecycle}}).
 
 At the pushed authorization request endpoint, the corresponding {{RFC9126}} error responses apply. On refresh-token use, {{refresh}} takes precedence, and the registered-client statement policy of {{registered-delivery}} follows the same rule: failures there are `invalid_grant`, the grant's continuation failing rather than client establishment.
 
-This surface is coarser than the registration codes and does not tell a client whether to seek a corrected statement or a different issuer; the authorization server SHOULD carry that distinction in `error_description`.
+When an otherwise valid proof protocol defines a recoverable, proof-specific error, including an error that supplies a DPoP nonce or client-attestation challenge, or requests a fresh attestation, that error from {{RFC9449}}, {{ABCA}}, or {{CLIENT-INSTANCE}} takes precedence over the generic errors above.
+
+This surface is coarser than the registration codes and does not tell a client whether to seek a corrected statement or a different issuer. The authorization server MAY return non-sensitive diagnostics in `error_description` to a client it has authenticated, but MUST NOT reveal issuer-trust, subject-namespace, or attester-policy details to an unauthenticated requester.
 
 # Example {#example}
 
@@ -257,17 +266,17 @@ The authorization server validates the statement, verifies that its trust in the
 This specification defines the following authorization server metadata {{RFC8414}} value:
 
 `software_statement_presentation_supported`:
-: OPTIONAL. Boolean value indicating whether the authorization server accepts a software statement presented at runtime in an authorization or token request ({{runtime-presentation}}), rather than only through {{RFC7591}} registration. If omitted, the default value is `false`. This member describes the consuming role. A value of `true` advertises the path as this specification defines it, at every endpoint the server's supported grant types make applicable; there is no per-endpoint signal.
+: OPTIONAL. Boolean value indicating whether the authorization server accepts a software statement presented at runtime in an authorization or token request ({{runtime-presentation}}), rather than only through {{RFC7591}} registration. If omitted, the default value is `false`. This member describes the consuming role. A value of `true` advertises the path as this specification defines it, at every endpoint the server's supported grant types make applicable; there is no per-endpoint signal. It does not imply acceptance of any particular statement issuer, subject namespace, attested member, or sender-constraint mode. A client also examines the authorization server metadata for the proof mechanism it intends to use, including client-authentication and DPoP metadata, `client_attestation_pop_methods_supported` from {{ABCA}}, and `client_instance_assertion_supported` from {{CLIENT-INSTANCE}}.
 
 # Extension Points {#extensions}
 
-This specification defines runtime presentation through the `software_statement` request parameter. Two profiles of the same path are left to extensions: carrying the statement within a client attestation {{ABCA}}, and a Client ID Metadata Document that references where the client publishes its current statements, so a resolving server fetches the review out of band. The latter differs from embedding a statement in the document, which the digest rule of {{ISSUANCE}} forbids. A discovery signal finer than `software_statement_presentation_supported`, advertising which chains a server accepts, is likewise left to an extension.
+This specification defines runtime presentation through the `software_statement` request parameter. Additional endpoint-specific discovery and proof modes are left to extensions. Two other profiles of the same path are also left to extensions: carrying the statement within a client attestation {{ABCA}}, and a Client ID Metadata Document that references where the client publishes its current statements, so a resolving server fetches the review out of band. The latter differs from embedding a statement in the document, which the digest rule of {{ISSUANCE}} forbids. A discovery signal finer than `software_statement_presentation_supported`, advertising which chains a server accepts, is likewise left to an extension.
 
 # Security Considerations {#security-considerations}
 
 ## Statement Theft
 
-A runtime presentation is safe for an unregistered presenter because the proof chains to the statement. Possession of an arbitrary key constrains only the request; the chain to the statement is what makes a stolen statement inert to every party outside the issuer's review. The registration path cannot offer this property; {{ISSUANCE}} bounds a stolen statement's use there through audience, lifetime, and registration limits instead.
+A runtime presentation is safe for an unregistered presenter because the proof chains to the statement. Possession of an arbitrary key constrains only the request; the chain to the statement makes possession of a stolen statement insufficient unless the attacker also controls a key covered by a mode the authorization server accepts. The registration path cannot offer this property; {{ISSUANCE}} bounds a stolen statement's use there through audience, lifetime, and registration limits instead.
 
 Restricting the accepted chain by what the statement attests prevents downgrade: when key material is attested, no other chain is accepted, so a reviewed key cannot be bypassed by a presenter selecting a weaker proof form. The authority gates of {{sender-constraint}} serve the same end: an issuer trusted for other metadata, or an attester trusted for other subjects, does not authorize runtime keys.
 
@@ -278,6 +287,12 @@ The presented statement is validated under the full ruleset of {{ISSUANCE}}: con
 ## Key Location versus Keys
 
 The `jwks_uri` chain verifies keys at an attested location, not attested keys: `cimd_digest` binds the metadata document's bytes and never the key set served at the URI, so compromise of the client's key host adds keys that satisfy the chain with no digest signal. Deployments for which that exposure is unacceptable prefer statements that attest `jwks` inline, at the cost of digest-visible rotation, or pin observed keys and alert on change. A server reusing a cached key set under {{sender-constraint}} additionally accepts that a just-removed key can briefly continue to verify.
+
+## External Retrieval and Resource Exhaustion {#external-retrieval}
+
+Runtime presentation can cause the authorization server to retrieve the Client ID Metadata Document, an attested `jwks_uri`, or keys and metadata associated with an attested instance issuer. Every such retrieval inherits the server-side request forgery protections of {{CIMD}}. A trusted signature does not make a URL safe: the authorization server MUST apply its URL, redirect, address-range, transport, and content-type policy independently to every referenced location.
+
+Before initiating a client-controlled retrieval, the authorization server MUST complete the statement checks that do not depend on that retrieval, including signature, issuer, audience, lifetime, subject, and claim-contract validation. It SHOULD bound JWT size and parsing work, concurrent retrievals, response size, and response time, and SHOULD cache successful and failed retrieval results for an appropriate period. A retrieval failure leaves the relevant metadata or proof chain unverified; the authorization server MUST reject the request and MUST NOT fall back to a weaker sender-constraint mode.
 
 ## Enforcement Bounds
 
@@ -291,6 +306,8 @@ Members the statement does not attest are client-asserted, and omission can mean
 
 A software statement remains a sensitive artifact in transit and at rest: possession alone does not enable presentation, but statements reveal attested metadata and audience relationships, and servers SHOULD avoid logging them.
 
+Error responses can also disclose trust configuration. The restrictions in {{errors}} prevent unauthenticated probing of issuer, namespace, and attester policy.
+
 # Privacy Considerations
 
 A presentation reveals to the authorization server the client's issuer relationship and the full attested metadata, including the audience list, which names the other authorization servers the client intends to establish relationships with. Issuers can bound the disclosure by keeping audiences narrow, as {{ISSUANCE}} recommends. The pushed authorization request requirement of {{authorization-requests}} keeps statements out of browser history, referrers, and front-channel logs.
@@ -300,6 +317,8 @@ A presentation reveals to the authorization server the client's issuer relations
 ## OAuth Parameters Registry
 
 This specification requests registration of the `software_statement` parameter in the IANA "OAuth Parameters" registry established by {{RFC6749}}, for runtime presentation of the artifact defined by {{RFC7591}}:
+
+The Dynamic Client Registration Metadata registry already contains a metadata member with the same name. That entry is in a different registry and is unaffected by this registration.
 
 Parameter Name:
 : `software_statement`
