@@ -1817,7 +1817,7 @@ grant_type=refresh_token
 &amp;software_statement=eyJ0eXAiOiJzb2Z0d2FyZS1zdGF0ZW1l...
 </pre><a href="#section-8.1-2" class="pilcrow">¶</a>
 </div>
-<p id="section-8.1-3">The authorization server validates the replacement, matches its <code>iss</code> and <code>sub</code> to the registration's governing statement, and atomically extends the registration's validity to the replacement's <code>exp</code>. Had the request arrived after expiry without a replacement, it would have failed with <code>invalid_grant</code>.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
+<p id="section-8.1-3">The authorization server validates the replacement, matches its <code>iss</code> and <code>sub</code> to the registration's governing statement, and atomically extends the registration's validity to the replacement's <code>exp</code>. Had the request arrived after expiry without a replacement, it would have failed with <code>invalid_client</code> (<a href="#revalidation" class="auto internal xref">Section 4.2</a>).<a href="#section-8.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="presenting-at-the-token-endpoint">
