@@ -1137,10 +1137,13 @@ svg {
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.1">
                 <p id="section-toc.1-1.1.2.1.1" class="keepWithNext"><a href="#section-1.1" class="auto internal xref">1.1</a>.  <a href="#name-protocol-overview" class="internal xref">Protocol Overview</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.2">
+                <p id="section-toc.1-1.1.2.2.1" class="keepWithNext"><a href="#section-1.2" class="auto internal xref">1.2</a>.  <a href="#name-relationship-to-client-atte" class="internal xref">Relationship to Client Attestation</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
-            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-definitions" class="internal xref">Conventions and Definitions</a></p>
+            <p id="section-toc.1-1.2.1"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-definitions" class="internal xref">Conventions and Definitions</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
             <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-statement-profiles" class="internal xref">Statement Profiles</a></p>
@@ -1342,6 +1345,39 @@ svg {
             <p id="section-1.1-5.4.1">The state the rest of the grant depends on persists as an establishment (<a href="#grant-lifecycle" class="auto internal xref">Section 5.5</a>).<a href="#section-1.1-5.4.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
+</section>
+</div>
+<div id="relationship-attestation">
+<section id="section-1.2">
+        <h3 id="name-relationship-to-client-atte">
+<a href="#section-1.2" class="section-number selfRef">1.2. </a><a href="#name-relationship-to-client-atte" class="section-name selfRef">Relationship to Client Attestation</a>
+        </h3>
+<p id="section-1.2-1">This section is non-normative.<a href="#section-1.2-1" class="pilcrow">¶</a></p>
+<p id="section-1.2-2">A software statement is an attestation. It is a signed assertion by a third party about a client, accepted by an authorization server that has configured trust in the signer, and it is no more than that: an attributable claim bounded by the signer's process, not proof that what it says is true (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>). It differs from the client attestation of <span>[<a href="#ABCA" class="cite xref">ABCA</a>]</span> and the client instance assertion of <span>[<a href="#CLIENT-INSTANCE" class="cite xref">CLIENT-INSTANCE</a>]</span> in subject, authority, lifetime, and effect, not in kind.<a href="#section-1.2-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-1.2-3">
+          <dt id="section-1.2-3.1">Subject:</dt>
+          <dd style="margin-left: 1.5em" id="section-1.2-3.2">
+            <p id="section-1.2-3.2.1">A software statement attests client software and the metadata a reviewer evaluated. A client attestation attests a running instance and the key it holds.<a href="#section-1.2-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-1.2-3.3">Authority:</dt>
+          <dd style="margin-left: 1.5em" id="section-1.2-3.4">
+            <p id="section-1.2-3.4.1">A software statement is signed by a review authority whose scope is a set of client identifiers. A client attestation is signed by a client attester whose scope is a deployment of the software; the two are configured independently by the authorization server.<a href="#section-1.2-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-1.2-3.5">Lifetime and audience:</dt>
+          <dd style="margin-left: 1.5em" id="section-1.2-3.6">
+            <p id="section-1.2-3.6.1">A software statement carries an audience and an expiry the reviewer chose, and the same statement is consumed at every server in that audience. A client attestation is short-lived and bound to the request it accompanies.<a href="#section-1.2-3.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-1.2-3.7">Effect:</dt>
+          <dd style="margin-left: 1.5em" id="section-1.2-3.8">
+            <p id="section-1.2-3.8.1">A software statement supplies establishment: which client this is, and what metadata a named reviewer stands behind. A client attestation supplies presenter proof: that the party sending this request holds a key someone vouches for. Neither grants access, and neither substitutes for the other.<a href="#section-1.2-3.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-1.2-4">The two therefore compose. A deployment holding only a client attestation knows what is running but not whether anyone approved it; a deployment holding only a software statement knows the software was reviewed but not that this sender is running it. Runtime presentation always requires both halves: the statement carries the review, and a proof carries the presenter, supplied either by a key the statement itself attests or, where it attests none, by a client attestation or instance assertion (<a href="#sender-constraint" class="auto internal xref">Section 5.3</a>).<a href="#section-1.2-4" class="pilcrow">¶</a></p>
+<p id="section-1.2-5">This specification defines no new attestation format and no new attester role. It defines how a review attestation is consumed, and how a presenter attestation defined elsewhere is bound to it.<a href="#section-1.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
