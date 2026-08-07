@@ -140,6 +140,33 @@ They compose: an assertion-carried digest can establish a client just in time wh
 
 Because an ID-JAG assertion is validated at every grant, ceasing assertion issuance stops new grants at once, which is the sharpest lever the enterprise holds, with existing access winding down as tokens expire. Statement expiry works on a slower clock: it governs the currency of establishment and approval, and takes effect at the next presentation, registration validity boundary, or refresh where a current statement is required. An enterprise offboarding an application uses both, stopping assertions to end new grants immediately and stopping approval renewal so the application lapses everywhere at its recorded expiry.
 
+## Composition with Shared Signals
+
+Everything above is enforced on a clock. An approval or a listing ends when its statement expires unrenewed, so how fast a decision takes effect is set by how short the issuer made the lifetime, and short lifetimes buy responsiveness with renewal traffic. That trade is avoidable: the parties are already in a configured pairwise relationship, since a trusting authorization server holds each issuer's identifier, keys, scope, and role, and that same relationship can carry an event stream.
+
+A profile over the [Shared Signals Framework](https://openid.net/specs/openid-sharedsignals-framework-1_0.html) would define the events. The statement issuer is the transmitter, the trusting authorization server is the receiver, events travel as [Security Event Tokens](https://www.rfc-editor.org/rfc/rfc8417.html) over the framework's push or poll delivery, and subjects use the [identifier formats of RFC 9493](https://www.rfc-editor.org/rfc/rfc9493.html): the `uri` format for a Client ID Metadata Document URL, and `iss_sub` for an `software_id` under the issuer that names it. Nothing new is invented at the transport or trust layer; the profile's work is naming events and their effects.
+
+Four events carry the semantics this deployment needs:
+
+| Event | Meaning | Layer | Effect and blast radius |
+| --- | --- | --- | --- |
+| Statement revoked | This artifact, by `jti`, is no longer good | Whichever layer issued it | Stop honoring that statement before its expiry |
+| Approval withdrawn | The tenant no longer approves this software | Tenant approval | Block that tenant's requests now; other tenants and the listing unaffected |
+| Listing withdrawn | The software is no longer established here | Establishment | Expire the registration early, for every tenant at that provider |
+| Metadata changed | The published metadata no longer matches what was reviewed | Establishment or approval | Re-resolve, compare the digest, and apply the server's change policy |
+
+Two properties make this safe to add without weakening what is already specified.
+
+Signals can only reduce standing. An event can end an approval, a listing, or a statement early. No event creates standing, extends a lifetime, or substitutes for a valid statement, so a forged or replayed event cannot grant anything, and the worst outcome of a spurious event is an availability failure the issuer can correct by issuing a fresh statement.
+
+Missed signals fail closed against the clock. A receiver that loses its stream, or an issuer whose transmitter is down, falls back to exactly the behavior specified today: standing ends at expiry. The bounded lifetime stays mandatory and remains the floor; signals only shorten the interval between a decision and its effect. This is why the two drafts do not depend on the framework, and why they remain implementable without it.
+
+The consequence is that lifetime and responsiveness stop being the same dial. An issuer can choose a lifetime that suits its renewal capacity, days rather than minutes, and still revoke in seconds. Offboarding becomes a signal, with the absence of renewal as the durable backstop for receivers that never got it.
+
+The stream is useful in the other direction too. A provider transmitting consumption events, a statement accepted, a registration created from it, a presentation refused, gives the enterprise something it cannot get today: an inventory of where its approvals are actually in force, across providers, without asking each one.
+
+This profile belongs in its own short document rather than in either draft, since it composes with both and neither should require it.
+
 ## What each draft supplies
 
 | Capability | Draft | Where |
@@ -168,7 +195,7 @@ Because an ID-JAG assertion is validated at every grant, ceasing assertion issua
 
 ## What these drafts do not solve
 
-* **Immediate revocation.** Enforcement is bounded by statement lifetime plus the provider's own controls. Shorter lifetimes tighten the loop at the cost of renewal traffic. An acceptance-time status mechanism is named as a future extension.
+* **Immediate revocation.** As specified, enforcement is bounded by statement lifetime plus the provider's own controls, and shorter lifetimes tighten the loop at the cost of renewal traffic. [Composition with Shared Signals](#composition-with-shared-signals) sketches the profile that would remove that trade; an acceptance-time status claim is the pull-based alternative named in the issuance draft.
 * **Identifier trustworthiness for non-hosted software.** A metadata URL is domain-anchored; an `software_id` is a vendor-asserted string. Approvals keyed on the latter are meaningful only within an issuer's enumerated scope.
 * **Discovery of policy.** There is no in-band way to learn which issuers a provider accepts, or that a tenant requires an approval. Trust configuration is deliberately out of band, and error responses guide the client.
 * **Delegation.** These drafts establish what the client is and whether it is approved. Which user or organization it acts for, and with what authority, is separate work; see [Composition with ID-JAG](#composition-with-id-jag) for the cross-domain case.
