@@ -364,7 +364,7 @@ grant_type=refresh_token
 &software_statement=eyJ0eXAiOiJzb2Z0d2FyZS1zdGF0ZW1l...
 ~~~
 
-The authorization server validates the replacement, matches its `iss` and `sub` to the registration's governing statement, and atomically extends the registration's validity to the replacement's `exp`. Had the request arrived after expiry without a replacement, it would have failed with `invalid_grant`.
+The authorization server validates the replacement, matches its `iss` and `sub` to the registration's governing statement, and atomically extends the registration's validity to the replacement's `exp`. Had the request arrived after expiry without a replacement, it would have failed with `invalid_client` ({{revalidation}}).
 
 ## Presenting at the Token Endpoint
 
