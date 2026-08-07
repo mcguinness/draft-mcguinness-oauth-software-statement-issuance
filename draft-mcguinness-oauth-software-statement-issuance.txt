@@ -1190,13 +1190,16 @@ Table of Contents
       have appeared among them.
 
    iat:  REQUIRED.  A NumericDate value representing the time at which
-      the software statement was issued.  Consumers order replacements
-      by this value ([PRESENTATION]), so an issuer MUST NOT issue a
+      the software statement was issued.  An issuer MUST NOT issue a
       statement for a given iss and sub pair with an iat earlier than
       one it has already issued for that pair, and SHOULD ensure the
-      value is strictly increasing across its signing nodes.  Back-
-      dating a statement to allow for clock skew makes it unusable as a
-      replacement.
+      value is strictly increasing across its signing nodes, so that the
+      order in which it made its decisions is recoverable from the
+      statements themselves.  Consumers rely on that order when one
+      statement replaces another ([PRESENTATION]) and when a withdrawal
+      separates statements issued before it from those issued after
+      ([SIGNALS]).  Back-dating a statement to allow for clock skew
+      makes it unusable as a replacement.
 
    exp:  REQUIRED.  A NumericDate value representing the expiration
       time.  A trusting authorization server MUST reject an expired
@@ -1283,9 +1286,9 @@ Table of Contents
 
    software_version:  OPTIONAL.  When attested, the [RFC7591]
       software_version the review covered; a new version of the software
-      requires re-issuance, and cannot be introduced by renewing an
-      existing registration ([PRESENTATION]).  A version string is a
-      vendor-asserted label, not a byte binding, so this binds the
+      requires re-issuance, and a statement covering it is not a renewal
+      of an existing registration ([PRESENTATION]).  A version string is
+      a vendor-asserted label, not a byte binding, so this binds the
       review to what the vendor calls that version, a weaker guarantee
       than cimd_digest gives the CIMD-anchored shape.
 
@@ -1306,8 +1309,9 @@ Table of Contents
    replacement delivered outside a registration request carries no such
    member, so [PRESENTATION] compares the attested software_version
    against the value recorded for the registration; a replacement
-   attesting a different version is a version change requiring a fresh
-   review, not a renewal.
+   attesting a different version is a version change rather than a
+   renewal, and is accepted only as a new registration decision under
+   the server's registration policy.
 
    A statement in this shape is consumable through registration
    (Section 12) or as direct policy import at an authorization server
@@ -1479,7 +1483,8 @@ Table of Contents
 
    A trusting authorization server SHOULD bound the number of
    registrations derived from one statement at one local audience.  The
-   safe default is one registration per (iss, jti, local audience).  On
+   safe default is one registration per (iss, sub, jti, local audience),
+   the same key [PRESENTATION] uses to inventory establishments.  On
    repeated presentation, local policy can reject the request, treat it
    as idempotent, or create another registration; [RFC7591] defines no
    duplicate-registration protocol.
@@ -1692,14 +1697,17 @@ Table of Contents
       particular tenant permits.  The tenant's own review function holds
       this role, and the authorization server records the tenant the
       issuer speaks for.  Statements from a tenant approval issuer are
-      evaluated in that tenant's request context under [PRESENTATION];
-      they neither create nor renew a registration, and they bear on no
-      other tenant.
+      evaluated in that tenant's request context under [PRESENTATION],
+      whether carried by the client or recorded at the authorization
+      server by the tenant; they neither create nor renew a
+      registration, and they bear on no other tenant.
 
-   An issuer MAY hold both roles, in which case the consumption point
-   distinguishes them: a statement in a registration request is
-   establishment, and a statement accompanying a request from a client
-   already established is tenant approval.
+   An issuer MAY hold both roles.  The role decides how a statement is
+   consumed; where an issuer holds both, the consumption point breaks
+   the tie: a statement in a registration request is establishment, and
+   a statement accompanying a request from a client already established
+   is tenant approval.  For the events of [SIGNALS], which have no
+   consumption point, the event type alone determines scope.
 
    Where an authorization server hosts multiple tenants, issuer trust is
    configured per tenant.  The authorization server MUST resolve the
@@ -1921,7 +1929,7 @@ Table of Contents
    instance of the software before accepting such a registration, such
    as [ABCA], an attested instance_issuers chain (Section 13.1), or a
    registration credential the trusting server issued.  Without such
-   proof, the one-registration-per-(iss, jti, local audience) default
+   proof, the one-registration-per-statement default of Section 13
    bounds exposure.
 
    Renewal in this version does not accept a prior software statement as
