@@ -62,6 +62,8 @@ This specification defines two ways to consume the statement format and validati
 * **Registration profile** ({{dcr-profile}}): a client registered through {{RFC7591}} is identified by `software_id`. The statement is consumed at registration and renewal, and its `exp` bounds the registration's validity ({{registration-validity}}).
 * **Runtime profile** ({{cimd-profile}}): a client is identified by a Client ID Metadata Document URL {{CIMD}} and may be unregistered. The client presents the statement in an authorization or token request, proves a key that chains to the statement, and is established for the resulting grant without creating a persistent registration ({{runtime-presentation}} and {{grant-lifecycle}}).
 
+The two profiles concern establishment, which is one layer of the decision to let a client act. An authorization server hosting many customers separates it from tenant approval, the customer's own decision about which established clients may operate in its tenant ({{tenant-approval}}); both sit above the sender-constraint proof that identifies the presenter and the grant that carries a user's authorization. Each layer has its own decider, artifact, and lifecycle, and this specification keeps them apart rather than collapsing them into one decision.
+
 In both profiles, ceasing statement renewal stops new establishment after the applicable expiry. It also stops continued use of an existing registration or grant where this specification requires a current statement. It does not revoke access tokens already issued, and continuation of runtime-established grants is subject to the refresh policy in {{refresh}}. These enforcement bounds are detailed in {{enforcement-bounds}}.
 
 This separation lets one issuer curate approved software across many authorization servers without making the issuer the final policy authority. Each server independently configures issuer trust, subject scope, authoritative metadata, grant policy, and token lifetime. An enterprise operating a statement issuer is the motivating deployment ({{deployment-model}}).
@@ -225,7 +227,7 @@ The request's `client_id` is the client's Client ID Metadata Document URL. It MU
 
 The request MUST also carry the proof inputs required by the accepted sender-constraint mode: client authentication parameters, a DPoP proof, the fields defined by {{ABCA}}, or a Client Instance Assertion as permitted by {{CLIENT-INSTANCE}}. A successful presentation establishes the client for the request and for the grant state derived from it ({{grant-lifecycle}}).
 
-At the token endpoint, a runtime presentation is valid only on a request that can open a new grant or directly issue access under a grant not already bound to an establishment. Authorization-code redemption and refresh-token use continue an existing grant and follow {{grant-lifecycle}} and {{refresh}} instead. A request that initiates issuance under {{ISSUANCE}} MUST NOT carry the `software_statement` parameter; the authorization server rejects the combination with `invalid_request`. Such a request is recognized before validation by its issuance signals: `response_type=software_statement_code` at the authorization endpoint, and the software statement `requested_token_type` at the token endpoint ({{ISSUANCE}}). A request that carries the parameter and is none of a runtime presentation, a refresh replacement ({{refresh}}), a revalidation delivery ({{revalidation}}), or a registered-client delivery ({{registered-delivery}}) is rejected with `invalid_request`.
+At the token endpoint, a runtime presentation is valid only on a request that can open a new grant or directly issue access under a grant not already bound to an establishment. Authorization-code redemption and refresh-token use continue an existing grant and follow {{grant-lifecycle}} and {{refresh}} instead. A request that initiates issuance under {{ISSUANCE}} MUST NOT carry the `software_statement` parameter; the authorization server rejects the combination with `invalid_request`. Such a request is recognized before validation by its issuance signals: `response_type=software_statement_code` at the authorization endpoint, and the software statement `requested_token_type` at the token endpoint ({{ISSUANCE}}). A request that carries the parameter and is none of a runtime presentation, a refresh replacement ({{refresh}}), a revalidation delivery ({{revalidation}}), or a tenant approval ({{tenant-approval}}) is rejected with `invalid_request`. Which of these a statement-carrying request is follows from the role in which the authorization server accepts the statement's issuer ({{ISSUANCE}}), not from the shape of the request.
 
 An authorization server advertises support through `software_statement_presentation_supported` ({{authorization-server-metadata}}).
 
@@ -309,19 +311,43 @@ When policy requires one, the client presents the replacement in the `software_s
 
 The refreshed access MUST fall within the replacement's effective metadata; the grant never widens beyond the original authorization. The authorization server MUST recompute the attested members from the replacement. It MAY re-resolve the Client ID Metadata Document for unattested members, in which case their current values apply; otherwise the recorded values persist for the grant. Because the replacement must authorize the existing Proven Key, this operation does not rotate the establishment's key. A client that needs a new key performs a new presentation and opens a new establishment. On success, the establishment's statement identity, `iat`, expiry, effective metadata, and trust decision are replaced in a single atomic update; concurrent deliveries resolve to the most recently issued statement. A refresh that fails these requirements, or omits a statement that policy requires, is rejected with `invalid_grant` and leaves the establishment unchanged.
 
-## Registered CIMD Clients {#registered-delivery}
+## Statements from an Established Client {#registered-delivery}
 
-A client can be registered at an authorization server under its Client ID Metadata Document URL as its `client_id`. Where such a registration exists, a statement-carrying request from that client is a delivery, never a runtime presentation: the registration record governs the request, and the delivered statement renews validity under {{registration-validity}} without supplying effective metadata for it. Runtime presentation establishes clients the server does not have; it does not reopen metadata for a client it does. A server that wishes attested changes to reach the registration applies them through its registration policy ({{revalidation}}) or through {{RFC7592}}, where a narrower record survives until it does.
+A client already established at an authorization server, whether registered through {{RFC7591}} or registered under its Client ID Metadata Document URL as its `client_id`, can still carry a statement. What the statement does depends on the role in which the authorization server accepts its issuer ({{ISSUANCE}}):
+
+* From the establishment issuer governing the client's registration, the statement is a delivery: it renews validity under {{registration-validity}} and supplies no effective metadata for the request. Runtime presentation establishes clients the server does not have; it does not reopen metadata for a client it does. A server that wishes attested changes to reach the registration applies them through its registration policy ({{revalidation}}) or through {{RFC7592}}, where a narrower record survives until it does.
+* From a tenant approval issuer, the statement is tenant approval and is evaluated as {{tenant-approval}} defines.
+* From an issuer accepted in neither role for the tenant the request belongs to, the request is rejected as {{errors}} defines.
 
 A registration created from a CIMD-profile statement is statement-governed when the server advertises `software_statement_registration_validity_supported`. The validity and revalidation model of {{registration-validity}} and {{revalidation}} applies, with the delivered statement's `sub` equal to the registered `client_id` and validated under the CIMD profile. The request authenticates as the registered client under the registration's own method; the delivered statement renews validity and does not otherwise alter the registration. A refresh-token request that omits a statement this policy requires, or delivers one failing these rules, is rejected with `invalid_grant`; any other token request failing the currency requirement is rejected with `invalid_client`.
+
+## Tenant Approval {#tenant-approval}
+
+An authorization server hosting multiple tenants establishes a client once and decides separately, per tenant, whether that client may operate there. A tenant approval statement carries that decision: it is issued by the tenant's approval issuer ({{ISSUANCE}}), its `sub` identifies the established client, and the authorization server evaluates it in the tenant's request context.
+
+The authorization server MUST resolve the tenant a request belongs to and MUST accept a tenant approval statement only from an issuer configured for that tenant. It MUST reject a statement whose issuer speaks for another tenant, whatever its signature ({{ISSUANCE}}).
+
+Tenant approval constrains the request; it does not establish the client:
+
+* The client's identity and metadata remain those of its establishment: a tenant approval statement MUST NOT create a registration, alter a registration record, or extend registration validity.
+* Where the statement attests metadata, that metadata narrows the request and MUST NOT widen it. The effective policy for the request is the intersection of what the establishment allows and what the tenant approved; a requested scope outside the intersection fails as {{errors}} defines.
+* Expiry bears on that tenant alone. A lapsed tenant approval stops that tenant's requests and leaves the client's registration, and every other tenant, untouched.
+
+Whether a tenant requires an approval statement is that tenant's policy. A tenant that expresses approval through the authorization server's own administrative interface needs no statement; the artifact is how a decision made once travels to every authorization server where the tenant has configured its issuer.
+
+Where the client is not established at the authorization server at all, one statement can serve both roles if the tenant's issuer is also accepted for establishment: the presentation establishes the client under {{cimd-presentation}} and carries the tenant's approval in the same act.
 
 # Deployment Model: Centrally Curated Software {#deployment-model}
 
 This section is non-normative.
 
-An enterprise that reviews and approves client software operates a statement issuer. Approval of an application is the issuance of a short-lived statement: the DCR profile for software its providers register through {{RFC7591}}, the CIMD profile for software with hosted metadata, each with `aud` naming the authorization servers of the providers where the approval should hold. Renewal is automatic while the approval stands, so registrations stay valid and presentations keep succeeding.
+Two review functions operate here, and they belong to different parties. A provider's marketplace decides which software may exist as a client on its platform, and a customer decides which of that software may operate in its tenant. The provider configures the marketplace's issuer in the establishment role and each customer's issuer in the tenant approval role ({{ISSUANCE}}).
 
-The controls follow from the lifetime machinery. Onboarding a provider is one trust configuration covering the issuer, identifier scope, accepted metadata authority, and lifetime policy. Approved applications then carry that review to the provider instead of being copied into a separate per-application allowlist. Ceasing renewal prevents new runtime presentations after `exp` and expires statement-governed registrations at their recorded boundary. It also ends refresh-based continuation where the provider requires a current statement under {{refresh}}. Already-issued access tokens remain governed by their own lifetime, and providers retain local control over grants and emergency deprovisioning. Narrowing an approval takes effect when the narrower replacement is next consumed. The result is one issuance policy enforced by multiple trusting authorization servers, subject to their explicit local policy.
+A marketplace application registers once. Its listing is an establishment statement whose renewal keeps the registration valid, and that single registration serves every tenant, which is what lets a vendor onboard a customer without provisioning anything per customer. Software hosted by its vendor rather than deployed by the customer works the same way: one client, many tenants, one listing lifecycle.
+
+An enterprise that reviews and approves client software operates a statement issuer of its own, in the tenant approval role at each provider where it has configured it. Approval of an application is the issuance of a short-lived statement whose `sub` names the application and whose `aud` names the providers where the approval should hold. Renewal is automatic while the approval stands, so approved applications keep working.
+
+The controls follow from the lifetime machinery, and the two lifecycles never have to be synchronized. Onboarding a provider is one trust configuration covering the issuer, its role, identifier scope, accepted metadata authority, and lifetime policy. Approved applications then carry that review to the provider instead of being copied into a separate per-application allowlist. Ceasing renewal at the customer's issuer lapses the application in that customer's tenant at every provider, and leaves the vendor's listing and every other customer untouched; ceasing renewal at the marketplace expires the listing itself. Either prevents new runtime presentations after `exp`, and the second expires statement-governed registrations at their recorded boundary. It also ends refresh-based continuation where the provider requires a current statement under {{refresh}}. Already-issued access tokens remain governed by their own lifetime, and providers retain local control over grants and emergency deprovisioning. Narrowing an approval takes effect when the narrower replacement is next consumed. The result is one issuance policy enforced by multiple trusting authorization servers, subject to their explicit local policy.
 
 # Error Responses {#errors}
 
@@ -330,11 +356,11 @@ A statement consumed at registration is rejected with the {{RFC7591}} error code
 `invalid_client`:
 : the statement or its proof fails to establish the client, including a failed profile ({{profiles}}), chain ({{sender-constraint}}), or `jwks_uri` retrieval; also any request under an expired statement-governed registration that does not restore it ({{revalidation}}), at every endpoint including the refresh-token grant.
 
+`unauthorized_client`:
+: the tenant has not approved this client, because a required tenant approval is absent, expired, or issued by an issuer configured for another tenant ({{tenant-approval}}); also the grant or response type case below.
+
 `invalid_scope`:
 : a requested scope falls outside the effective metadata.
-
-`unauthorized_client`:
-: the client is not permitted by its effective metadata to use the requested grant type or response type, although the authorization server supports it.
 
 `invalid_request`:
 : any other rejection, including a redemption or issuance request carrying the `software_statement` parameter ({{runtime-presentation}}, {{grant-lifecycle}}).

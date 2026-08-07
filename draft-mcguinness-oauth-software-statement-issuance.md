@@ -801,7 +801,8 @@ Configuring trust in an issuer is a one-time act that covers every client that i
 * the client identifier namespaces the issuer may attest through `sub`;
 * the audience identifiers the issuer may name;
 * the maximum statement lifetime it will honor, which also caps registration validity where the server implements the registration-validity model of {{PRESENTATION}};
-* the metadata claims for which it treats the issuer as authoritative; and
+* the metadata claims for which it treats the issuer as authoritative;
+* the role in which it accepts the issuer ({{issuer-roles}}); and
 * its policy on repeated and multiple registration ({{multi-instance}}).
 
 These inputs, not the signature alone, define acceptance. Because the issuer is an authorization server role, key retrieval reuses {{RFC8414}} discovery ({{authorization-server-metadata}}).
@@ -809,6 +810,20 @@ These inputs, not the signature alone, define acceptance. Because the issuer is 
 A trusting authorization server MUST derive trust from this local configuration and MUST NOT derive it from an `iss`, `jku`, `x5u`, or other key-location value carried in a presented statement. Having established trust, it validates each statement as described in {{software-statement-format}}.
 
 Issuer trust SHOULD be scoped as well as explicit. An issuer accepted for all values of `sub` can, if compromised or over-broad, mint acceptable statements about any client software; trust configuration SHOULD therefore constrain each issuer to the client identifier namespaces it is expected to attest, for example URLs under the domains of the software publishers it serves, and a statement whose `sub` falls outside that scope MUST be rejected even when its signature verifies ({{software-statement-format}}). For the non-CIMD shape ({{non-cimd-statements}}) the scope is an enumerated identifier set or a tenant rather than a URL namespace; the rejection rule is the same.
+
+## Issuer Roles {#issuer-roles}
+
+A trusting authorization server accepts an issuer in one of two roles, and records which when it configures the issuer. The roles answer different questions, are held by different parties, and run on separate lifecycles.
+
+Establishment issuer:
+: Its statements decide which software may exist as a client at this authorization server. A marketplace publisher program or an ecosystem directory holds this role. Statements from an establishment issuer are consumed at registration or at runtime establishment, and govern registration validity where {{PRESENTATION}} applies that model. One such decision serves every tenant the authorization server hosts.
+
+Tenant approval issuer:
+: Its statements decide which software a particular tenant permits. The tenant's own review function holds this role, and the authorization server records the tenant the issuer speaks for. Statements from a tenant approval issuer are evaluated in that tenant's request context under {{PRESENTATION}}; they neither create nor renew a registration, and they bear on no other tenant.
+
+An issuer MAY hold both roles, in which case the consumption point distinguishes them: a statement in a registration request is establishment, and a statement accompanying a request from a client already established is tenant approval.
+
+Where an authorization server hosts multiple tenants, issuer trust is configured per tenant. The authorization server MUST resolve the tenant a request belongs to and MUST evaluate only the issuers configured for that tenant; accepting a tenant approval issuer's statement outside the tenant it speaks for is a cross-tenant escalation ({{security-considerations}}).
 
 Pairwise configuration bounds a statement's reach to the issuers a trusting authorization server has configured, which is why a statement's practical audience is an ecosystem or administrative domain rather than the open web. The OAuth Identity Assertion Trust Framework {{TRUST-FRAMEWORK}} generalizes the model: a trusting authorization server publishes the conditions an issuer must satisfy and evaluates published evidence, such as authorization by the owner of a client identifier's namespace, when a statement is presented, replacing enumeration of trusted issuers with open-world policy. OpenID Federation {{OPENID-FED}} provides an alternative through trust chains. Both are out of scope here.
 
@@ -889,6 +904,8 @@ This specification does not define online revocation, and defines no status clai
 At a server that does not implement the registration-validity model of {{PRESENTATION}}, revocation does not undo registrations already derived from a statement, and responding to malicious software after registration is client lifecycle management at that server. Where that model is in force, a registration expires at the recorded `exp` unless a replacement renews it, so ceasing renewal retires the registration without per-server action.
 
 The explicit, scoped issuer trust configuration that acceptance depends on, and the requirement never to derive trust from key-location values in the statement itself, are specified in {{issuer-trust}}.
+
+At an authorization server hosting multiple tenants, the tenant a statement is evaluated in is part of its meaning. A tenant approval issuer speaks only for its own tenant ({{issuer-roles}}), so accepting its statement in another tenant's context grants one customer's approval authority over another customer's data. An authorization server MUST bind each configured tenant approval issuer to its tenant and resolve the tenant from the request before evaluating any statement.
 
 ## Registration Fraud and Impersonation {#registration-fraud}
 
