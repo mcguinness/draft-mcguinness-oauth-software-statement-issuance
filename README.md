@@ -16,6 +16,14 @@ This repository also hosts the companion Internet-Draft, "OAuth 2.0 Software Sta
 * [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-sw-stmt-presentation.txt)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-sw-stmt-presentation/) (after first submission)
 
+## Shared Signals Events for OAuth Software Statements
+
+The repository also hosts "Shared Signals Events for OAuth Software Statements", an optional profile that lets a statement issuer withdraw a decision before the statement expires. The issuer transmits lifecycle events over the Shared Signals Framework to the authorization servers that already trust it: statement revoked, approval withdrawn, establishment withdrawn, metadata changed, plus an optional reverse-direction event by which a consuming server reports where a statement is in force. Events can only reduce standing, and a receiver that misses one falls back to expiry, so neither of the other drafts depends on this one.
+
+* [Editor's Copy (HTML)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-sw-stmt-signals.html)
+* [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-sw-stmt-signals.txt)
+* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-sw-stmt-signals/) (after first submission)
+
 ## Deployment Model
 
 [Marketplace Listing and Enterprise Approval](deployment-model.md) sketches the end-to-end scenario the two drafts are built for: a provider marketplace deciding which software may exist as a client, an enterprise deciding which of it may operate in its tenant, and the four layers that keep those decisions separate. Non-normative.

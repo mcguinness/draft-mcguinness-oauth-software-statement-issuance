@@ -144,7 +144,7 @@ Because an ID-JAG assertion is validated at every grant, ceasing assertion issua
 
 Everything above is enforced on a clock. An approval or a listing ends when its statement expires unrenewed, so how fast a decision takes effect is set by how short the issuer made the lifetime, and short lifetimes buy responsiveness with renewal traffic. That trade is avoidable: the parties are already in a configured pairwise relationship, since a trusting authorization server holds each issuer's identifier, keys, scope, and role, and that same relationship can carry an event stream.
 
-A profile over the [Shared Signals Framework](https://openid.net/specs/openid-sharedsignals-framework-1_0.html) would define the events. The statement issuer is the transmitter, the trusting authorization server is the receiver, events travel as [Security Event Tokens](https://www.rfc-editor.org/rfc/rfc8417.html) over the framework's push or poll delivery, and subjects use the [identifier formats of RFC 9493](https://www.rfc-editor.org/rfc/rfc9493.html): the `uri` format for a Client ID Metadata Document URL, and `iss_sub` for an `software_id` under the issuer that names it. Nothing new is invented at the transport or trust layer; the profile's work is naming events and their effects.
+[Shared Signals Events for OAuth Software Statements](draft-mcguinness-oauth-sw-stmt-signals.md), the third draft in this repository, defines those events over the [Shared Signals Framework](https://openid.net/specs/openid-sharedsignals-framework-1_0.html). The statement issuer is the transmitter, the trusting authorization server is the receiver, events travel as [Security Event Tokens](https://www.rfc-editor.org/rfc/rfc8417.html) over the framework's push or poll delivery, and subjects use the [identifier formats of RFC 9493](https://www.rfc-editor.org/rfc/rfc9493.html): the `uri` format for a Client ID Metadata Document URL, and `iss_sub` for an `software_id` under the issuer that names it. Nothing new is invented at the transport or trust layer; the profile's work is naming events and their effects.
 
 Four events carry the semantics this deployment needs:
 
@@ -165,7 +165,7 @@ The consequence is that lifetime and responsiveness stop being the same dial. An
 
 The stream is useful in the other direction too. A provider transmitting consumption events, a statement accepted, a registration created from it, a presentation refused, gives the enterprise something it cannot get today: an inventory of where its approvals are actually in force, across providers, without asking each one.
 
-This profile belongs in its own short document rather than in either draft, since it composes with both and neither should require it.
+The profile is a separate document rather than part of either draft, since it composes with both and neither requires it.
 
 ## What each draft supplies
 
@@ -181,6 +181,7 @@ This profile belongs in its own short document rather than in either draft, sinc
 | Presenter binding | Consumption | Sender Constraint |
 | Tenant approval evaluation and intersection | Consumption | Tenant Approval |
 | Discovery signals | Consumption | Authorization Server Metadata |
+| Early withdrawal of a decision | Signals | Event Types, Receiver Processing |
 
 ## What changes, concretely
 
