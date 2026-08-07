@@ -25,7 +25,7 @@ Neither substitutes for the other. An application can be listed on a marketplace
 | Establishment | Which software may exist as a client here? | Provider, through its marketplace | Establishment statement | Listing review and renewal |
 | Tenant approval | Which established software may operate in my tenant? | Customer | Tenant approval statement | Customer review and renewal |
 | Presenter proof | Which instance is making this request? | Cryptography | Client authentication, DPoP proof, client attestation, instance assertion | Per request |
-| User grant | What may it access, for whom? | Resource owner and local policy | Access grant | Grant and token lifetime |
+| User grant | What may it access, for whom? | Resource owner and local policy | Access grant, or a cross-domain identity assertion | Grant and token lifetime |
 
 The consumption draft keeps these apart rather than collapsing them into one decision. Establishment and tenant approval are distinguished by the role in which an authorization server accepts an issuer, which the issuance draft defines under Issuer Roles; the wire carries at most one statement per request.
 
@@ -65,6 +65,8 @@ This is one decision, made once, in the enterprise's own system of record.
 ### 5. The customer onboards a provider
 
 At each provider, the enterprise configures its issuer once: the issuer identifier, the tenant approval role, the identifier scope, the metadata the provider will treat it as authoritative for, and a maximum lifetime. That is the entire per-provider cost, and it does not recur per application.
+
+Where the provider already trusts the enterprise identity provider for single sign-on or for cross-domain assertions, this adds a role to an existing relationship rather than establishing a new one ([Composition with ID-JAG](#composition-with-id-jag)).
 
 ### 6. A request arrives
 
@@ -110,6 +112,34 @@ Neither revokes tokens already issued. Access winds down as those tokens expire,
 
 **Managed and unmanaged devices.** Device posture belongs to the presenter-proof layer, where a client attestation can carry it, not to either review layer. Approval stays device-independent, and posture is enforced where the request is made.
 
+## Composition with ID-JAG
+
+[The OAuth Identity Assertion Authorization Grant](https://datatracker.ietf.org/doc/draft-ietf-oauth-identity-assertion-authz-grant/), ID-JAG, carries a user's authority across domains: the enterprise identity provider signs an assertion that a client exchanges at another provider's authorization server for an access token. It answers the user-grant layer for cross-domain requests, and it composes with the review layers rather than replacing them.
+
+The same enterprise infrastructure can sign both artifacts, which is what makes this practical:
+
+| Artifact | What it asserts | Layer | Checked |
+| --- | --- | --- | --- |
+| ID-JAG assertion | This user, at this enterprise, authorizes this client at this target | User grant | At every grant |
+| Tenant approval statement | This enterprise approves this software for its tenant | Tenant approval | While unexpired, at presentation or delivery |
+
+ID-JAG makes the identity provider's word about people portable; a software statement makes its word about software portable. The wiring is shared, the authority is not: a provider that already trusts the enterprise identity provider as an assertion issuer is being asked, when it also configures that issuer in the tenant approval role, to accept its word about something new. The relationship exists; the authority is an explicit additional decision, and configuring one role does not imply the other.
+
+### Per-grant metadata binding
+
+Where a deployment wants the client's metadata checked on every grant rather than through a separate approval lifecycle, [issue #121](https://github.com/oauth-wg/oauth-identity-assertion-authz-grant/issues/121) proposes an optional `cimd_digest` claim in the assertion the identity provider already signs. The target authorization server resolves the client's metadata document, compares the digest, and can provision the client just in time, with no prior registration and no separate artifact to obtain, renew, or deliver.
+
+The two mechanisms answer different questions and are worth keeping distinct:
+
+* The assertion-carried digest binds metadata. It says the identity provider expects this client to be the software published at that URL. It carries no review semantics, no attested member set, no audience of its own, and no approval lifecycle.
+* The tenant approval statement carries a decision. It says a named authority reviewed the software and approves it for a tenant, with an expiry, an audience, and an attested member set the provider can intersect against.
+
+They compose: an assertion-carried digest can establish a client just in time while a tenant approval statement, or the provider's own console toggle, still decides whether that client may operate in the tenant. Deployments that need only "this client is who the identity provider says it is" can stop at the digest.
+
+### Enforcement cadence
+
+Because an ID-JAG assertion is validated at every grant, ceasing assertion issuance stops new grants at once, which is the sharpest lever the enterprise holds, with existing access winding down as tokens expire. Statement expiry works on a slower clock: it governs the currency of establishment and approval, and takes effect at the next presentation, registration validity boundary, or refresh where a current statement is required. An enterprise offboarding an application uses both, stopping assertions to end new grants immediately and stopping approval renewal so the application lapses everywhere at its recorded expiry.
+
 ## What each draft supplies
 
 | Capability | Draft | Where |
@@ -141,5 +171,5 @@ Neither revokes tokens already issued. Access winds down as those tokens expire,
 * **Immediate revocation.** Enforcement is bounded by statement lifetime plus the provider's own controls. Shorter lifetimes tighten the loop at the cost of renewal traffic. An acceptance-time status mechanism is named as a future extension.
 * **Identifier trustworthiness for non-hosted software.** A metadata URL is domain-anchored; an `software_id` is a vendor-asserted string. Approvals keyed on the latter are meaningful only within an issuer's enumerated scope.
 * **Discovery of policy.** There is no in-band way to learn which issuers a provider accepts, or that a tenant requires an approval. Trust configuration is deliberately out of band, and error responses guide the client.
-* **Delegation.** These drafts establish what the client is and whether it is approved. Which user or organization it acts for, and with what authority, is separate work.
+* **Delegation.** These drafts establish what the client is and whether it is approved. Which user or organization it acts for, and with what authority, is separate work; see [Composition with ID-JAG](#composition-with-id-jag) for the cross-domain case.
 * **Device posture.** Referenced as a presenter-layer concern, not defined here.
