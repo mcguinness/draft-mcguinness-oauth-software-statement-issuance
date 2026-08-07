@@ -1247,14 +1247,28 @@ Table of Contents
    iat, exp, and jti.  The differences:
 
    sub:  REQUIRED.  The client software identifier agreed between issuer
-      and audience: an [RFC7591] software_id, or a client identifier
-      already registered at the authorization server named in aud.  It
-      is not a Client ID Metadata Document URL, and no retrieval is
+      and audience.  For software registered through [RFC7591], the
+      subject is the software_id, the identifier that holds across
+      registrations and versions; a registration request that supplies
+      software_id MUST supply a value equal to sub for the statement to
+      apply, and a request that omits it inherits the attested value
+      through ordinary statement precedence.  For import at an
+      authorization server where no vendor identifier exists, sub is a
+      client identifier already registered at the server named in aud.
+      It is never a Client ID Metadata Document URL, and no retrieval is
       implied.
 
    cimd_digest:  MUST be absent.  There is no canonical document to
       bind; the statement's own claims carry the entire reviewed
       content.
+
+   software_version:  OPTIONAL.  When attested, the [RFC7591]
+      software_version the review covered; it takes attested precedence
+      at registration, and a new version of the software requires re-
+      issuance.  A version string is a vendor-asserted label, not a byte
+      binding, so this binds the review to what the vendor calls that
+      version, a weaker guarantee than cimd_digest gives the CIMD-
+      anchored shape.
 
    Attested metadata is inline only: the snapshot-subset rule above does
    not apply, and the issuer attests exactly the members its review
