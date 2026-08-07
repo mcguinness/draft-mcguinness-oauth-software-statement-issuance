@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Shared Signals Events for OAuth Software Statements</title>
+<meta content="Karl McGuinness" name="author">
+<meta content="
+       A software statement carries a reviewer's decision about client software, bounded by an expiry the issuer chose. Ending that decision early has no standard mechanism, so how quickly a withdrawal takes effect is determined by how short the issuer made the statement's lifetime. This specification profiles the Shared Signals Framework for software statement lifecycle events, so that a statement issuer can tell the authorization servers that rely on its statements that a statement is revoked, that an approval is withdrawn, that an establishment is withdrawn, or that reviewed metadata has changed. Events can only reduce a client's standing, never create or extend it, and a receiver that misses an event falls back to expiry, so the mechanism shortens the interval between a decision and its effect without becoming load-bearing for security. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="OAuth" name="keyword">
+<meta content="Software Statement" name="keyword">
+<meta content="Shared Signals" name="keyword">
+<meta content="Security Event Token" name="keyword">
+<meta content="Revocation" name="keyword">
+<meta content="draft-mcguinness-oauth-sw-stmt-signals-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.5
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.11.0
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.8.2
+-->
+<link href="draft-mcguinness-oauth-sw-stmt-signals.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">oauth-sw-stmt-signals</td>
+<td class="right">August 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">McGuinness</td>
+<td class="center">Expires 8 February 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Web Authorization Protocol</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-mcguinness-oauth-sw-stmt-signals-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-08-07" class="published">7 August 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-02-08">8 February 2027</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">K. McGuinness</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Shared Signals Events for OAuth Software Statements</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">A software statement carries a reviewer's decision about client software, bounded by an expiry the issuer chose. Ending that decision early has no standard mechanism, so how quickly a withdrawal takes effect is determined by how short the issuer made the statement's lifetime. This specification profiles the Shared Signals Framework for software statement lifecycle events, so that a statement issuer can tell the authorization servers that rely on its statements that a statement is revoked, that an approval is withdrawn, that an establishment is withdrawn, or that reviewed metadata has changed. Events can only reduce a client's standing, never create or extend it, and a receiver that misses an event falls back to expiry, so the mechanism shortens the interval between a decision and its effect without becoming load-bearing for security.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 8 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-definitions" class="internal xref">Conventions and Definitions</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-relationship-to-the-stateme" class="internal xref">Relationship to the Statement Family</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-subject-identification" class="internal xref">Subject Identification</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-event-types" class="internal xref">Event Types</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-statement-revoked" class="internal xref">Statement Revoked</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-approval-withdrawn" class="internal xref">Approval Withdrawn</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-establishment-withdrawn" class="internal xref">Establishment Withdrawn</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.4">
+                <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-metadata-changed" class="internal xref">Metadata Changed</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.5">
+                <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-consumption-reported" class="internal xref">Consumption Reported</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-receiver-processing" class="internal xref">Receiver Processing</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-stream-configuration" class="internal xref">Stream Configuration</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-what-an-event-cannot-do" class="internal xref">What an Event Cannot Do</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-expiry-remains-the-floor" class="internal xref">Expiry Remains the Floor</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.3">
+                <p id="section-toc.1-1.8.2.3.1"><a href="#section-8.3" class="auto internal xref">8.3</a>.  <a href="#name-key-separation-and-compromi" class="internal xref">Key Separation and Compromise</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.4">
+                <p id="section-toc.1-1.8.2.4.1"><a href="#section-8.4" class="auto internal xref">8.4</a>.  <a href="#name-comparison-with-acceptance-" class="internal xref">Comparison with Acceptance-Time Status</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-event-type-assignment" class="internal xref">Event Type Assignment</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-set-payload-claims" class="internal xref">SET Payload Claims</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
+            <p id="section-toc.1-1.13.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1"><span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> defines a software statement in which an issuer attests reviewed client metadata, and <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> defines how a trusting authorization server consumes one: at registration, where the statement's expiry can bound the registration's validity; at runtime, where it establishes a client for a request; and as a tenant approval evaluated in one tenant's context. In every case the decision ends when the statement expires unrenewed.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">That leaves responsiveness coupled to lifetime. An issuer that wants a withdrawal to take effect within minutes must issue statements that live for minutes, and pay the renewal traffic for every client at every audience. An issuer that wants a manageable renewal cadence accepts that a withdrawal takes as long as the remaining lifetime.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">The coupling is unnecessary, because the parties are already in a configured relationship. A trusting authorization server records each issuer's identifier, key source, scope, and role in order to accept its statements at all (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>). This specification uses that relationship to carry lifecycle events over the Shared Signals Framework <span>[<a href="#SSF" class="cite xref">SSF</a>]</span>: the statement issuer transmits, the trusting authorization server receives, and events are Security Event Tokens <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span> delivered by the framework's push <span>[<a href="#RFC8935" class="cite xref">RFC8935</a>]</span> or poll <span>[<a href="#RFC8936" class="cite xref">RFC8936</a>]</span> bindings.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">This specification defines the subject identification, event types, payload claims, and receiver processing rules for those events, and an optional reverse-direction event by which a consuming authorization server reports where a statement is in force. It defines no new endpoint, transport, subject identifier format, or trust establishment mechanism.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-5">Two properties bound what the mechanism can do, and are normative in <a href="#processing" class="auto internal xref">Section 6</a>: an event can only reduce standing, and a receiver that misses events enforces expiry exactly as it does today. Deployments therefore keep bounded statement lifetimes, and neither <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> nor <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> depends on this specification.<a href="#section-1-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conventions-and-definitions">
+<section id="section-2">
+      <h2 id="name-conventions-and-definitions">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-conventions-and-definitions" class="section-name selfRef">Conventions and Definitions</a>
+      </h2>
+<p id="section-2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<p id="section-2-2">Transmitter, Receiver, Stream, and the delivery and configuration mechanisms are defined by <span>[<a href="#SSF" class="cite xref">SSF</a>]</span>. Security Event Token, or SET, is defined by <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span>. Subject identifier formats are defined by <span>[<a href="#RFC9493" class="cite xref">RFC9493</a>]</span>. Software statement, issuer roles, and statement validation are defined by <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>. Establishment, tenant approval, registration validity, and runtime presentation are defined by <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<p id="section-2-3">This specification additionally defines the following terms:<a href="#section-2-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2-4">
+        <dt id="section-2-4.1">Statement Issuer:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.2">
+          <p id="section-2-4.2.1">The party that signed a software statement, acting as a Transmitter of the events defined here.<a href="#section-2-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-4.3">Consuming Authorization Server:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-4.4">
+          <p id="section-2-4.4.1">A trusting authorization server that has configured the statement issuer, acting as a Receiver of the events defined here.<a href="#section-2-4.4.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="relationship">
+<section id="section-3">
+      <h2 id="name-relationship-to-the-stateme">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-relationship-to-the-stateme" class="section-name selfRef">Relationship to the Statement Family</a>
+      </h2>
+<p id="section-3-1">The events defined here carry no authority of their own. They report that a decision the issuer already had the authority to make has ended earlier than its expiry announced.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">The scope of an event's effect follows the role in which the consuming authorization server accepts the transmitting issuer (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>), exactly as the scope of a statement's effect does. An event from an issuer accepted in the establishment role bears on the client's existence at that server, for every tenant. An event from an issuer accepted in the tenant approval role bears only on the tenant that issuer speaks for. An event carries no tenant identifier; the receiver resolves scope from its own configuration.<a href="#section-3-2" class="pilcrow">¶</a></p>
+<p id="section-3-3">A consuming authorization server <span class="bcp14">MUST NOT</span> accept an event from an issuer it has not configured, and <span class="bcp14">MUST</span> verify the SET using keys obtained as it obtains that issuer's statement verification keys, from the issuer's authorization server metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>. It <span class="bcp14">MUST NOT</span> derive event trust from any key-location value carried in the event.<a href="#section-3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="subjects">
+<section id="section-4">
+      <h2 id="name-subject-identification">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-subject-identification" class="section-name selfRef">Subject Identification</a>
+      </h2>
+<p id="section-4-1">The subject of every event defined here is client software, identified as the <code>sub</code> of the statements the event concerns. Events use the <code>sub_id</code> claim of <span>[<a href="#SSF" class="cite xref">SSF</a>]</span> with the formats of <span>[<a href="#RFC9493" class="cite xref">RFC9493</a>]</span>:<a href="#section-4-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4-2.1">
+          <p id="section-4-2.1.1">Software identified by a Client ID Metadata Document URL <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span> uses the <code>uri</code> format, whose <code>uri</code> member carries that URL exactly as it appears in the statement's <code>sub</code>.<a href="#section-4-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-2.2">
+          <p id="section-4-2.2.1">Software identified by an <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> <code>software_id</code> uses the <code>iss_sub</code> format, whose <code>iss</code> member carries the statement issuer's identifier and whose <code>sub</code> member carries the <code>software_id</code>.<a href="#section-4-2.2.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-4-3">A consuming authorization server <span class="bcp14">MUST</span> match the subject by exact comparison against the <code>sub</code> of the statements it holds, and <span class="bcp14">MUST NOT</span> treat a subject it does not recognize as an error.<a href="#section-4-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="events">
+<section id="section-5">
+      <h2 id="name-event-types">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-event-types" class="section-name selfRef">Event Types</a>
+      </h2>
+<p id="section-5-1">Each event is a member of the SET <code>events</code> claim, whose value is the event payload object. All payloads share these claims:<a href="#section-5-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5-2">
+        <dt id="section-5-2.1">
+<code>event_timestamp</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.2">
+          <p id="section-5-2.2.1"><span class="bcp14">REQUIRED</span>. A NumericDate value giving the time the issuer made the decision the event reports. Receivers use it to order events (<a href="#processing" class="auto internal xref">Section 6</a>).<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.3">
+<code>software_statement_jti</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.4">
+          <p id="section-5-2.4.1"><span class="bcp14">OPTIONAL</span>. The <code>jti</code> of the statement the event concerns. When present, the event concerns that statement alone. When absent, the event concerns every statement the transmitting issuer has issued for the subject.<a href="#section-5-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-2.5">
+<code>reason_admin</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-2.6">
+          <p id="section-5-2.6.1"><span class="bcp14">OPTIONAL</span>. A human-readable explanation intended for an administrator, as <span>[<a href="#CAEP" class="cite xref">CAEP</a>]</span> defines the member.<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<div id="statement-revoked">
+<section id="section-5.1">
+        <h3 id="name-statement-revoked">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-statement-revoked" class="section-name selfRef">Statement Revoked</a>
+        </h3>
+<p id="section-5.1-1">The issuer withdraws a specific statement before its expiry, for example because it was mis-issued or its holder's key was compromised. <code>software_statement_jti</code> is <span class="bcp14">REQUIRED</span> for this event type.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<p id="section-5.1-2">A receiver <span class="bcp14">MUST</span> stop honoring the named statement. Where that statement governs a registration's validity (<span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>), the registration is expired as though its recorded <code>exp</code> had passed, and a replacement statement restores it under the revalidation rules of that specification.<a href="#section-5.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="approval-withdrawn">
+<section id="section-5.2">
+        <h3 id="name-approval-withdrawn">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-approval-withdrawn" class="section-name selfRef">Approval Withdrawn</a>
+        </h3>
+<p id="section-5.2-1">A tenant approval issuer withdraws its tenant's approval of the subject software.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<p id="section-5.2-2">A receiver <span class="bcp14">MUST</span> stop treating the subject as approved for that issuer's tenant, with the effect the tenant approval rules of <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> give an absent approval. The client's establishment, and every other tenant, are unaffected.<a href="#section-5.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="establishment-withdrawn">
+<section id="section-5.3">
+        <h3 id="name-establishment-withdrawn">
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-establishment-withdrawn" class="section-name selfRef">Establishment Withdrawn</a>
+        </h3>
+<p id="section-5.3-1">An establishment issuer withdraws the subject software's listing, for example on removal from a marketplace.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+<p id="section-5.3-2">A receiver <span class="bcp14">MUST</span> stop treating the subject as established. Registrations governed by statements from that issuer for that subject are expired, and runtime presentation of those statements fails as <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> defines for a statement that is not current. The effect reaches every tenant at that authorization server.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="metadata-changed">
+<section id="section-5.4">
+        <h3 id="name-metadata-changed">
+<a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-metadata-changed" class="section-name selfRef">Metadata Changed</a>
+        </h3>
+<p id="section-5.4-1">The issuer reports that the software's published metadata no longer matches what it reviewed. This event carries information a receiver could otherwise learn only by retrieval, and is advisory: the issuer is not withdrawing its decision.<a href="#section-5.4-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5.4-2">
+          <dt id="section-5.4-2.1">
+<code>cimd_digest</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.4-2.2">
+            <p id="section-5.4-2.2.1"><span class="bcp14">OPTIONAL</span>. The digest the issuer now observes at the subject's Client ID Metadata Document, in the encoding <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> defines.<a href="#section-5.4-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-5.4-3">A receiver applies its post-issuance change policy (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>) as though it had retrieved the document and observed the mismatch. It <span class="bcp14">MUST NOT</span> treat the event as attesting the new metadata.<a href="#section-5.4-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="consumption-reported">
+<section id="section-5.5">
+        <h3 id="name-consumption-reported">
+<a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-consumption-reported" class="section-name selfRef">Consumption Reported</a>
+        </h3>
+<p id="section-5.5-1">This event travels in the reverse direction: the Transmitter is the consuming authorization server and the Receiver is the statement issuer. Support is <span class="bcp14">OPTIONAL</span> for both parties, and a consuming authorization server <span class="bcp14">MUST NOT</span> transmit it unless configured to do so for that issuer.<a href="#section-5.5-1" class="pilcrow">¶</a></p>
+<p id="section-5.5-2">The event reports that the issuer's statement for the subject was consumed, so that an issuer can inventory where its decisions are in force. Its payload carries <code>event_timestamp</code> and <code>software_statement_jti</code>, and:<a href="#section-5.5-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5.5-3">
+          <dt id="section-5.5-3.1">
+<code>consumption</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.5-3.2">
+            <p id="section-5.5-3.2.1"><span class="bcp14">REQUIRED</span>. One of <code>registration</code>, <code>presentation</code>, <code>delivery</code>, or <code>refused</code>, naming the consumption point of <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> at which the statement was used, or that it was refused.<a href="#section-5.5-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-5.5-4">The event conveys no authority in either direction, and a statement issuer <span class="bcp14">MUST NOT</span> treat its absence as evidence that a statement is unused.<a href="#section-5.5-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="processing">
+<section id="section-6">
+      <h2 id="name-receiver-processing">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-receiver-processing" class="section-name selfRef">Receiver Processing</a>
+      </h2>
+<p id="section-6-1">A consuming authorization server that receives an event defined here <span class="bcp14">MUST</span>:<a href="#section-6-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-6-2">
+<li id="section-6-2.1">
+          <p id="section-6-2.1.1">verify the SET as <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span> requires, and verify that its issuer is configured and its keys were obtained as <a href="#relationship" class="auto internal xref">Section 3</a> requires;<a href="#section-6-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-2.2">
+          <p id="section-6-2.2.1">reject an event whose <code>aud</code> does not include an identifier of this authorization server, and an event whose <code>jti</code> it has already processed;<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-2.3">
+          <p id="section-6-2.3.1">resolve the subject (<a href="#subjects" class="auto internal xref">Section 4</a>) and the scope of the effect from the transmitting issuer's configured role (<a href="#relationship" class="auto internal xref">Section 3</a>); and<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-6-2.4">
+          <p id="section-6-2.4.1">apply the effect the event type defines, at the scope resolved in step 3.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<p id="section-6-3">Two constraints bound every event:<a href="#section-6-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6-4.1">
+          <p id="section-6-4.1.1">An event <span class="bcp14">MUST NOT</span> create standing, extend a statement's lifetime, restore a statement previously revoked, or otherwise increase what a client may do. A receiver <span class="bcp14">MUST</span> ignore any payload member that would have such an effect. Restoring standing requires a statement, presented or delivered as <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> defines.<a href="#section-6-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-4.2">
+          <p id="section-6-4.2.1">A receiver <span class="bcp14">MUST</span> continue to enforce statement expiry independently of this mechanism. Stream loss, transmitter unavailability, or delivery failure leaves standing to end at expiry, which remains the floor.<a href="#section-6-4.2.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-6-5">Events may arrive out of order or be duplicated. A receiver <span class="bcp14">MUST NOT</span> reverse an effect on the basis of an event whose <code>event_timestamp</code> precedes the event that produced it, and <span class="bcp14">SHOULD</span> retain the timestamp of the last applied event per subject and issuer for that comparison.<a href="#section-6-5" class="pilcrow">¶</a></p>
+<p id="section-6-6">An effect applied by an event does not revoke access tokens already issued. A receiver applies its own grant and token lifetime policy, as it does when a statement expires.<a href="#section-6-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="configuration">
+<section id="section-7">
+      <h2 id="name-stream-configuration">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-stream-configuration" class="section-name selfRef">Stream Configuration</a>
+      </h2>
+<p id="section-7-1">A statement issuer supporting this specification publishes Transmitter configuration metadata as <span>[<a href="#SSF" class="cite xref">SSF</a>]</span> defines, discoverable from the issuer identifier the consuming authorization server has already configured. Stream creation, subject management, verification, and delivery follow <span>[<a href="#SSF" class="cite xref">SSF</a>]</span>; this specification adds no configuration mechanism.<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-2">A consuming authorization server <span class="bcp14">SHOULD</span> create one stream per configured issuer and <span class="bcp14">SHOULD</span> request every event type this specification defines that the issuer's role can produce. A transmitter <span class="bcp14">MUST NOT</span> require a receiver to accept the reverse-direction event of <a href="#consumption-reported" class="auto internal xref">Section 5.5</a> as a condition of receiving the others.<a href="#section-7-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-8">
+      <h2 id="name-security-considerations">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<div id="what-an-event-cannot-do">
+<section id="section-8.1">
+        <h3 id="name-what-an-event-cannot-do">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-what-an-event-cannot-do" class="section-name selfRef">What an Event Cannot Do</a>
+        </h3>
+<p id="section-8.1-1">The constraints of <a href="#processing" class="auto internal xref">Section 6</a> are the security argument for this mechanism. A forged, replayed, or reordered event cannot grant a client anything, because no event increases standing. Its worst outcome is the premature loss of a legitimate client's standing, which is an availability failure the issuer corrects by issuing a fresh statement, and which the receiver can bound by rate-limiting a transmitter's events.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="expiry-remains-the-floor">
+<section id="section-8.2">
+        <h3 id="name-expiry-remains-the-floor">
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-expiry-remains-the-floor" class="section-name selfRef">Expiry Remains the Floor</a>
+        </h3>
+<p id="section-8.2-1">Because a receiver enforces expiry independently, an attacker who suppresses events, by disrupting delivery or the transmitter, delays a withdrawal at most until the affected statements expire. Deployments therefore choose lifetimes they would accept without this mechanism, and treat event delivery as an accelerator. A receiver <span class="bcp14">SHOULD</span> alert on stream loss rather than assume quiescence, since a healthy stream and a suppressed one are indistinguishable from the absence of events.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="key-separation-and-compromise">
+<section id="section-8.3">
+        <h3 id="name-key-separation-and-compromi">
+<a href="#section-8.3" class="section-number selfRef">8.3. </a><a href="#name-key-separation-and-compromi" class="section-name selfRef">Key Separation and Compromise</a>
+        </h3>
+<p id="section-8.3-1">A transmitter <span class="bcp14">MAY</span> sign SETs with a key distinct from its statement signing key, published in the same metadata. Compromise of a statement signing key is the more serious event, because statements grant standing and events cannot; a receiver responding to such a compromise removes trust in the issuer or its scope as <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> describes, which also ends event acceptance.<a href="#section-8.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="comparison-with-acceptance-time-status">
+<section id="section-8.4">
+        <h3 id="name-comparison-with-acceptance-">
+<a href="#section-8.4" class="section-number selfRef">8.4. </a><a href="#name-comparison-with-acceptance-" class="section-name selfRef">Comparison with Acceptance-Time Status</a>
+        </h3>
+<p id="section-8.4-1">A status mechanism such as <span>[<a href="#STATUS-LIST" class="cite xref">STATUS-LIST</a>]</span> lets a receiver pull a statement's state at the moment it is consumed, at the cost of a retrieval on the consumption path and an availability dependence on the status endpoint. The events defined here push state changes ahead of consumption, at the cost of stream state and the suppression exposure above. The two are complementary, and a deployment can use both.<a href="#section-8.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-9">
+      <h2 id="name-privacy-considerations">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-9-1">Subject identifiers in these events name software an issuer has reviewed and, in aggregate, describe an organization's approved software estate. A transmitter <span class="bcp14">SHOULD</span> scope each stream to the subjects the receiving authorization server can act on, and a receiver <span class="bcp14">SHOULD</span> apply to event logs the handling it applies to statements (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>).<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2">The reverse-direction event of <a href="#consumption-reported" class="auto internal xref">Section 5.5</a> tells an issuer where its statements are consumed, which for an enterprise issuer is its own estate but for a marketplace issuer reveals customer deployment activity at the provider. A consuming authorization server <span class="bcp14">MUST</span> treat transmission of that event as disclosure subject to its own tenant policy, and <span class="bcp14">MAY</span> omit it for any issuer or tenant.<a href="#section-9-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-10">
+      <h2 id="name-iana-considerations">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<div id="event-type-assignment">
+<section id="section-10.1">
+        <h3 id="name-event-type-assignment">
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-event-type-assignment" class="section-name selfRef">Event Type Assignment</a>
+        </h3>
+<p id="section-10.1-1">The event types defined in <a href="#events" class="auto internal xref">Section 5</a> require URI identifiers under a namespace this specification does not yet control. This version uses the placeholder base <code>https://schemas.openid.net/secevent/sw-stmt/event-type/</code> with the terminal segments <code>statement-revoked</code>, <code>approval-withdrawn</code>, <code>establishment-withdrawn</code>, <code>metadata-changed</code>, and <code>consumption-reported</code>. Assignment of the final base URI, and registration where the publishing body maintains a registry of security event types, is to be resolved before publication.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="set-payload-claims">
+<section id="section-10.2">
+        <h3 id="name-set-payload-claims">
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-set-payload-claims" class="section-name selfRef">SET Payload Claims</a>
+        </h3>
+<p id="section-10.2-1">The payload claims <code>software_statement_jti</code>, <code>consumption</code>, and <code>cimd_digest</code> are defined by this specification for use in the event payloads of <a href="#events" class="auto internal xref">Section 5</a>. Registration in a registry of SET payload claims, where the publishing body maintains one, is to be resolved before publication. The <code>event_timestamp</code> and <code>reason_admin</code> members are used as <span>[<a href="#CAEP" class="cite xref">CAEP</a>]</span> defines them.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-11">
+      <h2 id="name-references">
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-11.1">
+        <h3 id="name-normative-references">
+<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="CIMD">[CIMD]</dt>
+        <dd>
+<span class="refTitle">"OAuth Client ID Metadata Document"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document">https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="ISSUANCE">[ISSUANCE]</dt>
+        <dd>
+<span class="refTitle">"OAuth 2.0 Software Statement Issuance"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-software-statement-issuance">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-software-statement-issuance</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="PRESENTATION">[PRESENTATION]</dt>
+        <dd>
+<span class="refTitle">"OAuth 2.0 Software Statement Consumption and Runtime Presentation"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-sw-stmt-presentation">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-sw-stmt-presentation</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8414">[RFC8414]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">J. Bradley</span>, <span class="refTitle">"OAuth 2.0 Authorization Server Metadata"</span>, <span class="seriesInfo">RFC 8414</span>, <span class="seriesInfo">DOI 10.17487/RFC8414</span>, <time datetime="2018-06" class="refDate">June 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8414">https://www.rfc-editor.org/rfc/rfc8414</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8417">[RFC8417]</dt>
+        <dd>
+<span class="refAuthor">Hunt, P., Ed.</span>, <span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Denniss, W.</span>, and <span class="refAuthor">M. Ansari</span>, <span class="refTitle">"Security Event Token (SET)"</span>, <span class="seriesInfo">RFC 8417</span>, <span class="seriesInfo">DOI 10.17487/RFC8417</span>, <time datetime="2018-07" class="refDate">July 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8417">https://www.rfc-editor.org/rfc/rfc8417</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9493">[RFC9493]</dt>
+        <dd>
+<span class="refAuthor">Backman, A., Ed.</span>, <span class="refAuthor">Scurtescu, M.</span>, and <span class="refAuthor">P. Jain</span>, <span class="refTitle">"Subject Identifiers for Security Event Tokens"</span>, <span class="seriesInfo">RFC 9493</span>, <span class="seriesInfo">DOI 10.17487/RFC9493</span>, <time datetime="2023-12" class="refDate">December 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9493">https://www.rfc-editor.org/rfc/rfc9493</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="SSF">[SSF]</dt>
+      <dd>
+<span class="refTitle">"OpenID Shared Signals Framework Specification 1.0"</span>, <span>n.d.</span>, <span>&lt;<a href="https://openid.net/specs/openid-sharedsignals-framework-1_0.html">https://openid.net/specs/openid-sharedsignals-framework-1_0.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-11.2">
+        <h3 id="name-informative-references">
+<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="CAEP">[CAEP]</dt>
+        <dd>
+<span class="refTitle">"OpenID Continuous Access Evaluation Profile 1.0"</span>, <span>n.d.</span>, <span>&lt;<a href="https://openid.net/specs/openid-caep-1_0.html">https://openid.net/specs/openid-caep-1_0.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7591">[RFC7591]</dt>
+        <dd>
+<span class="refAuthor">Richer, J., Ed.</span>, <span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Machulak, M.</span>, and <span class="refAuthor">P. Hunt</span>, <span class="refTitle">"OAuth 2.0 Dynamic Client Registration Protocol"</span>, <span class="seriesInfo">RFC 7591</span>, <span class="seriesInfo">DOI 10.17487/RFC7591</span>, <time datetime="2015-07" class="refDate">July 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7591">https://www.rfc-editor.org/rfc/rfc7591</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8935">[RFC8935]</dt>
+        <dd>
+<span class="refAuthor">Backman, A., Ed.</span>, <span class="refAuthor">Jones, M., Ed.</span>, <span class="refAuthor">Scurtescu, M.</span>, <span class="refAuthor">Ansari, M.</span>, and <span class="refAuthor">A. Nadalin</span>, <span class="refTitle">"Push-Based Security Event Token (SET) Delivery Using HTTP"</span>, <span class="seriesInfo">RFC 8935</span>, <span class="seriesInfo">DOI 10.17487/RFC8935</span>, <time datetime="2020-11" class="refDate">November 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8935">https://www.rfc-editor.org/rfc/rfc8935</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8936">[RFC8936]</dt>
+        <dd>
+<span class="refAuthor">Backman, A., Ed.</span>, <span class="refAuthor">Jones, M., Ed.</span>, <span class="refAuthor">Scurtescu, M.</span>, <span class="refAuthor">Ansari, M.</span>, and <span class="refAuthor">A. Nadalin</span>, <span class="refTitle">"Poll-Based Security Event Token (SET) Delivery Using HTTP"</span>, <span class="seriesInfo">RFC 8936</span>, <span class="seriesInfo">DOI 10.17487/RFC8936</span>, <time datetime="2020-11" class="refDate">November 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8936">https://www.rfc-editor.org/rfc/rfc8936</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="STATUS-LIST">[STATUS-LIST]</dt>
+      <dd>
+<span class="refTitle">"Token Status List"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list">https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-A">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-A-1">This profile exists because bounding a review's lifetime and withdrawing it promptly are different requirements that a single expiry cannot serve. It draws on the Shared Signals Framework and the Continuous Access Evaluation Profile for its transport and payload conventions.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-B">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>

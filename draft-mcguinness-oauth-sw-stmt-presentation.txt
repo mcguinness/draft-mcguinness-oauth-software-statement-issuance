@@ -1175,7 +1175,9 @@ Table of Contents
    software_version is a vendor-asserted label, while cimd_digest covers
    exact bytes but requires retrieval for comparison.  The bounded
    statement lifetime limits what either signal can miss for new
-   establishment.
+   establishment.  [SIGNALS] defines an optional event mechanism by
+   which an issuer ends a decision before its expiry; expiry remains the
+   floor, and this specification does not depend on it.
 
    Renewal cadence is a deployment trade: short lifetimes tighten the
    issuer's control loop and increase issuance and delivery traffic, and
@@ -1346,6 +1348,10 @@ Table of Contents
               "Best Current Practice for OAuth 2.0 Security", BCP 240,
               RFC 9700, DOI 10.17487/RFC9700, January 2025,
               <https://www.rfc-editor.org/rfc/rfc9700>.
+
+   [SIGNALS]  "Shared Signals Events for OAuth Software Statements",
+              n.d., <https://datatracker.ietf.org/doc/draft-mcguinness-
+              oauth-sw-stmt-signals>.
 
 Acknowledgments
 

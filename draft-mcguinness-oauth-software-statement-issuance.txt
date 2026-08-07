@@ -1945,10 +1945,11 @@ Table of Contents
    (Section 15).  An extension could add acceptance-time status, for
    example a claim referencing a Token Status List [STATUS-LIST], along
    with the processing rules a trusting authorization server would apply
-   (Appendix C.9).  An event-driven alternative would carry revocation
-   over the pairwise relationship that already exists between issuer and
-   trusting authorization server, shortening the interval between a
-   decision and its effect while leaving expiry as the floor.
+   (Appendix C.9).  [SIGNALS] defines the event-driven alternative,
+   carrying withdrawal over the pairwise relationship that already
+   exists between issuer and trusting authorization server, shortening
+   the interval between a decision and its effect while leaving expiry
+   as the floor.
 
    At a server that does not implement the registration-validity model
    of [PRESENTATION], revocation does not undo registrations already
@@ -2395,6 +2396,10 @@ Table of Contents
               "OAuth 2.0 Device Authorization Grant", RFC 8628,
               DOI 10.17487/RFC8628, August 2019,
               <https://www.rfc-editor.org/rfc/rfc8628>.
+
+   [SIGNALS]  "Shared Signals Events for OAuth Software Statements",
+              n.d., <https://datatracker.ietf.org/doc/draft-mcguinness-
+              oauth-sw-stmt-signals>.
 
    [STATUS-LIST]
               "Token Status List", n.d.,
