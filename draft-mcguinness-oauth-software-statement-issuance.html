@@ -1190,14 +1190,6 @@ svg {
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
             <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-deferred-processing" class="internal xref">Deferred Processing</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
-                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-first-polling-request" class="internal xref">First Polling Request</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
-                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-subsequent-polling-requests" class="internal xref">Subsequent Polling Requests</a></p>
-</li>
-            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
             <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-software-statement-token-re" class="internal xref">Software Statement Token Response</a></p>
@@ -1385,7 +1377,7 @@ svg {
             <p id="section-1.2-2.2.1"><span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span> defines the client identifier, canonical metadata source, pre-registration, and metadata-change handling. Those mechanisms can serve as approval-carrying enrollment, while the metadata digest (<a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>) makes changes precisely detectable.<a href="#section-1.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-1.2-2.3">
-            <p id="section-1.2-2.3.1"><span>[<a href="#DTR" class="cite xref">DTR</a>]</span> defines client opt-in, token endpoint deferral, polling, cancellation, and sender constraint. This specification profiles it for both issuance flows.<a href="#section-1.2-2.3.1" class="pilcrow">¶</a></p>
+            <p id="section-1.2-2.3.1"><span>[<a href="#DTR" class="cite xref">DTR</a>]</span> defines client opt-in, token endpoint deferral, polling, cancellation, and sender constraint. This specification uses it as-is for asynchronous issuance and adds only a delivery restriction (<a href="#deferred-processing" class="auto internal xref">Section 9</a>).<a href="#section-1.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-1.2-2.4">
             <p id="section-1.2-2.4.1"><span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> defines both the response convention for non-access security tokens and the exchange profiled in <a href="#token-exchange-profile" class="auto internal xref">Section 8</a>.<a href="#section-1.2-2.4.1" class="pilcrow">¶</a></p>
@@ -1802,7 +1794,7 @@ Location: https://client.example.org/cb?
           <p id="section-7-6.2.1"><strong>Denied:</strong> it returns the terminal denial of <a href="#terminal-denial" class="auto internal xref">Section 10.1</a>.<a href="#section-7-6.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-6.3">
-          <p id="section-7-6.3.1"><strong>Pending:</strong> a deferred issuer returns the deferred token response of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>. It binds the deferral to the code's client identifier, metadata snapshot, audience, and client authentication or DPoP key. The client then polls according to <a href="#deferred-processing" class="auto internal xref">Section 9</a>.<a href="#section-7-6.3.1" class="pilcrow">¶</a></p>
+          <p id="section-7-6.3.1"><strong>Pending:</strong> the authorization server returns the deferred token response of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>, binding the deferral to the code's metadata snapshot and audience alongside the bindings <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> itself requires. The client then polls as <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> defines (<a href="#deferred-processing" class="auto internal xref">Section 9</a>).<a href="#section-7-6.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-7-7">A synchronous issuer never reaches the pending branch, having decided before it returned the code (<a href="#deferred-processing" class="auto internal xref">Section 9</a>).<a href="#section-7-7" class="pilcrow">¶</a></p>
@@ -1912,65 +1904,30 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3A
       <h2 id="name-deferred-processing">
 <a href="#section-9" class="section-number selfRef">9. </a><a href="#name-deferred-processing" class="section-name selfRef">Deferred Processing</a>
       </h2>
-<p id="section-9-1">An authorization server supports one of two conformance levels:<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-1">Approval can take hours or days rather than the seconds typical of user authentication, so an authorization server <span class="bcp14">MAY</span> answer an originating request, a software statement code redemption (<a href="#software-statement-code-redemption" class="auto internal xref">Section 7</a>) or a token exchange (<a href="#token-exchange-profile" class="auto internal xref">Section 8</a>), with a deferred token response <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> instead of a statement.<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2">An authorization server that does so implements <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> and advertises <code>deferred_token_response_supported</code> (<a href="#authorization-server-metadata" class="auto internal xref">Section 12</a>); one that always answers with a statement or a terminal denial (<a href="#terminal-denial" class="auto internal xref">Section 10.1</a>) does neither. Everything about the deferral, the <code>completion_mode</code> opt-in, the polling grant and its parameters, pending and denied and expired behavior, polling rate, sender constraint across polls, and cancellation, is as <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> specifies, and clients and authorization servers <span class="bcp14">MUST</span> follow it. This document adds only two constraints and one recommendation:<a href="#section-9-2" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-9-2.1">
-          <p id="section-9-2.1.1">A <strong>synchronous issuer</strong> answers every originating request with a statement or terminal denial (<a href="#terminal-denial" class="auto internal xref">Section 10.1</a>), so it <span class="bcp14">MUST</span> reach the issuance decision before responding, which in the redirect flow means before returning the software statement code. It never defers, need not implement <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>, and does not advertise <code>deferred_token_response_supported</code>.<a href="#section-9-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-9-3.1">
+          <p id="section-9-3.1.1">A deferral created under this specification <span class="bcp14">MUST</span> be delivered by polling. A client <span class="bcp14">MUST NOT</span> send the <code>client_notification_token</code> parameter of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>, and an authorization server <span class="bcp14">MUST NOT</span> deliver a callback, whatever the client's metadata says. Polling over the authenticated token endpoint needs no outbound channel, and a future version can adopt callbacks (<a href="#design-rationale" class="auto internal xref">Appendix A</a>).<a href="#section-9-3.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-9-2.2">
-          <p id="section-9-2.2.1">A <strong>deferred issuer</strong> returns a deferred token response when a decision needs out-of-band processing. It implements <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> and advertises <code>deferred_token_response_supported</code> (<a href="#authorization-server-metadata" class="auto internal xref">Section 12</a>).<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-9-3.2">
+          <p id="section-9-3.2.1">A successful polling response is the software statement token response of <a href="#software-statement-response" class="auto internal xref">Section 10</a>, not an access token response.<a href="#section-9-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-3.3">
+          <p id="section-9-3.3.1">Issuers <span class="bcp14">SHOULD</span> set deferral code lifetimes that reflect their actual approval latency.<a href="#section-9-3.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-9-3">Against a deferred issuer, every deferral originates from a deferred token response of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>, issued for a software statement code redemption (<a href="#software-statement-code-redemption" class="auto internal xref">Section 7</a>) or a token exchange (<a href="#token-exchange-profile" class="auto internal xref">Section 8</a>), and the client polls the token endpoint using the polling grant defined by <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>.<a href="#section-9-3" class="pilcrow">¶</a></p>
-<p id="section-9-4">A client contacting a deferred issuer <span class="bcp14">MUST</span> include the <code>completion_mode</code> parameter of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> with a value that includes <code>deferred</code> on the originating request, and <span class="bcp14">MUST</span> support the polling grant; the issuer <span class="bcp14">MAY</span> still complete synchronously. A deferred issuer <span class="bcp14">MUST</span> reject an originating request that does not carry that opt-in with <code>invalid_request</code>, because <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> treats an absent or non-<code>deferred</code> value as a requirement for synchronous handling, which an issuer whose decisions can outlive a request cannot guarantee. This deliberately raises the parameter from <span class="bcp14">OPTIONAL</span> in <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> to <span class="bcp14">REQUIRED</span> here. A synchronous issuer neither requires nor processes <code>completion_mode</code>.<a href="#section-9-4" class="pilcrow">¶</a></p>
-<p id="section-9-5">This specification profiles polling delivery only: a client <span class="bcp14">MUST NOT</span> include the <code>client_notification_token</code> parameter of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> on any request under this specification, a request containing it is rejected with <code>invalid_request</code>, and an authorization server <span class="bcp14">MUST NOT</span> deliver callback notifications for a deferral created under this specification, regardless of any <code>deferred_client_notification_endpoint</code> in the client's metadata. Polling over the authenticated token endpoint retrieves the statement without an outbound channel, so this version does not require an issuer to operate one; a future version can adopt the callback mechanism of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> (<a href="#design-rationale" class="auto internal xref">Appendix A</a>).<a href="#section-9-5" class="pilcrow">¶</a></p>
-<p id="section-9-6">When an issuer defers a request, it <span class="bcp14">MUST</span> record the sender-constraint context established at origination and bind it to the deferral:<a href="#section-9-6" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-9-7.1">
-          <p id="section-9-7.1.1">the client identifier;<a href="#section-9-7.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-9-7.2">
-          <p id="section-9-7.2.1">the client authentication method; and<a href="#section-9-7.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-9-7.3">
-          <p id="section-9-7.3.1">for a method that binds a key, that specific key: the DPoP JWK thumbprint, or the authenticated key for a method such as <code>private_key_jwt</code> or mTLS.<a href="#section-9-7.3.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
-<p id="section-9-8">A method that does not bind a key freezes only the client identity and method. Every polling request <span class="bcp14">MUST</span> match the recorded context. The authorization server <span class="bcp14">MUST NOT</span> re-derive that context from the current metadata document. A client that loses the origination key cannot complete the deferral and instead makes a new request.<a href="#section-9-8" class="pilcrow">¶</a></p>
-<p id="section-9-9">Approval of software statement issuance can take hours or days rather than the seconds typical of user authentication, for example when it involves reviewing the client's policy or compliance documentation. Issuers <span class="bcp14">SHOULD</span> set deferral code lifetimes that reflect their actual approval latency.<a href="#section-9-9" class="pilcrow">¶</a></p>
-<div id="first-polling-request">
-<section id="section-9.1">
-        <h3 id="name-first-polling-request">
-<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-first-polling-request" class="section-name selfRef">First Polling Request</a>
-        </h3>
-<p id="section-9.1-1">The first polling request is an HTTP <code>POST</code> request to the token endpoint using the <code>application/x-www-form-urlencoded</code> format. It contains:<a href="#section-9.1-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-9.1-2">
-          <dt id="section-9.1-2.1">
-<code>grant_type</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.1-2.2">
-            <p id="section-9.1-2.2.1"><span class="bcp14">REQUIRED</span>. The value <span class="bcp14">MUST</span> be <code>urn:ietf:params:oauth:grant-type:deferred</code>.<a href="#section-9.1-2.2.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-9.1-2.3">
-<code>deferral_code</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-9.1-2.4">
-            <p id="section-9.1-2.4.1"><span class="bcp14">REQUIRED</span>. The deferral code returned in the deferred response.<a href="#section-9.1-2.4.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-</dl>
-<p id="section-9.1-3">The polling request carries no PKCE parameter: for a redirect-flow deferral, the verifier was consumed when the software statement code was redeemed (<a href="#software-statement-code-redemption" class="auto internal xref">Section 7</a>). The polling request <span class="bcp14">MUST NOT</span> contain a <code>software_statement_code</code>, <code>code_verifier</code>, <code>redirect_uri</code>, <code>audience</code>, <code>subject_token</code>, <code>subject_token_type</code>, or <code>requested_token_type</code> parameter; a polling request containing any of them is rejected with <code>invalid_request</code>.<a href="#section-9.1-3" class="pilcrow">¶</a></p>
-<p id="section-9.1-4">On this and every subsequent polling request, the client <span class="bcp14">MUST</span> satisfy the sender-constraint context recorded for the deferral (<a href="#deferred-processing" class="auto internal xref">Section 9</a>): it uses the origination client authentication method and, when that method or a DPoP sender constraint binds a key, signs with the origination key. The authorization server verifies the request against the stored context, not against the current metadata document, and <span class="bcp14">MUST</span> reject a request that does not match, including a DPoP proof whose key differs from the recorded thumbprint.<a href="#section-9.1-4" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="subsequent-polling-requests">
-<section id="section-9.2">
-        <h3 id="name-subsequent-polling-requests">
-<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-subsequent-polling-requests" class="section-name selfRef">Subsequent Polling Requests</a>
-        </h3>
-<p id="section-9.2-1">If the request remains pending, the client continues polling according to <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> using only the polling grant's normal parameters and the sender constraint described in <a href="#first-polling-request" class="auto internal xref">Section 9.1</a>.<a href="#section-9.2-1" class="pilcrow">¶</a></p>
-<p id="section-9.2-2">Pending, denied, expired, canceled, and polling-rate behavior follows <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>. A successful first or subsequent polling response is the software statement token response defined in <a href="#software-statement-response" class="auto internal xref">Section 10</a>.<a href="#section-9.2-2" class="pilcrow">¶</a></p>
-<p id="section-9.2-3">Cancellation of a deferral follows the revocation mechanism of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>: the client presents the deferral code to the authorization server's revocation endpoint <span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> with a <code>token_type_hint</code> of <code>urn:ietf:params:oauth:token-type:deferral-code</code>. For a deferral created under this specification, the authorization server <span class="bcp14">MUST</span> require the deferral's sender constraint on the revocation request: client authentication where the deferral is bound to client authentication, or a DPoP proof with the origination-bound key otherwise. A revocation request that does not present the bound constraint <span class="bcp14">MUST</span> be treated as presenting an unrecognized token per <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>.<a href="#section-9.2-3" class="pilcrow">¶</a></p>
-</section>
+<p id="section-9-4">The following is a non-normative first polling request for a deferral created by a token exchange, using the polling grant of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> with the origination sender constraint:<a href="#section-9-4" class="pilcrow">¶</a></p>
+<div class="lang-http sourcecode" id="section-9-5">
+<pre>
+POST /token HTTP/1.1
+Host: issuer.example
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic czZCaGRSa3F0Mzo3RmpmcDBaQnIxS3REUmJuZlZkbUl3
+
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adeferred
+&amp;deferral_code=8xLOxBtZp8
+</pre><a href="#section-9-5" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
@@ -2204,7 +2161,7 @@ Pragma: no-cache
         <h3 id="name-deferral-sender-constraint">
 <a href="#section-13.5" class="section-number selfRef">13.5. </a><a href="#name-deferral-sender-constraint" class="section-name selfRef">Deferral Sender Constraint</a>
         </h3>
-<p id="section-13.5-1">Every deferral is created by a token request, and every poll is bound to the client authentication or DPoP key fixed at origination (<a href="#deferred-processing" class="auto internal xref">Section 9</a>), so a public redirect-flow client's <code>dpop_jkt</code> carries sender constraint continuously from the authorization response through polling. All additional sender-constraint, polling-rate, replay, cancellation, and logging requirements of <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> apply.<a href="#section-13.5-1" class="pilcrow">¶</a></p>
+<p id="section-13.5-1">A deferral outlives the request that created it, so the binding between the two matters. <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> specifies that binding, including what a polling request must present and what an authorization server must verify; this document neither relaxes nor restates it. What it adds is the polling-only rule of <a href="#deferred-processing" class="auto internal xref">Section 9</a>, which keeps the statement on the authenticated token endpoint rather than an outbound channel.<a href="#section-13.5-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="te-considerations">
