@@ -571,18 +571,18 @@ Table of Contents
 
    audience:  OPTIONAL.  A target service at which the client intends to
       use the statement, with the semantics defined in Section 2.1 of
-      [RFC8693].  The parameter MAY be repeated to request multiple
-      audiences.  Each value MUST be an authorization server issuer
-      identifier as defined by [RFC8414]; values MUST NOT be repeated,
-      and order is insignificant.  The authorization server selects the
-      final audience according to policy.  When this parameter is
-      present, every value in the statement's aud claim MUST have
-      appeared in the request.  If no requested audience is acceptable,
-      the authorization server MUST reject the request with
-      invalid_target [RFC8693], following the authorization-request
-      precedent of [RFC8707].  These semantics apply only to software
-      statement requests and do not affect proprietary uses of audience
-      for access-token targeting.
+      [RFC8693], and repeatable to request several.  Each value MUST be
+      an authorization server issuer identifier as defined by [RFC8414];
+      values MUST NOT be repeated, and order is insignificant.
+
+   The authorization server selects the final audience according to
+   policy.  When the parameter is present, every value in the
+   statement's aud claim MUST have appeared in the request, and where no
+   requested audience is acceptable the authorization server MUST reject
+   the request with invalid_target [RFC8693], following the
+   authorization-request precedent of [RFC8707].  These semantics apply
+   only to software statement requests and do not affect proprietary
+   uses of audience for access-token targeting.
 
    completion_mode:  OPTIONAL.  A value that includes deferred, sent as
       the advance hint [DTR] defines for an endpoint preceding a token
@@ -663,10 +663,16 @@ Table of Contents
       artifact redeemed at the token endpoint (Section 7).  It MUST be
       bound to the client identifier, redirect URI, PKCE challenge,
       metadata snapshot, requested audience, and, when dpop_jkt was
-      present, that JWK thumbprint.  The value MUST contain at least 128
-      bits of entropy from a cryptographically secure random source,
-      MUST be opaque to the client, MUST expire shortly after issuance,
-      and MUST NOT be accepted more than once.
+      present, that JWK thumbprint.  The value MUST:
+
+      *  contain at least 128 bits of entropy from a cryptographically
+         secure random source;
+
+      *  be opaque to the client;
+
+      *  expire shortly after issuance; and
+
+      *  not be accepted more than once.
 
    state:  REQUIRED.  The exact value received in the authorization
       request.
@@ -839,18 +845,23 @@ Table of Contents
 
    *  of at least 128 bits of entropy, when opaque.
 
-   A reusable initial access token MUST be sender-constrained, for
-   example bound to a client key through DPoP or mTLS; a bearer initial
-   access token MUST be single-use.  The credential SHOULD be integrity
-   protected and kept confidential in transit and at rest, and MAY
-   further restrict audiences or metadata.  The authorization server
-   MUST enforce every restriction the credential carries and MUST
-   prevent replay beyond its permitted number of uses.  A use is
-   consumed when the authorization server commits to an outcome for the
-   request, whether it issues a statement, creates a deferral, or denies
-   issuance; concurrent presentations of a single-use credential MUST
-   NOT both be committed.  Once a deferral exists, the client recovers
-   the outcome by polling with the deferral code rather than by
+   The initial access token is subject to the following:
+
+   *  A reusable one MUST be sender-constrained, for example bound to a
+      client key through DPoP or mTLS; a bearer one MUST be single-use.
+
+   *  It SHOULD be integrity protected and kept confidential in transit
+      and at rest, and MAY further restrict audiences or metadata.
+
+   *  The authorization server MUST enforce every restriction the
+      credential carries and MUST prevent replay beyond its permitted
+      number of uses.
+
+   A use is consumed when the authorization server commits to an
+   outcome, whether it issues a statement, creates a deferral, or denies
+   issuance, and concurrent presentations of a single-use credential
+   MUST NOT both be committed.  Once a deferral exists, the client
+   recovers the outcome by polling with the deferral code rather than by
    presenting the credential again.
 
    A DPoP proof on the exchange constrains any resulting deferral; it
@@ -1077,34 +1088,37 @@ Table of Contents
    Each metadata claim MUST be client metadata registered in the IANA
    "OAuth Dynamic Client Registration Metadata" registry, or otherwise
    recognized by the authorization server, such as instance_issuers
-   ([PRESENTATION]).  The following authorization-server-assigned,
-   credential, and recursive metadata members are not eligible for
-   attestation and MUST NOT appear in a software statement issued under
-   this specification: client_id, client_secret, client_id_issued_at,
-   client_secret_expires_at, registration_access_token,
-   registration_client_uri, and software_statement.  An authorization
-   server MAY exclude additional metadata according to policy.  The
-   client_id member required in the Client ID Metadata Document by
-   [CIMD] identifies the canonical document during issuance; the
+   ([PRESENTATION]).
+
+   These members are not eligible for attestation and MUST NOT appear in
+   a software statement issued under this specification, being
+   authorization-server-assigned, credential, or recursive: client_id,
+   client_secret, client_id_issued_at, client_secret_expires_at,
+   registration_access_token, registration_client_uri, and
+   software_statement.  An authorization server MAY exclude additional
+   metadata according to policy.
+
+   The client_id member that [CIMD] requires in the Client ID Metadata
+   Document identifies the canonical document during issuance.  The
    statement represents that identifier in sub and MUST NOT copy it as
    client metadata.
 
-   The issuer determines the audience and lifetime according to policy.
-   Lifetime carries two consequences that pull in opposite directions: a
-   short lifetime bounds exposure and keeps the review fresh, while at a
-   trusting authorization server implementing the registration-validity
-   model of [PRESENTATION] the same value is the registration's validity
-   and therefore the renewal cadence the client and issuer must sustain.
-   An issuer SHOULD choose a lifetime it can renew reliably for the
-   deployments it serves, and SHOULD stagger expiries across the
-   statements it issues, or renew ahead of the boundary, so that a fleet
-   issued together does not lapse together.  Every client metadata claim
-   MUST correspond to a member present in the metadata snapshot,
+   Attested metadata is bounded by the snapshot.  Every client metadata
+   claim MUST correspond to a member present in the metadata snapshot,
    carrying either that member's value or, for a set-valued member such
    as redirect_uris, grant_types, or scope, a subset of it.  The issuer
    MAY omit members but MUST NOT introduce a member absent from the
    snapshot, alter a value that is not set-valued, or otherwise
    contradict or widen the snapshot.
+
+   The issuer determines the audience and lifetime according to policy.
+   Lifetime pulls in two directions: a short one bounds exposure and
+   keeps the review fresh, while at a server implementing the
+   registration-validity model of [PRESENTATION] the same value is the
+   registration's validity, and so the renewal cadence both parties must
+   sustain.  An issuer SHOULD choose a lifetime it can renew reliably,
+   and SHOULD stagger expiries or renew ahead of the boundary so that a
+   fleet issued together does not lapse together.
 
    The sub claim is the client identifier URL, not the local client_id
    assigned through [RFC7591] registration.  A trusting authorization
@@ -1330,15 +1344,18 @@ Table of Contents
 13.6.  Signing Keys and Algorithms
 
    Compromise of a software-statement signing key enables an attacker to
-   mint statements for every audience that trusts that key.  Issuers
-   MUST protect signing keys according to the scope of their trust
-   relationships and SHOULD support controlled key rotation.  Trusting
-   authorization servers MUST restrict algorithms to those allowed for
-   the issuer and MUST follow [RFC8725] when selecting keys and
-   validating JWTs.  Issuers SHOULD prefer signature algorithms with
-   modern security properties, such as PS256, ES256, or EdDSA, over
-   RSASSA-PKCS1-v1_5 (RS256); ecosystem profiles that consume software
-   statements commonly restrict signing to such algorithms.
+   mint statements for every audience that trusts that key.
+
+   *  Issuers MUST protect signing keys according to the scope of their
+      trust relationships and SHOULD support controlled key rotation.
+
+   *  Issuers SHOULD prefer signature algorithms with modern security
+      properties, such as PS256, ES256, or EdDSA, over RSASSA-PKCS1-v1_5
+      (RS256).
+
+   *  Trusting authorization servers MUST restrict algorithms to those
+      allowed for the issuer and MUST follow [RFC8725] when selecting
+      keys and validating JWTs.
 
 13.7.  Approver Identity and Audit
 
@@ -1375,15 +1392,19 @@ Table of Contents
    monitoring, and audit obligations.
 
    A software statement distributes attested client metadata to every
-   authorization server at which the client presents it.  Issuers SHOULD
-   omit metadata that is not required by the intended audience and
-   SHOULD choose the narrowest practical audience.  Clients SHOULD NOT
-   present statements outside their intended deployment context.
-   Requested audience values reveal the authorization servers with which
-   the client plans to establish relationships.  A redirect-flow client
-   SHOULD use Pushed Authorization Requests [RFC9126] when that
-   relationship is sensitive.  Authorization servers SHOULD avoid
-   logging issued statements.
+   authorization server at which the client presents it, and requested
+   audience values reveal which servers a client plans to establish
+   relationships with.
+
+   *  Issuers SHOULD omit metadata not required by the intended
+      audience, and SHOULD choose the narrowest practical audience.
+
+   *  Clients SHOULD NOT present statements outside their intended
+      deployment context, and a redirect-flow client SHOULD use Pushed
+      Authorization Requests [RFC9126] where the relationship is
+      sensitive.
+
+   *  Authorization servers SHOULD avoid logging issued statements.
 
    Approval records can link a person to a client and deployment.  Such
    records SHOULD be access-controlled and retained only as long as

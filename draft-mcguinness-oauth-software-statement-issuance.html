@@ -1632,25 +1632,28 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <dt id="section-5-2.15">
 <code>audience</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-5-2.16">
-          <p id="section-5-2.16.1"><span class="bcp14">OPTIONAL</span>. A target service at which the client intends to use the statement, with the semantics defined in Section 2.1 of <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>. The parameter <span class="bcp14">MAY</span> be repeated to request multiple audiences. Each value <span class="bcp14">MUST</span> be an authorization server issuer identifier as defined by <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>; values <span class="bcp14">MUST NOT</span> be repeated, and order is insignificant. The authorization server selects the final audience according to policy. When this parameter is present, every value in the statement's <code>aud</code> claim <span class="bcp14">MUST</span> have appeared in the request. If no requested audience is acceptable, the authorization server <span class="bcp14">MUST</span> reject the request with <code>invalid_target</code> <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>, following the authorization-request precedent of <span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>. These semantics apply only to software statement requests and do not affect proprietary uses of <code>audience</code> for access-token targeting.<a href="#section-5-2.16.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-5-2.17">
-<code>completion_mode</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-5-2.18">
-          <p id="section-5-2.18.1"><span class="bcp14">OPTIONAL</span>. A value that includes <code>deferred</code>, sent as the advance hint <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> defines for an endpoint preceding a token request. It lets the authorization server choose a review path suited to out-of-band completion before it begins work, and does not replace the opt-in required at redemption (<a href="#deferred-processing" class="auto internal xref">Section 9</a>).<a href="#section-5-2.18.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-5-2.19">
-<code>dpop_jkt</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-5-2.20">
-          <p id="section-5-2.20.1"><span class="bcp14">REQUIRED</span> for a public client and for any request whose <code>redirect_uri</code> is a loopback or private-use URI; <span class="bcp14">OPTIONAL</span> otherwise. The parameter has the semantics defined in Section 10 of <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>. When present, its value <span class="bcp14">MUST</span> be associated with the resulting software statement code and with any deferral state derived from its redemption.<a href="#section-5-2.20.1" class="pilcrow">¶</a></p>
+          <p id="section-5-2.16.1"><span class="bcp14">OPTIONAL</span>. A target service at which the client intends to use the statement, with the semantics defined in Section 2.1 of <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>, and repeatable to request several. Each value <span class="bcp14">MUST</span> be an authorization server issuer identifier as defined by <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>; values <span class="bcp14">MUST NOT</span> be repeated, and order is insignificant.<a href="#section-5-2.16.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-5-3">The authorization server <span class="bcp14">MUST</span> reject with <code>invalid_request</code> a request that omits a required PKCE parameter or a required <code>dpop_jkt</code>.<a href="#section-5-3" class="pilcrow">¶</a></p>
-<p id="section-5-4">The following is a non-normative example of an authorization request from a confidential client; a public client would additionally include <code>dpop_jkt</code> (line breaks are for display purposes only):<a href="#section-5-4" class="pilcrow">¶</a></p>
-<div class="lang-http sourcecode" id="section-5-5">
+<p id="section-5-3">The authorization server selects the final audience according to policy. When the parameter is present, every value in the statement's <code>aud</code> claim <span class="bcp14">MUST</span> have appeared in the request, and where no requested audience is acceptable the authorization server <span class="bcp14">MUST</span> reject the request with <code>invalid_target</code> <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>, following the authorization-request precedent of <span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>. These semantics apply only to software statement requests and do not affect proprietary uses of <code>audience</code> for access-token targeting.<a href="#section-5-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5-4">
+        <dt id="section-5-4.1">
+<code>completion_mode</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-4.2">
+          <p id="section-5-4.2.1"><span class="bcp14">OPTIONAL</span>. A value that includes <code>deferred</code>, sent as the advance hint <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> defines for an endpoint preceding a token request. It lets the authorization server choose a review path suited to out-of-band completion before it begins work, and does not replace the opt-in required at redemption (<a href="#deferred-processing" class="auto internal xref">Section 9</a>).<a href="#section-5-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-4.3">
+<code>dpop_jkt</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-4.4">
+          <p id="section-5-4.4.1"><span class="bcp14">REQUIRED</span> for a public client and for any request whose <code>redirect_uri</code> is a loopback or private-use URI; <span class="bcp14">OPTIONAL</span> otherwise. The parameter has the semantics defined in Section 10 of <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>. When present, its value <span class="bcp14">MUST</span> be associated with the resulting software statement code and with any deferral state derived from its redemption.<a href="#section-5-4.4.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-5-5">The authorization server <span class="bcp14">MUST</span> reject with <code>invalid_request</code> a request that omits a required PKCE parameter or a required <code>dpop_jkt</code>.<a href="#section-5-5" class="pilcrow">¶</a></p>
+<p id="section-5-6">The following is a non-normative example of an authorization request from a confidential client; a public client would additionally include <code>dpop_jkt</code> (line breaks are for display purposes only):<a href="#section-5-6" class="pilcrow">¶</a></p>
+<div class="lang-http sourcecode" id="section-5-7">
 <pre>
 GET /authorize?response_type=software_statement_code
   &amp;client_id=https%3A%2F%2Fclient.example.org%2Fmetadata.json
@@ -1659,7 +1662,7 @@ GET /authorize?response_type=software_statement_code
   &amp;code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
   &amp;code_challenge_method=S256 HTTP/1.1
 Host: server.example.com
-</pre><a href="#section-5-5" class="pilcrow">¶</a>
+</pre><a href="#section-5-7" class="pilcrow">¶</a>
 </div>
 <div id="prohibited-parameters">
 <section id="section-5.1">
@@ -1701,7 +1704,21 @@ Host: server.example.com
           <dt id="section-6.1-2.1">
 <code>software_statement_code</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-6.1-2.2">
-            <p id="section-6.1-2.2.1"><span class="bcp14">REQUIRED</span>. A short-lived, single-use artifact redeemed at the token endpoint (<a href="#software-statement-code-redemption" class="auto internal xref">Section 7</a>). It <span class="bcp14">MUST</span> be bound to the client identifier, redirect URI, PKCE challenge, metadata snapshot, requested audience, and, when <code>dpop_jkt</code> was present, that JWK thumbprint. The value <span class="bcp14">MUST</span> contain at least 128 bits of entropy from a cryptographically secure random source, <span class="bcp14">MUST</span> be opaque to the client, <span class="bcp14">MUST</span> expire shortly after issuance, and <span class="bcp14">MUST NOT</span> be accepted more than once.<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-6.1-2.2.1"><span class="bcp14">REQUIRED</span>. A short-lived, single-use artifact redeemed at the token endpoint (<a href="#software-statement-code-redemption" class="auto internal xref">Section 7</a>). It <span class="bcp14">MUST</span> be bound to the client identifier, redirect URI, PKCE challenge, metadata snapshot, requested audience, and, when <code>dpop_jkt</code> was present, that JWK thumbprint. The value <span class="bcp14">MUST</span>:<a href="#section-6.1-2.2.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6.1-2.2.2.1">
+                <p id="section-6.1-2.2.2.1.1">contain at least 128 bits of entropy from a cryptographically secure random source;<a href="#section-6.1-2.2.2.1.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-6.1-2.2.2.2">
+                <p id="section-6.1-2.2.2.2.1">be opaque to the client;<a href="#section-6.1-2.2.2.2.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-6.1-2.2.2.3">
+                <p id="section-6.1-2.2.2.3.1">expire shortly after issuance; and<a href="#section-6.1-2.2.2.3.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-6.1-2.2.2.4">
+                <p id="section-6.1-2.2.2.4.1">not be accepted more than once.<a href="#section-6.1-2.2.2.4.1" class="pilcrow">¶</a></p>
+</li>
+            </ul>
 </dd>
           <dd class="break"></dd>
 <dt id="section-6.1-2.3">
@@ -1877,19 +1894,31 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3A
           <p id="section-8-8.4.1">of at least 128 bits of entropy, when opaque.<a href="#section-8-8.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-8-9">A reusable initial access token <span class="bcp14">MUST</span> be sender-constrained, for example bound to a client key through DPoP or mTLS; a bearer initial access token <span class="bcp14">MUST</span> be single-use. The credential <span class="bcp14">SHOULD</span> be integrity protected and kept confidential in transit and at rest, and <span class="bcp14">MAY</span> further restrict audiences or metadata. The authorization server <span class="bcp14">MUST</span> enforce every restriction the credential carries and <span class="bcp14">MUST</span> prevent replay beyond its permitted number of uses. A use is consumed when the authorization server commits to an outcome for the request, whether it issues a statement, creates a deferral, or denies issuance; concurrent presentations of a single-use credential <span class="bcp14">MUST NOT</span> both be committed. Once a deferral exists, the client recovers the outcome by polling with the deferral code rather than by presenting the credential again.<a href="#section-8-9" class="pilcrow">¶</a></p>
-<p id="section-8-10">A DPoP proof on the exchange constrains any resulting deferral; it does not authenticate the presenter or protect the subject token (Section 3 of <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>). The initial access token therefore needs its own sender constraint or single-use restriction.<a href="#section-8-10" class="pilcrow">¶</a></p>
-<p id="section-8-11">The exchange is evaluated against current metadata. The authorization server <span class="bcp14">MUST</span> obtain and validate the Client ID Metadata Document and <span class="bcp14">MUST</span> bind a fresh metadata snapshot (<a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>) and the requested audience before returning either the software statement or a deferral code. The statement's claims derive from that snapshot. An authorization server that recorded the metadata digest of a prior issuance for this <code>client_id</code> <span class="bcp14">MAY</span> compare it against the fresh snapshot and treat a change as an input to issuance policy.<a href="#section-8-11" class="pilcrow">¶</a></p>
-<p id="section-8-12">Issuance policy determines whether an initial access token authorizes only the request or issuance itself. The result is:<a href="#section-8-12" class="pilcrow">¶</a></p>
+<p id="section-8-9">The initial access token is subject to the following:<a href="#section-8-9" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-8-13.1">
-          <p id="section-8-13.1.1">a software statement token response (<a href="#software-statement-response" class="auto internal xref">Section 10</a>) on success;<a href="#section-8-13.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-8-10.1">
+          <p id="section-8-10.1.1">A reusable one <span class="bcp14">MUST</span> be sender-constrained, for example bound to a client key through DPoP or mTLS; a bearer one <span class="bcp14">MUST</span> be single-use.<a href="#section-8-10.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-8-13.2">
-          <p id="section-8-13.2.1">a <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> deferred token response from a deferred issuer, followed by polling, when processing cannot complete immediately (<a href="#deferred-processing" class="auto internal xref">Section 9</a>); or<a href="#section-8-13.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-8-10.2">
+          <p id="section-8-10.2.1">It <span class="bcp14">SHOULD</span> be integrity protected and kept confidential in transit and at rest, and <span class="bcp14">MAY</span> further restrict audiences or metadata.<a href="#section-8-10.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-8-13.3">
-          <p id="section-8-13.3.1">the terminal denial of <a href="#terminal-denial" class="auto internal xref">Section 10.1</a> when issuance policy denies the exchange.<a href="#section-8-13.3.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-8-10.3">
+          <p id="section-8-10.3.1">The authorization server <span class="bcp14">MUST</span> enforce every restriction the credential carries and <span class="bcp14">MUST</span> prevent replay beyond its permitted number of uses.<a href="#section-8-10.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-8-11">A use is consumed when the authorization server commits to an outcome, whether it issues a statement, creates a deferral, or denies issuance, and concurrent presentations of a single-use credential <span class="bcp14">MUST NOT</span> both be committed. Once a deferral exists, the client recovers the outcome by polling with the deferral code rather than by presenting the credential again.<a href="#section-8-11" class="pilcrow">¶</a></p>
+<p id="section-8-12">A DPoP proof on the exchange constrains any resulting deferral; it does not authenticate the presenter or protect the subject token (Section 3 of <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>). The initial access token therefore needs its own sender constraint or single-use restriction.<a href="#section-8-12" class="pilcrow">¶</a></p>
+<p id="section-8-13">The exchange is evaluated against current metadata. The authorization server <span class="bcp14">MUST</span> obtain and validate the Client ID Metadata Document and <span class="bcp14">MUST</span> bind a fresh metadata snapshot (<a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>) and the requested audience before returning either the software statement or a deferral code. The statement's claims derive from that snapshot. An authorization server that recorded the metadata digest of a prior issuance for this <code>client_id</code> <span class="bcp14">MAY</span> compare it against the fresh snapshot and treat a change as an input to issuance policy.<a href="#section-8-13" class="pilcrow">¶</a></p>
+<p id="section-8-14">Issuance policy determines whether an initial access token authorizes only the request or issuance itself. The result is:<a href="#section-8-14" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8-15.1">
+          <p id="section-8-15.1.1">a software statement token response (<a href="#software-statement-response" class="auto internal xref">Section 10</a>) on success;<a href="#section-8-15.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-15.2">
+          <p id="section-8-15.2.1">a <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> deferred token response from a deferred issuer, followed by polling, when processing cannot complete immediately (<a href="#deferred-processing" class="auto internal xref">Section 9</a>); or<a href="#section-8-15.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-15.3">
+          <p id="section-8-15.3.1">the terminal denial of <a href="#terminal-denial" class="auto internal xref">Section 10.1</a> when issuance policy denies the exchange.<a href="#section-8-15.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -2046,9 +2075,12 @@ Pragma: no-cache
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-11-6">Each metadata claim <span class="bcp14">MUST</span> be client metadata registered in the IANA "OAuth Dynamic Client Registration Metadata" registry, or otherwise recognized by the authorization server, such as <code>instance_issuers</code> (<span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>). The following authorization-server-assigned, credential, and recursive metadata members are not eligible for attestation and <span class="bcp14">MUST NOT</span> appear in a software statement issued under this specification: <code>client_id</code>, <code>client_secret</code>, <code>client_id_issued_at</code>, <code>client_secret_expires_at</code>, <code>registration_access_token</code>, <code>registration_client_uri</code>, and <code>software_statement</code>. An authorization server <span class="bcp14">MAY</span> exclude additional metadata according to policy. The <code>client_id</code> member required in the Client ID Metadata Document by <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span> identifies the canonical document during issuance; the statement represents that identifier in <code>sub</code> and <span class="bcp14">MUST NOT</span> copy it as client metadata.<a href="#section-11-6" class="pilcrow">¶</a></p>
-<p id="section-11-7">The issuer determines the audience and lifetime according to policy. Lifetime carries two consequences that pull in opposite directions: a short lifetime bounds exposure and keeps the review fresh, while at a trusting authorization server implementing the registration-validity model of <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> the same value is the registration's validity and therefore the renewal cadence the client and issuer must sustain. An issuer <span class="bcp14">SHOULD</span> choose a lifetime it can renew reliably for the deployments it serves, and <span class="bcp14">SHOULD</span> stagger expiries across the statements it issues, or renew ahead of the boundary, so that a fleet issued together does not lapse together. Every client metadata claim <span class="bcp14">MUST</span> correspond to a member present in the metadata snapshot, carrying either that member's value or, for a set-valued member such as <code>redirect_uris</code>, <code>grant_types</code>, or <code>scope</code>, a subset of it. The issuer <span class="bcp14">MAY</span> omit members but <span class="bcp14">MUST NOT</span> introduce a member absent from the snapshot, alter a value that is not set-valued, or otherwise contradict or widen the snapshot.<a href="#section-11-7" class="pilcrow">¶</a></p>
-<p id="section-11-8">The <code>sub</code> claim is the client identifier URL, not the local <code>client_id</code> assigned through <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> registration. A trusting authorization server <span class="bcp14">MAY</span> use <code>sub</code> to correlate registrations and apply per-client policy (<span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>).<a href="#section-11-8" class="pilcrow">¶</a></p>
+<p id="section-11-6">Each metadata claim <span class="bcp14">MUST</span> be client metadata registered in the IANA "OAuth Dynamic Client Registration Metadata" registry, or otherwise recognized by the authorization server, such as <code>instance_issuers</code> (<span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>).<a href="#section-11-6" class="pilcrow">¶</a></p>
+<p id="section-11-7">These members are not eligible for attestation and <span class="bcp14">MUST NOT</span> appear in a software statement issued under this specification, being authorization-server-assigned, credential, or recursive: <code>client_id</code>, <code>client_secret</code>, <code>client_id_issued_at</code>, <code>client_secret_expires_at</code>, <code>registration_access_token</code>, <code>registration_client_uri</code>, and <code>software_statement</code>. An authorization server <span class="bcp14">MAY</span> exclude additional metadata according to policy.<a href="#section-11-7" class="pilcrow">¶</a></p>
+<p id="section-11-8">The <code>client_id</code> member that <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span> requires in the Client ID Metadata Document identifies the canonical document during issuance. The statement represents that identifier in <code>sub</code> and <span class="bcp14">MUST NOT</span> copy it as client metadata.<a href="#section-11-8" class="pilcrow">¶</a></p>
+<p id="section-11-9">Attested metadata is bounded by the snapshot. Every client metadata claim <span class="bcp14">MUST</span> correspond to a member present in the metadata snapshot, carrying either that member's value or, for a set-valued member such as <code>redirect_uris</code>, <code>grant_types</code>, or <code>scope</code>, a subset of it. The issuer <span class="bcp14">MAY</span> omit members but <span class="bcp14">MUST NOT</span> introduce a member absent from the snapshot, alter a value that is not set-valued, or otherwise contradict or widen the snapshot.<a href="#section-11-9" class="pilcrow">¶</a></p>
+<p id="section-11-10">The issuer determines the audience and lifetime according to policy. Lifetime pulls in two directions: a short one bounds exposure and keeps the review fresh, while at a server implementing the registration-validity model of <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> the same value is the registration's validity, and so the renewal cadence both parties must sustain. An issuer <span class="bcp14">SHOULD</span> choose a lifetime it can renew reliably, and <span class="bcp14">SHOULD</span> stagger expiries or renew ahead of the boundary so that a fleet issued together does not lapse together.<a href="#section-11-10" class="pilcrow">¶</a></p>
+<p id="section-11-11">The <code>sub</code> claim is the client identifier URL, not the local <code>client_id</code> assigned through <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> registration. A trusting authorization server <span class="bcp14">MAY</span> use <code>sub</code> to correlate registrations and apply per-client policy (<span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>).<a href="#section-11-11" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authorization-server-metadata">
@@ -2167,7 +2199,18 @@ Pragma: no-cache
         <h3 id="name-signing-keys-and-algorithms">
 <a href="#section-13.6" class="section-number selfRef">13.6. </a><a href="#name-signing-keys-and-algorithms" class="section-name selfRef">Signing Keys and Algorithms</a>
         </h3>
-<p id="section-13.6-1">Compromise of a software-statement signing key enables an attacker to mint statements for every audience that trusts that key. Issuers <span class="bcp14">MUST</span> protect signing keys according to the scope of their trust relationships and <span class="bcp14">SHOULD</span> support controlled key rotation. Trusting authorization servers <span class="bcp14">MUST</span> restrict algorithms to those allowed for the issuer and <span class="bcp14">MUST</span> follow <span>[<a href="#RFC8725" class="cite xref">RFC8725</a>]</span> when selecting keys and validating JWTs. Issuers <span class="bcp14">SHOULD</span> prefer signature algorithms with modern security properties, such as <code>PS256</code>, <code>ES256</code>, or <code>EdDSA</code>, over RSASSA-PKCS1-v1_5 (<code>RS256</code>); ecosystem profiles that consume software statements commonly restrict signing to such algorithms.<a href="#section-13.6-1" class="pilcrow">¶</a></p>
+<p id="section-13.6-1">Compromise of a software-statement signing key enables an attacker to mint statements for every audience that trusts that key.<a href="#section-13.6-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13.6-2.1">
+            <p id="section-13.6-2.1.1">Issuers <span class="bcp14">MUST</span> protect signing keys according to the scope of their trust relationships and <span class="bcp14">SHOULD</span> support controlled key rotation.<a href="#section-13.6-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.6-2.2">
+            <p id="section-13.6-2.2.1">Issuers <span class="bcp14">SHOULD</span> prefer signature algorithms with modern security properties, such as <code>PS256</code>, <code>ES256</code>, or <code>EdDSA</code>, over RSASSA-PKCS1-v1_5 (<code>RS256</code>).<a href="#section-13.6-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-13.6-2.3">
+            <p id="section-13.6-2.3.1">Trusting authorization servers <span class="bcp14">MUST</span> restrict algorithms to those allowed for the issuer and <span class="bcp14">MUST</span> follow <span>[<a href="#RFC8725" class="cite xref">RFC8725</a>]</span> when selecting keys and validating JWTs.<a href="#section-13.6-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
 </section>
 </div>
 <div id="approver-identity-and-audit">
@@ -2188,8 +2231,19 @@ Pragma: no-cache
 <a href="#section-14" class="section-number selfRef">14. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
 <p id="section-14-1">The authorization server learns the client identifier URL, the canonical metadata document, and information about the party interacting with the authorization endpoint. It <span class="bcp14">SHOULD</span> collect and retain only the information required for issuance, security monitoring, and audit obligations.<a href="#section-14-1" class="pilcrow">¶</a></p>
-<p id="section-14-2">A software statement distributes attested client metadata to every authorization server at which the client presents it. Issuers <span class="bcp14">SHOULD</span> omit metadata that is not required by the intended audience and <span class="bcp14">SHOULD</span> choose the narrowest practical audience. Clients <span class="bcp14">SHOULD NOT</span> present statements outside their intended deployment context. Requested <code>audience</code> values reveal the authorization servers with which the client plans to establish relationships. A redirect-flow client <span class="bcp14">SHOULD</span> use Pushed Authorization Requests <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span> when that relationship is sensitive. Authorization servers <span class="bcp14">SHOULD</span> avoid logging issued statements.<a href="#section-14-2" class="pilcrow">¶</a></p>
-<p id="section-14-3">Approval records can link a person to a client and deployment. Such records <span class="bcp14">SHOULD</span> be access-controlled and retained only as long as required.<a href="#section-14-3" class="pilcrow">¶</a></p>
+<p id="section-14-2">A software statement distributes attested client metadata to every authorization server at which the client presents it, and requested <code>audience</code> values reveal which servers a client plans to establish relationships with.<a href="#section-14-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-14-3.1">
+          <p id="section-14-3.1.1">Issuers <span class="bcp14">SHOULD</span> omit metadata not required by the intended audience, and <span class="bcp14">SHOULD</span> choose the narrowest practical audience.<a href="#section-14-3.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-3.2">
+          <p id="section-14-3.2.1">Clients <span class="bcp14">SHOULD NOT</span> present statements outside their intended deployment context, and a redirect-flow client <span class="bcp14">SHOULD</span> use Pushed Authorization Requests <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span> where the relationship is sensitive.<a href="#section-14-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-3.3">
+          <p id="section-14-3.3.1">Authorization servers <span class="bcp14">SHOULD</span> avoid logging issued statements.<a href="#section-14-3.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-14-4">Approval records can link a person to a client and deployment. Such records <span class="bcp14">SHOULD</span> be access-controlled and retained only as long as required.<a href="#section-14-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="iana">
