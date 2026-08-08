@@ -307,7 +307,7 @@ Equal digests identify the same document for this specification. A changed diges
 
 Byte identity deliberately detects serialization-only changes. A digest mismatch is an input to policy, not a validation failure. A publisher SHOULD serve a stable byte artifact whose octets change only with its metadata; a document rendered dynamically or served through content negotiation produces digest changes unrelated to its metadata. The authorization server MUST reject duplicate object member names, because parsers can interpret them differently despite an identical digest.
 
-An issuance source SHOULD publish keys by reference through `jwks_uri` rather than inline through `jwks`. Rotation behind a stable URI leaves the document and digest unchanged; inline rotation changes both, so the attested keys no longer match the current document and a new statement is needed. The statement attests either the key location or the inline keys. The convenience cuts both ways: rotation invisible to the digest means key-host compromise is also invisible to it, and where the attested key is the runtime proof under {{PRESENTATION}} the compromise substitutes the presenter as well; {{PRESENTATION}} weighs the trade, and an issuer serving theft-sensitive deployments attests `jwks` inline instead.
+An issuance source SHOULD publish keys by reference through `jwks_uri` rather than inline through `jwks`. Rotation behind a stable URI leaves the document and digest unchanged; inline rotation changes both, so the attested keys no longer match the current document and a new statement is needed. The document carries either the key location or the inline keys, and the digest binds whichever it is. The convenience cuts both ways: rotation invisible to the digest means key-host compromise is also invisible to it, and where that key is the runtime proof under {{PRESENTATION}} the compromise substitutes the presenter as well; {{PRESENTATION}} weighs the trade, and an issuer serving theft-sensitive deployments attests `jwks` inline instead.
 
 A metadata document used as an issuance source MUST NOT contain a `software_statement` member, although {{CIMD}} otherwise permits one. An issuing authorization server treats a document containing one as failing validation for issuance.
 
@@ -603,7 +603,7 @@ The JOSE header MUST include `kid`, identifying the signing key within the issue
 
 Extensions can add claims; an incompatible revision would use a new type value. Supported algorithms appear in `software_statement_signing_alg_values_supported` ({{authorization-server-metadata}}).
 
-The JWT payload MUST contain the following claims in addition to the approved client metadata.
+A statement says that its issuer evaluated the Client ID Metadata Document whose content the digest names, and vouches for it to whoever accepts that issuer. The document carries the metadata; the statement carries the decision. The JWT payload MUST contain the following claims.
 
 `iss`:
 : REQUIRED. The issuer identifier of the issuing authorization server, as defined by {{RFC8414}}.
@@ -612,7 +612,7 @@ The JWT payload MUST contain the following claims in addition to the approved cl
 : REQUIRED. The exact client identifier URL presented in the request that produced the statement.
 
 `aud`:
-: REQUIRED. One or more audience identifiers for the authorization servers permitted to accept the statement. Each value MUST be an authorization server issuer identifier as defined by {{RFC8414}}. A trusting authorization server MUST reject the statement unless one of its locally configured audience identifiers exactly matches a value in this claim. When the request contained `audience` values, every value in this claim MUST have appeared among them.
+: OPTIONAL. One or more audience identifiers restricting which authorization servers may accept the statement, each an authorization server issuer identifier as defined by {{RFC8414}}. Where the claim is present, a trusting authorization server MUST reject the statement unless one of its locally configured audience identifiers exactly matches a value in it, and where the request carried `audience` values every value in the claim MUST have appeared among them. Where the claim is absent, the statement is unrestricted and acceptance rests on the consumer's configured trust in the issuer and its identifier scope ({{PRESENTATION}}). An issuer SHOULD omit the claim, so that one review serves every server that trusts it, and include it only where it means to limit reach: a statement attesting no key material is usable by whoever holds it, and naming an audience is what bounds that ({{PRESENTATION}}).
 
 `iat`:
 : REQUIRED. A NumericDate value representing the time at which the software statement was issued. An issuer MUST NOT issue a statement for a given `iss` and `sub` pair with an `iat` earlier than one it has already issued for that pair, and SHOULD ensure the value is strictly increasing across its signing nodes, so that the order in which it made its decisions is recoverable from the statements themselves. Consumers rely on that order when one statement replaces another ({{PRESENTATION}}) and when a withdrawal separates statements issued before it from those issued after ({{SIGNALS}}). Back-dating a statement to allow for clock skew makes it unusable as a replacement.
@@ -626,15 +626,11 @@ The JWT payload MUST contain the following claims in addition to the approved cl
 `cimd_digest`:
 : REQUIRED. The metadata digest ({{metadata-snapshot}}) of the Client ID Metadata Document from which the metadata snapshot was derived. This claim binds the statement to the exact document content evaluated during issuance and lets any party determine whether the client's currently published metadata still matches what was attested.
 
-Each metadata claim MUST be client metadata registered in the IANA "OAuth Dynamic Client Registration Metadata" registry, or otherwise recognized by the authorization server, such as `instance_issuers` ({{PRESENTATION}}).
+A statement carries no client metadata. The reviewed metadata is the document the digest names, which a consuming authorization server retrieves and verifies for itself, so copying members into the statement would duplicate what the digest already binds and reopen questions of precedence and partial review that the digest settles. A statement issued under this specification MUST NOT contain client metadata claims.
 
-These members are not eligible for attestation and MUST NOT appear in a software statement issued under this specification, being authorization-server-assigned, credential, or recursive: `client_id`, `client_secret`, `client_id_issued_at`, `client_secret_expires_at`, `registration_access_token`, `registration_client_uri`, and `software_statement`. An authorization server MAY exclude additional metadata according to policy.
+An issuer that means to vouch for particular members without binding the whole document needs an extension defining what a partial review asserts and how a consumer applies it ({{design-rationale}}).
 
-The `client_id` member that {{CIMD}} requires in the Client ID Metadata Document identifies the canonical document during issuance. The statement represents that identifier in `sub` and MUST NOT copy it as client metadata.
-
-Attested metadata is bounded by the snapshot. Every client metadata claim MUST correspond to a member present in the metadata snapshot, carrying either that member's value or, for a set-valued member such as `redirect_uris`, `grant_types`, or `scope`, a subset of it. The issuer MAY omit members but MUST NOT introduce a member absent from the snapshot, alter a value that is not set-valued, or otherwise contradict or widen the snapshot.
-
-The issuer determines the audience and lifetime according to policy. Lifetime pulls in two directions: a short one bounds exposure and keeps the review fresh, while at a server implementing the registration-validity model of {{PRESENTATION}} the same value is the registration's validity, and so the renewal cadence both parties must sustain. An issuer SHOULD choose a lifetime it can renew reliably, and SHOULD stagger expiries or renew ahead of the boundary so that a fleet issued together does not lapse together.
+The issuer determines the lifetime, and any audience restriction, according to policy. Lifetime pulls in two directions: a short one bounds exposure and keeps the review fresh, while at a server implementing the registration-validity model of {{PRESENTATION}} the same value is the registration's validity, and so the renewal cadence both parties must sustain. An issuer SHOULD choose a lifetime it can renew reliably, and SHOULD stagger expiries or renew ahead of the boundary so that a fleet issued together does not lapse together.
 
 The `sub` claim is the client identifier URL, not the local `client_id` assigned through {{RFC7591}} registration. A trusting authorization server MAY use `sub` to correlate registrations and apply per-client policy ({{PRESENTATION}}).
 
@@ -678,7 +674,7 @@ When an approval interface is shown, it MUST clearly describe that the decision 
 An erroneous approval affects every authorization server in the statement's audience until expiry. The approval interface therefore MUST present:
 
 * the client identifier URL;
-* the metadata to be attested; and
+* the document content it will vouch for, identified by its digest; and
 * the audience the issuer intends to place in the statement.
 
 It SHOULD present the intended lifetime, and SHOULD make narrowing visible when the client requested a different or broader audience. Attesting `instance_issuers` ({{PRESENTATION}}) endorses the listed authorities to attest runtime instances and deserves particular scrutiny.
@@ -697,7 +693,7 @@ A trusting authorization server can conclude only what the issuer decided; local
 
 Fetching a Client ID Metadata Document and resources referenced by it exposes the authorization server to server-side request forgery, resource exhaustion, malicious content, and client impersonation risks. The validation, address filtering, response-size limits, redirect handling, caching, logo handling, and domain-trust considerations of {{CIMD}} apply.
 
-The metadata snapshot requirements in {{metadata-snapshot}} prevent a time-of-check/time-of-use change from silently altering the attested metadata after approval; members the statement does not attest remain live, and runtime presentation ({{PRESENTATION}}) sources them from the current document at each presentation. Authorization servers SHOULD record the metadata digest ({{metadata-snapshot}}) and retain the exact retrieved octets of the approved document for audit purposes; a re-serialized copy cannot reproduce the digest.
+The metadata snapshot requirements in {{metadata-snapshot}} prevent a time-of-check/time-of-use change from silently altering what was reviewed: the digest names the document content the issuer evaluated, and a consumer comparing it against the served document sees any change. Authorization servers SHOULD record the metadata digest ({{metadata-snapshot}}) and retain the exact retrieved octets of the approved document for audit purposes; a re-serialized copy cannot reproduce the digest.
 
 ## Authorization Response Security {#authorization-response-security}
 
@@ -743,9 +739,9 @@ An audit record SHOULD bind each decision, whether approval or denial, to the me
 
 The authorization server learns the client identifier URL, the canonical metadata document, and information about the party interacting with the authorization endpoint. It SHOULD collect and retain only the information required for issuance, security monitoring, and audit obligations.
 
-A software statement distributes attested client metadata to every authorization server at which the client presents it, and requested `audience` values reveal which servers a client plans to establish relationships with.
+A statement names the software a reviewer evaluated, and where it carries an `aud` claim it also reveals which authorization servers the client plans to establish relationships with. Omitting the claim discloses nothing beyond the review itself.
 
-* Issuers SHOULD omit metadata not required by the intended audience, and SHOULD choose the narrowest practical audience.
+* Issuers SHOULD restrict the audience only where they mean to limit reach, since naming one discloses the client's intended relationships.
 * Clients SHOULD NOT present statements outside their intended deployment context, and a redirect-flow client SHOULD use Pushed Authorization Requests {{RFC9126}} where the relationship is sensitive.
 * Authorization servers SHOULD avoid logging issued statements.
 
@@ -956,7 +952,7 @@ Specification Document(s):
 
 **Why the response uses `access_token`.** {{RFC8693}} defines the container, and reusing it means existing token endpoint machinery carries the artifact. The `issued_token_type` says what it actually is.
 
-**Deliberately deferred capabilities.** This version omits several capabilities, each with an extension point: callback delivery for deferral, a canonicalized digest, acceptance-time status, and CIMD-native conveyance of an issued statement. Consumption-side extensions, including endorsed instance keys, are named by {{PRESENTATION}}.
+**Deliberately deferred capabilities.** This version omits several capabilities, each with an extension point: callback delivery for deferral, a canonicalized digest, acceptance-time status, and CIMD-native conveyance of an issued statement, and partial review, by which an issuer would vouch for particular members rather than a whole document. Consumption-side extensions, including endorsed instance keys, are named by {{PRESENTATION}}.
 
 # Acknowledgments
 
