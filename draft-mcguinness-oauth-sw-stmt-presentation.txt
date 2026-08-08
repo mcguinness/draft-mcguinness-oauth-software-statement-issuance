@@ -67,10 +67,7 @@ Table of Contents
      1.1.  Protocol Overview
      1.2.  Relationship to Client Attestation
    2.  Conventions and Definitions
-   3.  Statement Profiles
-     3.1.  Common Elements
-     3.2.  DCR Profile
-     3.3.  CIMD Profile
+   3.  Statement Requirements
    4.  Presentation at Registration
      4.1.  Registration Validity
      4.2.  Revalidation
@@ -84,8 +81,8 @@ Table of Contents
      5.4.  Effective Metadata
      5.5.  Grant Lifecycle
        5.5.1.  Refresh
-     5.6.  Statements from an Established Client
-     5.7.  Tenant Approval
+     5.6.  Tenant Approval
+     5.7.  Statements from an Established Client
    6.  Deployment Model: Centrally Curated Software
    7.  Error Responses
    8.  Examples
@@ -126,27 +123,23 @@ Table of Contents
    This specification defines two ways to consume the statement format
    and validation rules of [ISSUANCE]:
 
-   *  *Registration profile* (Section 3.2): a client registered through
-      [RFC7591] is identified by software_id.  The statement is consumed
-      at registration and renewal, and its exp bounds the registration's
-      validity (Section 4.1).
+   *  *At registration* (Section 4): the statement is consumed in an
+      [RFC7591] registration request and at renewal, and its exp bounds
+      the registration's validity (Section 4.1).
 
-   *  *Runtime profile* (Section 3.3): a client is identified by a
-      Client ID Metadata Document URL [CIMD] and may be unregistered.
-      The client presents the statement in an authorization or token
-      request, proves a key that chains to the statement, and is
-      established for the resulting grant without creating a persistent
-      registration (Section 5.1 and Section 5.5).
+   *  *At runtime* (Section 5): the client presents the statement in an
+      authorization or token request, proves a key the statement
+      attests, and is established for the resulting grant without
+      creating a persistent registration (Section 5.1 and Section 5.5).
 
-   The two profiles concern establishment, which is one layer of the
-   decision to let a client act.  An authorization server hosting many
-   customers separates it from tenant approval, the customer's own
-   decision about which established clients may operate in its tenant
-   (Section 5.7); both sit above the sender-constraint proof that
-   identifies the presenter and the grant that carries a user's
-   authorization.  Each layer has its own decider, artifact, and
-   lifecycle, and this specification keeps them apart rather than
-   collapsing them into one decision.
+   Establishment is one layer of the decision to let a client act.  An
+   authorization server hosting many customers separates it from tenant
+   approval, the customer's own decision about which established clients
+   may operate in its tenant (Section 5.6); both sit above the sender-
+   constraint proof that identifies the presenter and the grant that
+   carries a user's authorization.  Each layer has its own decider,
+   artifact, and lifecycle, and this specification keeps them apart
+   rather than collapsing them into one decision.
 
    In both profiles, ceasing statement renewal stops new establishment
    after the applicable expiry.  It also stops continued use of an
@@ -200,9 +193,9 @@ Table of Contents
        request, or in a pushed authorization request for a redirect
        flow, with its Client ID Metadata Document URL as client_id.
 
-   2.  The authorization server validates the statement (Section 3.3),
-       verifies the sender-constraint chain (Section 5.3), and derives
-       the client's effective metadata for the request (Section 5.4).
+   2.  The authorization server validates the statement (Section 3),
+       verifies the sender constraint (Section 5.3), and derives the
+       client's effective metadata for the request (Section 5.4).
 
    3.  The request proceeds under the effective metadata.  No persistent
        registration is created.
@@ -296,88 +289,50 @@ Table of Contents
       during runtime presentation.  The accepted proof path binds this
       key to the statement as specified in Section 5.3.
 
-3.  Statement Profiles
+3.  Statement Requirements
 
-   This document consumes the two statement shapes [ISSUANCE] defines,
-   discriminated by the presence of cimd_digest: the DCR profile is its
-   non-CIMD shape, the CIMD profile its CIMD-anchored shape.  The
-   syntax, validation, and semantics of every element are those of
-   [ISSUANCE]; this section states which elements each profile requires
-   and what each is consumed for.  How the client acquired the statement
-   is out of scope: the issuance flows of [ISSUANCE] produce CIMD-
-   profile statements, DCR-profile statements are issued by out-of-band
-   processes such as an enterprise review console, and neither profile
-   requires a particular acquisition path.
+   This document consumes the software statement of [ISSUANCE].  The
+   syntax, validation, and semantics of every element are defined there;
+   this section states what a statement must carry to be consumed here,
+   and what each element is consumed for.  How the client acquired it is
+   out of scope.
 
-3.1.  Common Elements
+   typ header:  software-statement+jwt; explicit typing prevents
+      confusion with other JWTs from the same issuer.
 
-   Both profiles require the following, in addition to the typ header
-   value software-statement+jwt, whose explicit typing prevents
-   confusion with other JWTs from the same issuer:
+   iss:  Identifies the issuer for trust and scope decisions, and forms
+      part of the statement identity recorded with a registration or
+      establishment.
 
-   iss:  REQUIRED.  Identifies the issuer for trust, claim-authority,
-      and scope decisions, and forms part of the statement identity
-      recorded with a registration or establishment.
+   sub:  The client's Client ID Metadata Document URL [CIMD].  In a
+      runtime presentation the request's client_id equals it, by the
+      rule of Section 5.1.
 
-   aud:  REQUIRED.  Scopes which authorization servers may accept the
-      statement; without it a statement would be usable at every server
-      that trusts the issuer.
+   aud:  Scopes which authorization servers may accept the statement;
+      without it a statement would be usable at every server that trusts
+      the issuer.
 
-   iat:  REQUIRED.  The issuance time.
+   iat:  The issuance time, which orders one statement against another
+      when a replacement arrives (Section 4.2, Section 5.5.1).
 
-   exp:  REQUIRED.  The expiry the issuer chose.  Under the DCR profile
-      it bounds registration validity (Section 4.1); under the CIMD
-      profile it is checked at every presentation and at the validity
-      points of Section 5.5.  The effect on registrations,
+   exp:  The expiry the issuer chose.  It bounds registration validity
+      (Section 4.1), is checked at every presentation, and is the
+      issuer's continuous-governance lever: renewal extends standing,
+      ceased renewal ends it.  The effect on registrations,
       establishments, grants, and tokens is bounded as Section 11.6
       describes.
 
-   jti:  REQUIRED.  Identifies the statement within the issuer's
-      namespace; inventory and concurrency bounds can key on the iss and
-      jti pair.  A replacement statement has its own jti, so replacement
-      matching does not key on this value.
+   jti:  Identifies the statement within the issuer's namespace;
+      inventory and concurrency bounds key on the iss and jti pair.  A
+      replacement statement has its own jti, so replacement matching
+      does not key on this value.
 
-3.2.  DCR Profile
+   cimd_digest:  Binds the issuer's review to the exact document bytes
+      evaluated and feeds the post-issuance change policy of [ISSUANCE].
 
-   For client software registered through [RFC7591] and identified by
-   software_id:
-
-   sub:  REQUIRED.  The software's [RFC7591] software_id.  The statement
-      binds to a registration request by the identifier rules of
-      [ISSUANCE]: a request whose software_id differs from sub is
-      rejected.
-
-   software_version:  OPTIONAL.  The version the review covered; when
-      attested, a request whose software_version differs is rejected
-      ([ISSUANCE]), and a new version requires re-issuance
-      (Section 4.3).
-
-   cimd_digest:  MUST be absent; its absence is what marks this profile.
-      Attested metadata is inline only, and the statement's own claims
-      carry the entire reviewed content.
-
-   A DCR-profile statement is consumed at registration and renewal
-   (Section 4).  It cannot be presented at runtime because the runtime
-   rules depend on the Client ID Metadata Document named by a CIMD-
-   profile subject.
-
-3.3.  CIMD Profile
-
-   For a client identified by a Client ID Metadata Document URL, each
-   element is consumed by a specific runtime mechanism, and a statement
-   lacking any of them cannot be presented:
-
-   sub:  REQUIRED.  The client's Client ID Metadata Document URL; the
-      request's client_id equals it, by the rule of Section 5.1.
-
-   cimd_digest:  REQUIRED.  Binds the issuer's review to the exact
-      document bytes evaluated and feeds the post-issuance change policy
-      of [ISSUANCE].
-
-   A CIMD-profile statement is presented at runtime (Section 5.1), and
-   also serves a registered client whose client_id is its CIMD URL
-   (Section 5.6).  A statement failing this profile is rejected as
-   Section 7 defines for an invalid statement.
+   A statement lacking any of these cannot be consumed under this
+   specification, whatever a registration endpoint might otherwise
+   accept, and one failing validation is rejected as Section 7 defines.
 
 4.  Presentation at Registration
 
@@ -520,23 +475,14 @@ Table of Contents
    parameter in a token request or a pushed authorization request:
 
    software_statement:  REQUIRED for presentation.  The software
-      statement (Section 3.3), consumed for establishment: a runtime
-      presentation, a refresh replacement (Section 5.5.1), or a
-      revalidation delivery (Section 4.2).
-
-   tenant_approval_statement:  OPTIONAL.  A software statement carrying
-      a tenant's approval, consumed as Section 5.7 defines.  It is a
-      distinct parameter because the two artifacts answer different
-      questions, come from different issuers, and are frequently needed
-      on the same request.
-
-   Each parameter carries at most one statement, as [RFC6749] requires
-   of request parameters generally; an authorization server MUST reject
-   a request repeating either with invalid_request.  What a statement is
-   consumed as follows from the parameter that carries it, and the
-   authorization server MUST additionally verify that it accepts the
-   statement's issuer in the corresponding role ([ISSUANCE]), rejecting
-   it otherwise.  A request MAY carry both parameters.
+      statement (Section 3).  It is consumed for establishment: a
+      runtime presentation, a refresh replacement (Section 5.5.1), or a
+      revalidation delivery (Section 4.2).  Tenant approvals are
+      recorded rather than carried (Section 5.6), so one statement
+      parameter serves every request this specification defines.  The
+      authorization server MUST verify that it accepts the statement's
+      issuer in the establishment role ([ISSUANCE]), and MUST reject a
+      request repeating the parameter with invalid_request.
 
    The request's client_id is the client's Client ID Metadata Document
    URL.  It MUST exactly equal the statement's sub; the authorization
@@ -544,10 +490,9 @@ Table of Contents
    client_id is the statement's sub, and the authorization server
    assigns none.
 
-   The request MUST also carry the proof inputs required by the accepted
-   sender-constraint mode: client authentication parameters, a DPoP
-   proof, the fields defined by [ABCA], or a Client Instance Assertion
-   as permitted by [CLIENT-INSTANCE].  A successful presentation
+   The request MUST also carry the proof required by Section 5.3: client
+   authentication under a method the statement's metadata specifies, or
+   a DPoP proof with an attested key.  A successful presentation
    establishes the client for the request and for the grant state
    derived from it (Section 5.5).
 
@@ -565,8 +510,9 @@ Table of Contents
    ([ISSUANCE]).  A request that carries software_statement and is none
    of a runtime presentation, a refresh replacement (Section 5.5.1), or
    a revalidation delivery (Section 4.2) is rejected with
-   invalid_request.  Because the parameter names the consumption, an
-   issuer holding both roles ([ISSUANCE]) creates no ambiguity here.
+   invalid_request.  An issuer holding both roles ([ISSUANCE]) creates
+   no ambiguity here, because a tenant approval never arrives on a
+   request.
 
    An authorization server advertises support through
    software_statement_presentation_supported (Section 9).
@@ -574,13 +520,13 @@ Table of Contents
 5.1.1.  Authorization Endpoint
 
    Presentation in an authorization request MUST use a pushed
-   authorization request [RFC9126].  The statement, any tenant approval,
-   and the proof are sent to the pushed authorization request endpoint,
-   where the processing rules of Section 5.2 apply.  The subsequent
-   authorization request MUST use a client_id exactly equal to the
-   establishment's sub and MUST NOT include either statement parameter.
-   A statement never appears in a front-channel URL, just as [ISSUANCE]
-   keeps an issued statement out of authorization responses.
+   authorization request [RFC9126].  The statement and its proof are
+   sent to the pushed authorization request endpoint, where the
+   processing rules of Section 5.2 apply.  The subsequent authorization
+   request MUST use a client_id exactly equal to the establishment's sub
+   and MUST NOT include the software_statement parameter.  A statement
+   never appears in a front-channel URL, just as [ISSUANCE] keeps an
+   issued statement out of authorization responses.
 
 5.1.2.  Token Endpoint
 
@@ -598,8 +544,8 @@ Table of Contents
        not require a client-controlled network retrieval before
        performing such a retrieval.
 
-   2.  Verify the profile of Section 3.3 and the client_id rule of
-       Section 5.1.
+   2.  Verify the statement requirements of Section 3 and the client_id
+       rule of Section 5.1.
 
    3.  Verify the sender-constraint chain (Section 5.3).
 
@@ -610,90 +556,45 @@ Table of Contents
 
 5.3.  Sender Constraint
 
-   A runtime presentation MUST be sender-constrained, and the constraint
-   MUST chain to the statement.  The presenter proves possession of the
-   Proven Key through the applicable client authentication method, a
-   DPoP proof [RFC9449], or a proof-of-possession mechanism defined by
-   [ABCA] or [CLIENT-INSTANCE].  The proof MUST be bound to the current
-   request and validated with the replay protections of that mechanism.
-   The authorization server accepts exactly one of the following modes:
+   A runtime presentation MUST be sender-constrained by a key the
+   statement attests.  The presenter proves possession of that key
+   through the applicable client authentication method or a DPoP proof
+   [RFC9449], and the proof MUST be bound to the current request and
+   validated with the replay protections of that mechanism.
 
-   Mode selection is determined by what the statement contains, not by
-   local authority configuration.  When the statement attests jwks or
-   jwks_uri, only the Directly Attested Key mode is available at every
-   server in the statement's audience.  A server that does not treat the
-   issuer as authoritative for that member MUST reject the presentation
-   rather than allow an endorsement mode; attested key material never
-   demotes to client-asserted for the purpose of this section, because
-   demotion would let a presenter select a weaker proof at the weakest
-   server in the audience.
+   The proven key MUST appear in the attested jwks or at the attested
+   jwks_uri.  Where the effective metadata specifies a client
+   authentication method, the presenter MUST use it, and where the grant
+   type requires client authentication a DPoP proof does not satisfy
+   that requirement ([RFC9449]).  The authorization server MUST reject a
+   presentation without such a proof, or whose proven key the statement
+   does not attest.
 
-   Directly Attested Key:  The Proven Key MUST appear in the key set the
-      statement attests through jwks or jwks_uri.  When effective
-      metadata specifies a client authentication method, the presenter
-      MUST use that method, and where the grant type requires client
-      authentication, a DPoP proof does not satisfy that requirement
-      ([RFC9449]).  A DPoP proof by itself is sufficient only when its
-      key is directly attested, the effective metadata requires no other
-      authentication method, and the grant type does not require client
-      authentication.
-
-   Locally Trusted Client Attestation:  This mode is available only when
-      the statement attests no key material.  The authorization server
-      MUST validate the client attestation and its proof according to
-      [ABCA].  The attestation subject MUST exactly equal the
-      statement's sub, its confirmation claim MUST identify the Proven
-      Key, and the client attester MUST be trusted for that exact
-      subject or its configured namespace.
-
-   Attested Instance Issuer:  This mode is available only when the
-      statement attests no key material and attests instance_issuers,
-      and only where the server treats the issuer as authoritative for
-      that member.  At the token endpoint, the request MAY carry a
-      Client Instance Assertion as specified by [CLIENT-INSTANCE].  The
-      authorization server MUST validate it against an attested issuer
-      descriptor, MUST verify that the assertion's subject identifies
-      the software the statement describes, its sub, and the assertion's
-      sender key is the Proven Key. An assertion from an attested issuer
-      for a different subject, such as another workload in the same
-      environment, MUST NOT satisfy this mode.  This specification does
-      not define this mode at the pushed authorization request endpoint
-      because [CLIENT-INSTANCE] does not define its wire parameters
-      there.
-
-   Each mode is gated by the authority behind it: the endorsement modes
-   require the server to treat the issuer as authoritative for the
-   member they rely on ([ISSUANCE]), and attester trust counts only
-   within its configured sub scope.  The authorization server MUST
-   reject a presentation without such a proof, or whose Proven Key no
-   accepted mode covers.
-
-   A statement that attests neither key material nor an instance-key
-   delegation, presented at a server whose attester trust does not cover
-   its sub, cannot satisfy this section and is consumable only through
-   registration.
+   A statement that attests no key material cannot be presented at
+   runtime and is consumable only through registration (Section 4).
+   Endorsement of a key the statement does not name, by a client
+   attester or by an issuer the statement delegates to, is left to
+   extensions (Section 10): admitting it in the core would make the
+   accepted proof depend on configuration a client cannot observe, and
+   would let a presenter reach for a weaker proof than the one the
+   issuer reviewed.
 
    Verifying a key at the attested jwks_uri is a retrieval at
-   presentation time.  A fetch failure leaves the chain unverified, and
-   the presentation is rejected as invalid_client; the server MUST NOT
-   fall back to a weaker mode.  A server MAY reuse a recently retrieved
-   key set within ordinary HTTP caching bounds, subject to a maximum
-   reuse period of its own choosing; it MUST NOT let the client's cache
-   directives alone determine how long a removed key continues to verify
-   (Section 11.5).
+   presentation time.  A fetch failure leaves the key unverified, and
+   the presentation is rejected as invalid_client.  A server MAY reuse a
+   recently retrieved key set within ordinary HTTP caching bounds,
+   subject to a maximum reuse period of its own choosing; it MUST NOT
+   let the client's cache directives alone determine how long a removed
+   key continues to verify (Section 11.5).
 
 5.4.  Effective Metadata
 
    Having validated the statement and its proof, the authorization
    server derives the client's effective metadata for the request:
 
-   *  An attested member for which the server treats the issuer as
-      authoritative ([ISSUANCE]) has the value the statement gives it,
-      with the precedence [RFC7591] defines.
-
-   *  An attested member outside that set does not take attested
-      precedence; per the policy rule of [ISSUANCE], the server ignores
-      it or treats it as client-asserted.
+   *  An attested member has the value the statement gives it, with the
+      precedence [RFC7591] defines, the issuer's scope ([ISSUANCE])
+      being what bounds which clients it may attest at all.
 
    *  A member the statement does not attest takes its value from the
       client's current Client ID Metadata Document, the document at the
@@ -740,8 +641,8 @@ Table of Contents
    *  the tenant the grant was opened for, where the authorization
       server hosts more than one;
 
-   *  any tenant approval in force for the request, recorded or carried
-      (Section 5.7);
+   *  the tenant's recorded approval in force when the grant was opened,
+      where the tenant requires one (Section 5.6);
 
    *  the effective metadata (Section 5.4);
 
@@ -784,14 +685,11 @@ Table of Contents
    ceased renewal end an existing grant (Section 11.6).
 
    Where the grant was opened for a tenant that requires approval
-   (Section 5.7), the authorization server MUST also evaluate that
-   tenant's approval on refresh, using the recorded approval where it
-   holds one and the tenant_approval_statement parameter otherwise.  An
-   approval that has expired, or a required carried approval that is
-   absent or failing validation, ends the grant's continuation with
-   invalid_grant.  Because the two artifacts travel in separate
-   parameters, a refresh can carry both a replacement establishment
-   statement and a current tenant approval.
+   (Section 5.6), the authorization server MUST also evaluate that
+   tenant's recorded approval on refresh.  An approval that has expired,
+   or that a record refuses, ends the grant's continuation with
+   invalid_grant.  Nothing additional travels on the request, because
+   the approval is state the server already holds.
 
    An authorization server that holds a record refusing a statement,
    such as one kept under a withdrawal ([SIGNALS]), MUST treat that
@@ -828,64 +726,45 @@ Table of Contents
    a statement that policy requires, is rejected with invalid_grant and
    leaves the establishment unchanged.
 
-5.6.  Statements from an Established Client
-
-   A client already established at an authorization server, whether
-   registered through [RFC7591] or registered under its Client ID
-   Metadata Document URL as its client_id, can still carry a statement.
-   What the statement does depends on the role in which the
-   authorization server accepts its issuer ([ISSUANCE]):
-
-   *  From the establishment issuer governing the client's registration,
-      the statement is a delivery: it renews validity under Section 4.1
-      and supplies no effective metadata for the request.  Runtime
-      presentation establishes clients the server does not have; it does
-      not reopen metadata for a client it does.  A server that wishes
-      attested changes to reach the registration applies them through
-      its registration policy (Section 4.2) or through [RFC7592], where
-      a narrower record survives until it does.
-
-   *  From a tenant approval issuer, the statement is tenant approval
-      and is evaluated as Section 5.7 defines.
-
-   *  From an issuer accepted in neither role for the tenant the request
-      belongs to, the request is rejected as Section 7 defines.
-
-   A registration created from a CIMD-profile statement is statement-
-   governed when the server advertises
-   software_statement_registration_validity_supported.  The validity and
-   revalidation model of Section 4.1 and Section 4.2 applies, with the
-   delivered statement's sub equal to the registered client_id and
-   validated under the CIMD profile.  The request authenticates as the
-   registered client under the registration's own method; the delivered
-   statement renews validity and does not otherwise alter the
-   registration.  Where the registration is still valid and the server
-   requires a current statement, a refresh-token request that omits one
-   or delivers one failing these rules is rejected with invalid_grant.
-   Where the registration has already expired, Section 4.2 governs and
-   the rejection is invalid_client at every endpoint.
-
-5.7.  Tenant Approval
+5.6.  Tenant Approval
 
    An authorization server hosting multiple tenants establishes a client
    once and decides separately, per tenant, whether that client may
    operate there.  A tenant approval statement carries that decision: it
    is issued by the tenant's approval issuer ([ISSUANCE]), its sub
-   identifies the established client, and the authorization server
-   evaluates it in the tenant's request context.
+   identifies the established client, and the tenant records it at the
+   authorization server.
 
-   The authorization server MUST resolve the tenant a request belongs to
-   and MUST accept a tenant approval statement only from an issuer
-   configured for that tenant.  It MUST reject a statement whose issuer
-   speaks for another tenant, whatever its signature ([ISSUANCE]).
+   A tenant approval is recorded, not carried on requests.  The tenant
+   supplies the statement through the authorization server's
+   administrative interface, and the authorization server MUST
+   authenticate the supplying party as an administrator of the tenant
+   the approval will govern and MUST verify that the statement's issuer
+   is one it accepts in the tenant approval role for that same tenant.
+   A statement signed by an issuer configured for another tenant MUST be
+   rejected rather than recorded.  The record holds the statement's iss,
+   sub, jti, iat, and exp, and the tenant it governs.
+
+   Recording rather than carrying keeps the decision where the decision
+   was made.  A carried approval would require the client to be a client
+   of every customer's issuer, and would put a second statement on
+   requests that may already carry one.
+
+   The authorization server MUST re-verify a recorded approval at each
+   use, not only when it was recorded, so that withdrawal of issuer
+   trust, a change of issuer scope, or a record refusing the statement
+   takes effect without waiting for expiry.  It MUST NOT record an
+   approval whose iat is earlier than that of the approval it replaces,
+   so that a narrower decision cannot be rolled back by re-recording an
+   older one.  On expiry the authorization server MUST treat the tenant
+   as having no approval for that client.
 
    Tenant approval constrains the request; it does not establish the
    client:
 
    *  The client's identity and metadata remain those of its
-      establishment: a tenant approval statement MUST NOT create a
-      registration, alter a registration record, or extend registration
-      validity.
+      establishment: a tenant approval MUST NOT create a registration,
+      alter a registration record, or extend registration validity.
 
    *  Where the statement attests metadata, that metadata narrows the
       request and MUST NOT widen it.  The effective policy for the
@@ -897,61 +776,41 @@ Table of Contents
       that tenant's requests and leaves the client's registration, and
       every other tenant, untouched.
 
-   Whether a tenant requires an approval statement is that tenant's
-   policy.  A tenant that expresses approval through the authorization
-   server's own administrative interface needs no statement; the
-   artifact is how a decision made once travels to every authorization
-   server where the tenant has configured its issuer.
+   Whether a tenant requires an approval is that tenant's policy.  A
+   tenant that expresses approval through the authorization server's own
+   interface without an artifact needs no statement; the statement is
+   what lets one decision be made once and honored at every
+   authorization server where the tenant has configured its issuer.
 
-   A tenant approval statement reaches the authorization server by one
-   of two paths, and a deployment chooses:
+5.7.  Statements from an Established Client
 
-   *  Carried by the client, in the tenant_approval_statement parameter
-      of a request it makes for that tenant.  The client obtains the
-      statement from the tenant's issuer under [ISSUANCE], which
-      requires it to be a client of that issuer, a relationship the
-      client establishes with each tenant whose approval it carries.
+   A client already established at an authorization server, whether
+   registered through [RFC7591] or registered under its Client ID
+   Metadata Document URL as its client_id, can still carry a statement.
+   From the establishment issuer governing its registration, the
+   statement is a delivery: it renews validity under Section 4.1 and
+   supplies no effective metadata for the request.  Runtime presentation
+   establishes clients the server does not have; it does not reopen
+   metadata for a client it does.  A server that wishes attested changes
+   to reach the registration applies them through its registration
+   policy (Section 4.2) or through [RFC7592], where a narrower record
+   survives until it does.  A statement from an issuer the server
+   accepts in neither role for that client is rejected as Section 7
+   defines.
 
-   *  Recorded at the authorization server, supplied through the
-      server's administrative interface by the tenant, in which case the
-      client carries nothing.  The authorization server validates the
-      statement as it would a carried one, records it with the tenant,
-      and applies it to that tenant's requests for the client the
-      statement names.
-
-   An authorization server recording an approval MUST authenticate the
-   recording party as an administrator of the tenant the approval will
-   govern, and MUST verify that the statement's issuer is one it accepts
-   in the tenant approval role for that same tenant.  A statement signed
-   by an issuer configured for another tenant MUST be rejected rather
-   than recorded, whichever tenant it would be recorded under.  The
-   record holds the statement's iss, sub, jti, iat, and exp, and the
-   tenant it governs.
-
-   A recorded approval has the validity its exp gives it.  The
-   authorization server MUST re-verify it at each use, not only when it
-   was recorded, so that withdrawal of issuer trust, a change of issuer
-   scope, or a record refusing the statement takes effect without
-   waiting for expiry.  On expiry the authorization server MUST treat
-   the tenant as having no approval for that client, with the same
-   effect as an absent approval.
-
-   Whether carried or recorded, an approval MUST NOT be accepted with an
-   iat earlier than that of the most recent approval the authorization
-   server has accepted or recorded for the same tenant, client, and
-   issuer, so that a client cannot present a broader approval it still
-   holds after its tenant has narrowed one.  Where a recorded approval
-   exists, it governs the request; a carried approval from the same
-   issuer with a later iat replaces the record and renews its validity,
-   which is how a recorded approval is renewed without administrative
-   action.  Retrieval of a replacement by the authorization server from
-   the tenant's issuer is not defined here.
-
-   Where the client is not established at the authorization server at
-   all, one statement can serve both roles if the tenant's issuer is
-   also accepted for establishment: the presentation establishes the
-   client under Section 5 and carries the tenant's approval in the same
-   act.
+   A registration created from a statement is statement-governed when
+   the server advertises
+   software_statement_registration_validity_supported.  The validity and
+   revalidation model of Section 4.1 and Section 4.2 applies, with the
+   delivered statement's sub equal to the registered client_id.  The
+   request authenticates as the registered client under the
+   registration's own method; the delivered statement renews validity
+   and does not otherwise alter the registration.  Where the
+   registration is still valid and the server requires a current
+   statement, a refresh-token request that omits one or delivers one
+   failing these rules is rejected with invalid_grant.  Where the
+   registration has already expired, Section 4.2 governs and the
+   rejection is invalid_client at every endpoint.
 
 6.  Deployment Model: Centrally Curated Software
 
@@ -1016,7 +875,7 @@ Table of Contents
 
    unauthorized_client:  the tenant has not approved this client,
       because a required tenant approval is absent, expired, or issued
-      by an issuer configured for another tenant (Section 5.7); also the
+      by an issuer configured for another tenant (Section 5.6); also the
       grant or response type case below.
 
    invalid_scope:  a requested scope falls outside the effective
@@ -1024,8 +883,7 @@ Table of Contents
 
    invalid_request:  any other rejection, including a redemption or
       issuance request carrying the software_statement parameter, and a
-      request repeating either statement parameter (Section 5.1,
-      Section 5.5).
+      request repeating the parameter (Section 5.1, Section 5.5).
 
    At the pushed authorization request endpoint, the corresponding
    [RFC9126] error responses apply.  On refresh-token use of a runtime-
@@ -1036,10 +894,8 @@ Table of Contents
    Section 4.2, because the registration rather than the grant is what
    lapsed; neither rejection indicates refresh-token replay ([RFC9700]).
 
-   When an otherwise valid proof protocol defines a recoverable, proof-
-   specific error, including an error that supplies a DPoP nonce or
-   client-attestation challenge, or requests a fresh attestation, that
-   error from [RFC9449], [ABCA], or [CLIENT-INSTANCE] takes precedence
+   Where the proof mechanism defines a recoverable error of its own,
+   such as a DPoP nonce challenge [RFC9449], that error takes precedence
    over the generic errors above.
 
    This surface is coarser than the registration codes and does not tell
@@ -1080,12 +936,10 @@ Table of Contents
 
 8.2.  Presenting at the Token Endpoint
 
-   The following presents an already-issued CIMD-profile statement at
-   the token endpoint, sender-constrained by a client attestation
-   [ABCA].  The OAuth-Client-Attestation header carries an attestation
-   of the instance key from a client attester the server trusts for the
-   statement's sub, with that sub as its subject; the OAuth-Client-
-   Attestation-PoP header proves that key; the software_statement
+   The following presents an already-issued statement at the token
+   endpoint.  The statement attests the client's jwks_uri and
+   private_key_jwt as its authentication method, so the client
+   authenticates with a key the statement covers; the software_statement
    parameter carries the issuer's review; and client_id is the Client ID
    Metadata Document URL named by the statement's sub.  No client record
    exists at this server.
@@ -1093,24 +947,20 @@ Table of Contents
    POST /token HTTP/1.1
    Host: as.example
    Content-Type: application/x-www-form-urlencoded
-   OAuth-Client-Attestation: eyJhbGciOiJFUzI1NiIsInR5cCI6Im9hdXRoLWNsaWVu...
-   OAuth-Client-Attestation-PoP: eyJhbGciOiJFUzI1NiIsInR5cCI6Im9hdXRoLWNs...
-
    grant_type=client_credentials
    &scope=tools.read
    &client_id=https%3A%2F%2Fclient.example%2Fapp
+   &client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3A
+   client-assertion-type%3Ajwt-bearer
+   &client_assertion=eyJhbGciOiJFUzI1NiIsImtpZCI6IjIwMjYtMDgifQ...
    &software_statement=eyJ0eXAiOiJzb2Z0d2FyZS1zdGF0ZW1l...
 
-   The authorization server validates the statement, verifies that its
-   trust in the attester covers the statement's sub, that the
-   attestation's subject is that sub, and that the proof-of-possession
-   header proves the attested instance key, and applies the effective
-   metadata to the request: the requested scope falls within it, and the
-   request authenticates as the client the statement describes.  It
-   keeps no registration; the effective client_id is the statement's
-   sub.  Here [ABCA] supplies the sender constraint while the parameter
-   carries the statement, distinct from a profile that carries the
-   statement within the attestation itself (Section 10).
+   The authorization server validates the statement, retrieves the
+   attested jwks_uri, verifies the client assertion against a key found
+   there, and applies the effective metadata to the request: the
+   requested scope falls within it, and the request authenticates as the
+   client the statement describes.  It keeps no registration; the
+   effective client_id is the statement's sub.
 
 9.  Authorization Server Metadata
 
@@ -1129,16 +979,14 @@ Table of Contents
       presentation to clients that need no redirect, without also
       promising the front-channel path.  This member describes the
       consuming role.  It does not imply acceptance of any particular
-      statement issuer, subject namespace, attested member, or sender-
-      constraint mode, and it does not imply support for statement-
-      governed registrations.  An authorization server advertising true
-      that supports a redirect grant type MUST publish
+      statement issuer or subject namespace, and it does not imply
+      support for statement-governed registrations.  An authorization
+      server advertising presentation at the pushed authorization
+      request endpoint MUST publish
       pushed_authorization_request_endpoint, since Section 5.1.1 makes
       presentation there the only front-channel path.  A client also
-      examines the authorization server metadata for the proof mechanism
-      it intends to use, including client-authentication and DPoP
-      metadata, client_attestation_pop_methods_supported from [ABCA],
-      and client_instance_assertion_supported from [CLIENT-INSTANCE].
+      examines the ordinary client-authentication and DPoP metadata for
+      the proof it intends to use.
 
    software_statement_registration_validity_supported:  OPTIONAL.
       Boolean value indicating whether every registration the
@@ -1159,17 +1007,17 @@ Table of Contents
 
 10.  Extension Points
 
-   This specification defines runtime presentation through the
-   software_statement request parameter.  Additional endpoint-specific
-   discovery and proof modes are left to extensions.  Two other profiles
-   of the same path are also left to extensions: carrying the statement
-   within a client attestation [ABCA], and a Client ID Metadata Document
-   that references where the client publishes its current statements, so
-   a resolving server fetches the review out of band.  The latter
-   differs from embedding a statement in the document, which the digest
-   rule of [ISSUANCE] forbids.  A discovery signal finer than
-   software_statement_presentation_supported, advertising which chains a
-   server accepts, is likewise left to an extension.
+   Three extensions of this path are left to separate specifications.
+   Endorsed keys: a client attestation [ABCA], or an assertion from an
+   issuer named by an attested instance_issuers delegation
+   [CLIENT-INSTANCE], vouching for a key the statement does not itself
+   attest, which would admit software whose instances hold their own
+   keys.  Statement conveyance within a client attestation, rather than
+   as a request parameter.  And a Client ID Metadata Document that
+   references where the client publishes its current statements, so a
+   resolving server fetches the review out of band, which differs from
+   embedding a statement in the document as the digest rule of
+   [ISSUANCE] forbids.
 
 11.  Security Considerations
 
@@ -1185,16 +1033,13 @@ Table of Contents
    narrow audience and lifetime plus local limits on registrations
    derived from one statement.
 
-   Selecting the mode by what the statement contains prevents downgrade
-   across the audience: when key material is attested, every server in
-   the audience either binds the presenter to that key or rejects the
-   presentation, so a presenter cannot shop the statement to whichever
-   server treats the member as non-authoritative and there obtain an
-   endorsement mode.  The authority gates of Section 5.3 serve the same
-   end for the endorsement modes: an issuer trusted for other metadata,
-   or an attester trusted for other subjects, does not authorize runtime
-   keys, and an assertion for a different subject does not satisfy the
-   instance-issuer mode.
+   Admitting only a key the statement attests is what prevents
+   downgrade: every server in the audience either binds the presenter to
+   that key or refuses the presentation, so a presenter cannot shop the
+   statement to a server with weaker configuration and there prove a key
+   the issuer never reviewed.  An extension admitting endorsed keys
+   (Section 10) reopens that question and needs to answer it in its own
+   terms.
 
 11.2.  Renewal Authenticates the Credential
 
@@ -1369,21 +1214,6 @@ Table of Contents
 
    Specification Document(s):  This specification, Section 5.1
 
-   This specification also requests registration of the
-   tenant_approval_statement parameter in the same registry:
-
-   Parameter Name:  tenant_approval_statement
-
-   Parameter Usage Location:  authorization request, token request
-
-   Note:  In an authorization request the parameter is conveyed only
-      through the pushed authorization request endpoint [RFC9126]
-      (Section 5.1.1).
-
-   Change Controller:  IESG
-
-   Specification Document(s):  This specification, Section 5.7
-
 13.2.  OAuth Authorization Server Metadata Registry
 
    This specification requests registration of the following values in
@@ -1414,18 +1244,9 @@ Table of Contents
 
 14.1.  Normative References
 
-   [ABCA]     "OAuth 2.0 Attestation-Based Client Authentication", n.d.,
-              <https://datatracker.ietf.org/doc/draft-ietf-oauth-
-              attestation-based-client-auth>.
-
    [CIMD]     "OAuth Client ID Metadata Document", n.d.,
               <https://datatracker.ietf.org/doc/draft-ietf-oauth-client-
               id-metadata-document>.
-
-   [CLIENT-INSTANCE]
-              "OAuth 2.0 Client Instance Assertion", n.d.,
-              <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
-              client-instance-assertion>.
 
    [ISSUANCE] "OAuth 2.0 Software Statement Issuance", n.d.,
               <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
@@ -1475,6 +1296,15 @@ Table of Contents
               <https://www.rfc-editor.org/rfc/rfc9700>.
 
 14.2.  Informative References
+
+   [ABCA]     "OAuth 2.0 Attestation-Based Client Authentication", n.d.,
+              <https://datatracker.ietf.org/doc/draft-ietf-oauth-
+              attestation-based-client-auth>.
+
+   [CLIENT-INSTANCE]
+              "OAuth 2.0 Client Instance Assertion", n.d.,
+              <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
+              client-instance-assertion>.
 
    [SIGNALS]  "Shared Signals Events for OAuth Software Statements",
               n.d., <https://datatracker.ietf.org/doc/draft-mcguinness-

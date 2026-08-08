@@ -200,28 +200,20 @@ Table of Contents
    identified as the sub of the statements the event concerns.  Events
    use the sub_id claim of [SSF] with the formats of [RFC9493]:
 
-   *  Software identified by a Client ID Metadata Document URL [CIMD]
-      uses the uri format, whose uri member carries that URL exactly as
-      it appears in the statement's sub.
-
-   *  Software identified by an [RFC7591] software_id uses the iss_sub
-      format, whose iss member carries the statement issuer's identifier
-      and whose sub member carries the software_id.
+   Software is identified by its Client ID Metadata Document URL [CIMD]
+   using the uri format, whose uri member carries that URL exactly as it
+   appears in the statement's sub.
 
    A consuming authorization server MUST match the subject by exact
-   comparison against the statements it holds and the subjects of its
-   Withdrawal Records: the uri member against a statement's sub, and for
-   an iss_sub identifier both members, its iss against the statement's
-   iss and its sub against the statement's sub.  A statement whose sub
-   is a client identifier already registered at the authorization server
-   ([ISSUANCE]) has no subject identifier format defined here and is
-   outside this specification.
-
-   A receiver MUST record a withdrawal for a subject it does not
-   currently recognize (Section 5) rather than discarding the event.  A
-   subject unknown at the time of an event is the ordinary case in the
-   runtime profile, where a receiver holds no state for software until
-   it is first presented.
+   comparison of the uri member against a statement's sub, and against
+   the subjects of its Withdrawal Records.  The transmitting issuer is
+   part of every record, so a withdrawal by one issuer never reaches
+   statements another issuer made about the same software.  A receiver
+   MUST record a withdrawal for a subject it does not currently
+   recognize (Section 5) rather than discarding the event.  A subject
+   unknown at the time of an event is the ordinary case in the runtime
+   profile, where a receiver holds no state for software until it is
+   first presented.
 
 5.  Withdrawal Records
 
@@ -327,11 +319,11 @@ Table of Contents
    A receiver MUST record the withdrawal (Section 5) and stop treating
    the subject as approved for that issuer's tenant, with the effect the
    tenant approval rules of [PRESENTATION] give an absent approval.
-   Where the receiver holds a recorded tenant approval from that issuer
-   for that subject and tenant, it is discarded unless its iat is after
-   the record's effective time, in which case it was recorded from a
-   later decision and is retained.  The client's establishment, and
-   every other tenant, are unaffected.
+   Where the receiver holds a recorded tenant approval ([PRESENTATION])
+   from that issuer for that subject, it is discarded unless its iat is
+   after the record's effective time, in which case the tenant recorded
+   it from a later decision and it is retained.  The client's
+   establishment, and every other tenant, are unaffected.
 
 6.3.  Establishment Withdrawn
 
