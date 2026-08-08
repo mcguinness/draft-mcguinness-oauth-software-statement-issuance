@@ -54,7 +54,7 @@ informative:
 
 --- abstract
 
-A software statement carries a reviewer's decision about client software, bounded by an expiry the issuer chose. Ending that decision early has no standard mechanism, so how quickly a withdrawal takes effect is determined by how short the issuer made the statement's lifetime. This specification profiles the Shared Signals Framework for software statement lifecycle events, so that a statement issuer can tell the authorization servers that rely on its statements that a statement is revoked, that an approval is withdrawn, that an establishment is withdrawn, or that reviewed metadata has changed. Events can only reduce a client's standing, never create or extend it, and a receiver that misses an event falls back to expiry, so the mechanism shortens the interval between a decision and its effect without becoming load-bearing for security.
+A software statement carries a reviewer's decision about client software, bounded by an expiry the issuer chose. Ending that decision early has no standard mechanism, so how quickly a withdrawal takes effect is determined by how short the issuer made the statement's lifetime. This specification profiles the Shared Signals Framework for software statement lifecycle events, so that a statement issuer can tell the authorization servers that rely on its statements that a statement is revoked, that an establishment is withdrawn, or that reviewed metadata has changed. Events can only reduce a client's standing, never create or extend it, and a receiver that misses an event falls back to expiry, so the mechanism shortens the interval between a decision and its effect without becoming load-bearing for security.
 
 --- middle
 
@@ -70,7 +70,7 @@ This specification defines the subject identification, event types, payload clai
 
 Two properties bound what the mechanism can do, and are normative in {{processing}}: an event can only reduce standing, and a receiver that misses events enforces expiry exactly as it does today. A withdrawal is durable rather than momentary, which {{withdrawal-records}} specifies, so a client holding an unexpired statement cannot restore what an event ended. Deployments therefore keep bounded statement lifetimes, and neither {{ISSUANCE}} nor {{PRESENTATION}} depends on this specification.
 
-This mechanism buys latency, not correctness, and it matters where an artifact is carried by the party it concerns. A tenant approval that an authorization server retrieves from the tenant's issuer ({{PRESENTATION}}) ends by ceasing to be served, so events add nothing there beyond speed. An establishment statement is carried by the client it admits, and a client has no reason to stop presenting one; withdrawing it before its expiry is what these events are for.
+This mechanism buys latency, not correctness. A statement is carried by the client it admits, and a client has no reason to stop presenting one, so withdrawing a review before its expiry is what these events are for. A decision a consuming server evaluates afresh on every request, such as one carried by an identity assertion, needs no event at all.
 
 # Conventions and Definitions
 
@@ -114,14 +114,14 @@ A consuming authorization server MUST match the subject by exact comparison of t
 
 A withdrawal event names a decision that ended. Its effect is durable, and a receiver that only ceases some current activity has not applied it: in the runtime profile there is no current activity to cease, and in the registration profile the client holds a statement that would otherwise restore what the event withdrew.
 
-On applying `statement-revoked`, `approval-withdrawn`, or `establishment-withdrawn`, a consuming authorization server MUST create or update a Withdrawal Record holding the transmitting issuer, the subject, the event type, an effective time, and, for `statement-revoked`, the revoked `jti`.
+On applying `statement-revoked` or `establishment-withdrawn`, a consuming authorization server MUST create or update a Withdrawal Record holding the transmitting issuer, the subject, the event type, an effective time, and, for `statement-revoked`, the revoked `jti`.
 
 The effective time is the later of the event's `event_timestamp` and the time the receiver accepted the event. A receiver cannot verify that an issuer stopped issuing when it decided to withdraw, and an issuer whose renewal is automated may mint a scheduled statement between the decision and the event's arrival; taking the later of the two times keeps such a statement from restoring what the withdrawal ended. An issuer MUST NOT issue a statement for a subject after transmitting a withdrawal for that subject unless it has made a new decision to do so, and SHOULD suspend automated renewal for a subject before transmitting.
 
 While a Withdrawal Record is retained, the receiver MUST refuse a statement matching it:
 
 * a `statement-revoked` record refuses the statement with that `jti`, whatever its `iat`;
-* an `approval-withdrawn` or `establishment-withdrawn` record refuses every statement from that issuer for that subject whose `iat` is at or before the record's effective time.
+* an `establishment-withdrawn` record refuses every statement from that issuer for that subject whose `iat` is at or before the record's effective time.
 
 A statement from that issuer for that subject with an `iat` after the record's effective time is a later decision by the same authority. It is accepted under the ordinary rules of {{ISSUANCE}} and {{PRESENTATION}}, and restores what the withdrawal ended. This is the only recovery path, and it requires the issuer to act.
 
@@ -137,7 +137,7 @@ Each event is a member of the SET `events` claim, whose value is the event paylo
 : REQUIRED. A NumericDate value giving the time the issuer made the decision the event reports. Receivers use it to order events ({{processing}}).
 
 `software_statement_jti`:
-: REQUIRED in `statement-revoked`, where it names the artifact withdrawn. It MUST NOT appear in `approval-withdrawn` or `establishment-withdrawn`, which withdraw a decision rather than an artifact and therefore reach every statement the issuer has issued for the subject up to the record's effective time; a receiver MUST ignore it if present in those events. Narrowing a decision withdrawal to one artifact would leave a client's other unexpired statements untouched, which is the outcome {{withdrawal-records}} exists to prevent.
+: REQUIRED in `statement-revoked`, where it names the artifact withdrawn. It MUST NOT appear in `establishment-withdrawn`, which withdraws a decision rather than an artifact and therefore reach every statement the issuer has issued for the subject up to the record's effective time; a receiver MUST ignore it if present in those events. Narrowing a decision withdrawal to one artifact would leave a client's other unexpired statements untouched, which is the outcome {{withdrawal-records}} exists to prevent.
 
 `reason_admin`:
 : OPTIONAL. A human-readable explanation intended for an administrator, as {{CAEP}} defines the member.
@@ -147,12 +147,6 @@ Each event is a member of the SET `events` claim, whose value is the event paylo
 The issuer withdraws a specific statement before its expiry, for example because it was mis-issued or its holder's key was compromised. `software_statement_jti` is REQUIRED for this event type.
 
 A receiver MUST record the revocation ({{withdrawal-records}}) and stop honoring the named statement. Where that statement governs a registration's validity ({{PRESENTATION}}) at a server implementing that model, the registration is expired as though its recorded `exp` had passed. A replacement statement restores it under the revalidation rules of that specification, subject to the refusal rules of {{withdrawal-records}}, which prevent the revoked statement itself from serving as the replacement.
-
-## Approval Withdrawn {#approval-withdrawn}
-
-A tenant approval issuer withdraws its tenant's approval of the subject software.
-
-A receiver MUST record the withdrawal ({{withdrawal-records}}) and stop treating the subject as approved for that issuer's tenant, with the effect the tenant approval rules of {{PRESENTATION}} give an absent approval. Where the receiver holds a recorded tenant approval ({{PRESENTATION}}) from that issuer for that subject, it is discarded unless its `iat` is after the record's effective time, in which case the tenant recorded it from a later decision and it is retained. The client's establishment, and every other tenant, are unaffected.
 
 ## Establishment Withdrawn {#establishment-withdrawn}
 
@@ -234,7 +228,7 @@ Withdrawal Records ({{withdrawal-records}}) persist an issuer's negative decisio
 
 ## Event Type Assignment
 
-The event types defined in {{events}} require URI identifiers under a namespace this specification does not yet control. This version uses the placeholder base `https://schemas.openid.net/secevent/sw-stmt/event-type/` with the terminal segments `statement-revoked`, `approval-withdrawn`, `establishment-withdrawn`, and `metadata-changed`. Assignment of the final base URI, and registration where the publishing body maintains a registry of security event types, is to be resolved before publication.
+The event types defined in {{events}} require URI identifiers under a namespace this specification does not yet control. This version uses the placeholder base `https://schemas.openid.net/secevent/sw-stmt/event-type/` with the terminal segments `statement-revoked`, `establishment-withdrawn`, and `metadata-changed`. Assignment of the final base URI, and registration where the publishing body maintains a registry of security event types, is to be resolved before publication.
 
 ## SET Payload Claims
 

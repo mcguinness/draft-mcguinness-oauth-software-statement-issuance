@@ -28,18 +28,18 @@ Two capabilities in this family have no incumbent answer, and both are provider-
 
 The customer-side story is different, and worth stating plainly: a determined enterprise can already hold one approval record and drive each provider's administrative API from it, unilaterally, today. What it cannot get that way is a decision the provider verifies rather than trusts, expiring registrations, or any of this at a provider that offers no such API. The portable approval is worth having, and it is an improvement on scripting rather than a capability that does not exist.
 
-A provider can therefore adopt this in two rungs, and needs no counterparty for the first. It issues statements from its own listing program for the software it lists, consumes them under the registration-validity model, and gets delistings that actually take effect. Then it accepts runtime presentation at the token endpoint for clients that need no redirect, which asks listed publishers only to host a metadata document. Tenant approval, the layer that requires a second party, comes after both.
+A provider can therefore adopt this in two rungs, and needs no counterparty for the first. It issues statements from its own listing program for the software it lists, consumes them under the registration-validity model, and gets delistings that actually take effect. Then it accepts runtime presentation at the token endpoint for clients that need no redirect, which asks listed publishers only to host a metadata document. The customer's own permission decision is not a layer of this family at all; where the customer's identity provider mediates the grant, that decision is expressed by whether it issues an assertion.
 
 ## Four layers
 
 | Layer | Question | Decider | Artifact | Lifecycle |
 | --- | --- | --- | --- | --- |
 | Establishment | Which software may exist as a client here? | Provider, through its marketplace | Establishment statement | Listing review and renewal |
-| Tenant approval | Which established software may operate in my tenant? | Customer | Tenant approval statement | Customer review and renewal |
+| Tenant permission | Which established software may operate in my tenant right now? | Customer | Whether the customer's identity provider issues an assertion for it | Per grant |
 | Presenter proof | Which instance is making this request? | The statement, which fixes the accepted proof; the provider, which configures any attester it trusts | Client authentication, DPoP proof, client attestation, instance assertion | Per request |
 | User grant | What may it access, for whom? | Resource owner and local policy | Access grant, or a cross-domain identity assertion | Grant and token lifetime |
 
-The consumption draft keeps these apart rather than collapsing them into one decision. Establishment and tenant approval are distinguished by the role in which an authorization server accepts an issuer, which the issuance draft defines under Issuer Roles; the wire carries at most one statement per request.
+The drafts in this repository define the establishment layer only. Tenant permission is answered by whether the customer's identity provider issues an assertion for the software, presenter proof by the key the statement attests, and the grant by ordinary OAuth.
 
 ## Actors
 
@@ -48,7 +48,7 @@ The consumption draft keeps these apart rather than collapsing them into one dec
 | Software publisher | The software's identity, a Client ID Metadata Document URL or an `software_id` | Publishes metadata; obtains statements |
 | Marketplace | The provider's listing process | Establishment statements, audience naming the provider's authorization servers |
 | Provider authorization server | Registrations, tenants, trust configuration | Consumes statements; enforces all four layers |
-| Enterprise customer | Its own approval process | Tenant approval statements, audience naming the providers it uses |
+| Enterprise customer | Its own permission decision, and optionally its own review process | Assertions for permitted applications; statements where it wants a portable review record |
 | Client instance | A key, and possibly an attestation | Presents proof at request time |
 | End user | Consent | Authorizes access |
 
@@ -68,21 +68,15 @@ The application registers at the provider, carrying the establishment statement.
 
 Where the application has no registration and is identified by its metadata URL, it can instead be established at request time by presenting its statement, with no persistent record created.
 
-### 4. The customer approves the application
+### 4. The customer decides which software may operate in its tenant
 
-The enterprise reviews the application through its own process and its issuer signs a tenant approval statement: `sub` names the application, `aud` names the providers where the approval should hold, attested claims narrow what the enterprise approved, and the expiry sets how long the approval stands without renewal.
+This is a different decision from the marketplace's, on a different clock, and the drafts deliberately do not carry it. Where the customer's identity provider mediates the grant, it is already answered continuously: the provider issues a cross-domain identity assertion for the applications the customer permits and issues none for the rest, so enforcement happens at every grant and withdrawal takes effect at the next one. [Issue #121](https://github.com/oauth-wg/oauth-identity-assertion-authz-grant/issues/121) adds the piece that makes this self-sufficient, an optional `cimd_digest` in the assertion, letting the provider verify the client's metadata and provision it just in time with no registration to govern.
 
-This is one decision, made once, in the enterprise's own system of record.
+A customer that wants its review to travel as an artifact rather than as policy inside its identity provider, because it needs an auditable record of what was reviewed or because the provider is reached without the identity provider in the path, operates a statement issuer of its own and appears to providers as any other reviewer.
 
-Getting it to a provider is one step, and after it the customer's system stays the source of truth. The customer publishes its approvals and the provider retrieves them. The application carries nothing, which is what keeps a vendor from needing an OAuth relationship with every customer's issuer, and it keeps the customer's decision in the customer's hands: an approval ends by ceasing to be served, with no artifact in circulation that outlives it. A provider that cannot retrieve, or a customer that has not set retrieval up, falls back to the administrator recording the statement once through the provider's interface.
+### 5. The provider configures the reviewers it trusts
 
-The reason approvals are not carried, while listings are, is worth stating: an artifact that grants may be conveyed by the party it grants to, whose incentive is to convey it faithfully, and an artifact that restricts must not be, because the restricted party would then control whether the decision is ever seen. The second path is closest to how consoles work today and is the practical migration route; the first suits software the customer runs itself.
-
-### 5. The customer onboards a provider
-
-At each provider, the enterprise configures its issuer once: the issuer identifier, the tenant approval role, the identifier scope, the metadata the provider will treat it as authoritative for, and a maximum lifetime. The provider also configures whatever attester trust the applications' proof modes require, and the tenant decides whether it will require approval statements at all. Adding a provider does not require re-entering the application estate by hand, but approvals name their audiences, so statements issued before that provider existed do not name it and become usable there as the issuer's next renewal cycle includes it.
-
-Where the provider already trusts the enterprise identity provider for single sign-on or for cross-domain assertions, this adds a role to an existing relationship rather than establishing a new one ([Composition with ID-JAG](#composition-with-id-jag)).
+At each provider, a reviewer's issuer is configured once: the issuer identifier, its key source, the client identifier namespaces it may speak for, the audiences it may name, and a maximum lifetime. That is the entire per-reviewer cost, and it does not recur per application.
 
 ### 6. A request arrives
 
@@ -92,17 +86,15 @@ The provider resolves the tenant the request belongs to, then evaluates the laye
 sequenceDiagram
     participant App as Application instance
     participant AS as Provider authorization server
-    App->>AS: Request + tenant approval statement + presenter proof
+    App->>AS: Request + statement + presenter proof
     AS->>AS: Resolve tenant from request context
     AS->>AS: Establishment: registration valid, listing current?
-    AS->>AS: Tenant approval: issuer configured for this tenant, unexpired?
+    AS->>AS: Tenant permission: did this tenant's IdP issue an assertion?
     AS->>AS: Presenter proof: key the statement or registration authorizes
-    AS->>AS: Effective policy = establishment ∩ tenant approval
+    AS->>AS: Effective policy = the attested metadata
     AS->>AS: Grant: what the resource owner authorized
     AS-->>App: Access token, or an error naming the layer that failed
 ```
-
-Tenant approval constrains the request and does not establish the client: it cannot create a registration, alter one, or extend its validity, and its attested metadata narrows without widening. A tenant that prefers a console toggle to an artifact keeps the toggle; the statement is how a decision made once travels to providers the enterprise onboards later.
 
 ### 7. Two renewal loops, running independently
 
@@ -110,7 +102,7 @@ The marketplace renews listings on its own cadence. The enterprise renews approv
 
 ### 8. Offboarding
 
-The enterprise stops serving an application's approval. At the next retrieval, or at expiry where the provider records rather than retrieves, the application stops making new requests in that enterprise's tenant, at every provider where the enterprise configured its issuer, with no console visits. Existing grants stop refreshing only where the provider evaluates tenant approval on refresh, which the consumption draft requires for tenants that require approval; providers that do not are left with grants that continue until their refresh tokens expire. The vendor's listing is untouched and every other customer is unaffected.
+The enterprise stops permitting an application. Where its identity provider mediates access, it stops issuing assertions for that application and new grants stop at once, with existing access winding down as tokens expire. The vendor's listing is untouched and every other customer is unaffected.
 
 The marketplace stops renewing a listing. The registration expires at the provider, and the application stops working for everyone there.
 
@@ -118,13 +110,13 @@ Neither revokes tokens already issued. Access winds down as those tokens expire 
 
 ## Variants
 
-**Vendor-hosted multi-tenant SaaS.** The common case. One client, one registration, many tenants. Tenant approval is the per-customer overlay, evaluated in the tenant context of each request.
+**Vendor-hosted multi-tenant SaaS.** The common case. One client, one registration, many tenants. Each customer's permission is expressed on its own side, per grant, rather than as an overlay the provider stores.
 
 **Customer-deployed software.** The customer installs and runs the software itself. Each installation registers, and the same establishment statement can govern many registrations, subject to the provider's limits on how many it derives from one statement. Software with no hostable metadata document is outside this family and registers as it does today.
 
 **Employee-installed public software.** The publisher hosts the metadata and holds a statement; the enterprise decides whether that software may reach its tenants. The hard part is the presenter proof: a key shipped inside a distributed binary is present in every copy, so it identifies the software but not the installation. Runtime presentation admits only a key the statement attests, so such software registers per installation instead; admitting an instance's own key through an attester or an attested delegation is named as an extension rather than defined.
 
-**Application to application.** No user is present. The calling application establishes itself as a client, presents tenant approval for the customer it is acting for, and proves its key. Who it acts on behalf of, as opposed to what it is, belongs to delegation mechanisms outside these drafts.
+**Application to application.** No user is present, so no identity assertion carries a customer's permission. The calling application establishes itself as a client and proves its key, and the customer's permission has to be expressed at the provider by other means, which is the case this family serves least well and the one worth naming honestly.
 
 **Managed and unmanaged devices.** None of the drafts addresses device posture. Its natural home is the presenter-proof layer, where an attestation scheme can carry device signals if it defines them, rather than either review layer: approval stays device-independent, and posture is enforced where the request is made.
 
@@ -137,9 +129,9 @@ The same enterprise infrastructure can sign both artifacts, which is what makes 
 | Artifact | What it asserts | Layer | Checked |
 | --- | --- | --- | --- |
 | ID-JAG assertion | This user, at this enterprise, authorizes this client at this target | User grant | At every grant |
-| Tenant approval statement | This enterprise approves this software for its tenant | Tenant approval | While unexpired, at presentation or delivery |
+| Identity assertion | This customer permits this software to act for this user, here, now | Tenant permission | At every grant |
 
-ID-JAG makes the identity provider's word about people portable; a software statement makes its word about software portable. The wiring is shared, the authority is not: a provider that already trusts the enterprise identity provider as an assertion issuer is being asked, when it also configures that issuer in the tenant approval role, to accept its word about something new. The relationship exists; the authority is an explicit additional decision, and configuring one role does not imply the other.
+ID-JAG makes the identity provider's word about people portable, and the same act carries the customer's word about which software may use it, since an application the customer does not permit gets no assertion. That is why the enterprise case needs no artifact of its own: the decision is already in the path, evaluated every time, and withdrawn by ceasing to issue.
 
 ### Per-grant metadata binding
 
@@ -148,9 +140,9 @@ Where a deployment wants the client's metadata checked on every grant rather tha
 The two mechanisms answer different questions and are worth keeping distinct:
 
 * The assertion-carried digest binds metadata. It says the identity provider expects this client to be the software published at that URL. It carries no review semantics, no attested member set, no audience of its own, and no approval lifecycle.
-* The tenant approval statement carries a decision. It says a named authority reviewed the software and approves it for a tenant, with an expiry, an audience, and an attested member set the provider can intersect against.
+* A software statement carries a review. It says a named reviewer evaluated specific metadata and vouched for it, with an expiry and an audience, which is what a customer needs when it wants an auditable record rather than a policy decision inside its identity provider.
 
-They compose: an assertion-carried digest can establish a client just in time while a tenant approval statement, or the provider's own console toggle, still decides whether that client may operate in the tenant. Deployments that need only "this client is who the identity provider says it is" can stop at the digest.
+They compose: the digest establishes the client just in time, and the assertion's existence is the customer's permission. Deployments needing only that can stop there and never touch the statement drafts.
 
 ### Enforcement cadence
 
@@ -167,7 +159,6 @@ Four events carry the semantics this deployment needs:
 | Event | Meaning | Layer | Effect and blast radius |
 | --- | --- | --- | --- |
 | Statement revoked | This artifact, by `jti`, is no longer good | Whichever layer issued it | Refuse that statement before its expiry, durably |
-| Approval withdrawn | The tenant no longer approves this software | Tenant approval | Refuse its approval statements and block that tenant's requests now; other tenants and the listing unaffected |
 | Establishment withdrawn | The software is no longer established here | Establishment | Refuse its statements and expire the registration early, for every tenant at that provider |
 | Metadata changed | The published metadata no longer matches what was reviewed | Advisory | Apply the server's change policy as though it had observed the change; it can add a reason to distrust, never clear one |
 
@@ -195,7 +186,6 @@ The profile is a separate document rather than part of either draft, since it co
 | Registration validity and renewal | Consumption | Presentation at Registration |
 | Runtime establishment without registration | Consumption | Runtime Presentation |
 | Presenter binding | Consumption | Sender Constraint |
-| Tenant approval evaluation and intersection | Consumption | Tenant Approval |
 | Discovery signals | Consumption | Authorization Server Metadata |
 | Early withdrawal of a decision | Signals | Event Types, Receiver Processing |
 
@@ -212,9 +202,9 @@ The profile is a separate document rather than part of either draft, since it co
 
 ## Operational realities
 
-**Who runs the issuer.** An enterprise issuer is an authorization server role, not a new system to build: the natural operator is whoever already runs the enterprise's identity provider, which is why the composition with ID-JAG matters more than it first appears. An enterprise that does not want to operate one keeps using each provider's console; the tenant approval layer is then expressed locally, and nothing else in this model changes.
+**Who runs the issuer.** A reviewer's issuer is an authorization server role, not a new system to build. For a marketplace it is part of the listing program. For an enterprise that wants a portable review record it is naturally whoever runs the identity provider, which is also the party already answering the permission question per grant. An enterprise that wants neither keeps using each provider's console, and nothing else here changes.
 
-**Issuer availability is now in the path.** Approvals renew on a schedule, so an issuer outage longer than the remaining lifetime lapses every approval it maintains, at every provider, at once. Lifetimes of days rather than minutes, staggered expiries, and renewal well ahead of the boundary are what keep that from being a self-inflicted outage; the drafts state the staggering duty on issuers for the same reason.
+**Issuer availability is in the path where reviews are.** Statements renew on a schedule, so a reviewer's outage longer than the remaining lifetime lapses every statement it maintains, at every provider, at once. Lifetimes of days rather than minutes, staggered expiries, and renewal well ahead of the boundary are what keep that from being a self-inflicted outage; the drafts state the staggering duty on issuers for the same reason.
 
 **Coexisting with what exists.** Nothing here requires a provider to remove its console or an enterprise to abandon its allowlists. A provider consuming statements alongside its own toggles applies both, and the narrower answer governs. A practical migration runs the statement path in parallel, compares its decisions against the console for a cycle, and only then makes the console the exception path.
 
