@@ -264,7 +264,7 @@ A successful presentation creates an establishment comprising the following, whi
 * the validated `sub`;
 * the statement identity, its `iss`, `jti`, `iat`, and expiry;
 * the tenant the grant was opened for, where the authorization server hosts more than one;
-* the tenant's recorded approval in force when the grant was opened, where the tenant requires one ({{tenant-approval}});
+* the tenant the grant was opened for, where the tenant requires an approval ({{tenant-approval}}), the approval itself being evaluated afresh rather than frozen into the establishment;
 * the effective metadata ({{effective-metadata}});
 * the issuer trust decision; and
 * the sender-constraint mechanism and Proven Key.
@@ -277,7 +277,7 @@ A statement MUST be unexpired when presented. Expiry after presentation does not
 
 On refresh-token use the authorization server MUST verify possession of the establishment's Proven Key under the same sender-constraint mechanism. It MAY, by local policy, additionally require a current unexpired statement, and SHOULD require one once the establishment's recorded statement has expired, since that requirement is what makes ceased renewal end an existing grant ({{enforcement-bounds}}).
 
-Where the grant was opened for a tenant that requires approval ({{tenant-approval}}), the authorization server MUST also evaluate that tenant's recorded approval on refresh. An approval that has expired, or that a record refuses, ends the grant's continuation with `invalid_grant`. Nothing additional travels on the request, because the approval is state the server already holds.
+Where the grant was opened for a tenant that requires approval ({{tenant-approval}}), the authorization server MUST also evaluate that tenant's current approval on refresh, retrieved or recorded. An approval that has expired, that is absent from the current retrieval, or that a record refuses, ends the grant's continuation with `invalid_grant`. Nothing additional travels on the request, because the approval is state the server holds or fetches.
 
 An authorization server that holds a record refusing a statement, such as one kept under a withdrawal ({{SIGNALS}}), MUST treat that statement as not current wherever this section requires currency, so that a withdrawal ends grant continuation on the same terms as an expiry.
 
@@ -294,11 +294,15 @@ The refreshed access MUST fall within the replacement's effective metadata; the 
 
 An authorization server hosting multiple tenants establishes a client once and decides separately, per tenant, whether that client may operate there. A tenant approval statement carries that decision: it is issued by the tenant's approval issuer ({{ISSUANCE}}), its `sub` identifies the established client, and the tenant records it at the authorization server.
 
-A tenant approval is recorded, not carried on requests. The tenant supplies the statement through the authorization server's administrative interface, and the authorization server MUST authenticate the supplying party as an administrator of the tenant the approval will govern and MUST verify that the statement's issuer is one it accepts in the tenant approval role for that same tenant. A statement signed by an issuer configured for another tenant MUST be rejected rather than recorded. The record holds the statement's `iss`, `sub`, `jti`, `iat`, and `exp`, and the tenant it governs.
+A tenant approval is never carried on a request. An artifact that grants may be conveyed by the party it grants to, whose incentive is to convey it faithfully; an artifact that restricts must not be, because withdrawal is the point of holding it and the restricted party would control whether the server ever sees it. An approval reaches an authorization server in one of two ways.
 
-Recording rather than carrying keeps the decision where the decision was made. A carried approval would require the client to be a client of every customer's issuer, and would put a second statement on requests that may already carry one.
+**Retrieved.** The authorization server retrieves the tenant's current approvals from that tenant's issuer, at the location and with the credential recorded when the tenant configured the issuer ({{ISSUANCE}}). It MAY reuse a retrieved set within the caching bounds of the response and MUST NOT reuse a statement past its own `exp`. An approval absent from a retrieval is withdrawn: the authorization server MUST treat it as it treats an expired one, which is what makes ceasing to serve an approval sufficient to end it. Where a retrieval fails, the authorization server continues on what it last retrieved until those statements expire, so a failure degrades to the expiry behavior specified elsewhere rather than to a new one.
 
-The authorization server MUST re-verify a recorded approval at each use, not only when it was recorded, so that withdrawal of issuer trust, a change of issuer scope, or a record refusing the statement takes effect without waiting for expiry. It MUST NOT record an approval whose `iat` is earlier than that of the approval it replaces, so that a narrower decision cannot be rolled back by re-recording an older one. On expiry the authorization server MUST treat the tenant as having no approval for that client.
+**Recorded.** The tenant supplies the statement through the authorization server's administrative interface, for deployments that cannot retrieve or have not configured it. The authorization server MUST authenticate the supplying party as an administrator of the tenant the approval will govern, and MUST verify that the statement's issuer is one it accepts in the tenant approval role for that same tenant. A statement signed by an issuer configured for another tenant MUST be rejected rather than recorded. The record holds the statement's `iss`, `sub`, `jti`, `iat`, and `exp`, and the tenant it governs.
+
+Where both are configured for a tenant, the retrieved set governs, and a recorded approval covers only subjects the retrieval does not mention.
+
+The authorization server MUST re-verify an approval at each use, whether retrieved or recorded, so that withdrawal of issuer trust, a change of issuer scope, or a record refusing the statement takes effect without waiting for expiry. It MUST NOT record an approval whose `iat` is earlier than that of the approval it replaces, so that a narrower decision cannot be rolled back by re-recording an older one. On expiry the authorization server MUST treat the tenant as having no approval for that client.
 
 Tenant approval constrains the request; it does not establish the client:
 
@@ -306,7 +310,7 @@ Tenant approval constrains the request; it does not establish the client:
 * Where the statement attests metadata, that metadata narrows the request and MUST NOT widen it. The effective policy for the request is the intersection of what the establishment allows and what the tenant approved; a requested scope outside the intersection fails as {{errors}} defines.
 * Expiry bears on that tenant alone. A lapsed tenant approval stops that tenant's requests and leaves the client's registration, and every other tenant, untouched.
 
-Whether a tenant requires an approval is that tenant's policy. A tenant that expresses approval through the authorization server's own interface without an artifact needs no statement; the statement is what lets one decision be made once and honored at every authorization server where the tenant has configured its issuer.
+Whether a tenant requires an approval is that tenant's policy. A tenant that expresses approval through the authorization server's own interface without an artifact needs no statement; the statement is what lets one decision be made once and honored at every authorization server where the tenant has configured its issuer. Retrieval is what keeps it current there without further administrative action.
 
 ## Statements from an Established Client {#registered-delivery}
 
@@ -427,6 +431,10 @@ The `jwks_uri` chain verifies keys at an attested location, not attested keys: `
 Runtime presentation can cause the authorization server to retrieve the Client ID Metadata Document, an attested `jwks_uri`, or keys and metadata associated with an attested instance issuer. Every such retrieval inherits the server-side request forgery protections of {{CIMD}}. A trusted signature does not make a URL safe: the authorization server MUST apply its URL, redirect, address-range, transport, and content-type policy independently to every referenced location.
 
 Presentation reaches these retrievals before any client is registered or any user has interacted, so the work is available to an unauthenticated requester holding one acceptable statement. An authorization server SHOULD rate-limit presentations per statement identity, per subject, and per source, and SHOULD bound the establishments it will create from one statement ({{effective-metadata}}), before spending retrieval or storage on a new presentation. Before initiating a client-controlled retrieval, the authorization server MUST complete the statement checks that do not depend on that retrieval, including signature, issuer, audience, lifetime, subject, and claim-contract validation. It SHOULD bound JWT size and parsing work, concurrent retrievals, response size, and response time, and SHOULD cache successful and failed retrieval results for an appropriate period. A retrieval failure leaves the relevant metadata or proof chain unverified; the authorization server MUST reject the request and MUST NOT fall back to a weaker sender-constraint mode.
+
+## Approval Availability
+
+Retrieving approvals puts the tenant's issuer in the path of that tenant's requests, bounded by the caching rules of {{tenant-approval}}: an unreachable issuer costs nothing until the last retrieved statements expire, and then costs that tenant its approvals. This is the same trade the family already takes with statement lifetimes, and the same mitigation applies, which is to choose lifetimes the issuer can sustain and renew ahead of the boundary. Retrieval also discloses to each authorization server the approvals naming it, which is the estate relevant to that server and no more; an issuer serving statements naming other audiences would disclose where else its software is approved ({{ISSUANCE}}).
 
 ## Enforcement Bounds {#enforcement-bounds}
 

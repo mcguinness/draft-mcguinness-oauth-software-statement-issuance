@@ -70,6 +70,8 @@ This specification defines the subject identification, event types, payload clai
 
 Two properties bound what the mechanism can do, and are normative in {{processing}}: an event can only reduce standing, and a receiver that misses events enforces expiry exactly as it does today. A withdrawal is durable rather than momentary, which {{withdrawal-records}} specifies, so a client holding an unexpired statement cannot restore what an event ended. Deployments therefore keep bounded statement lifetimes, and neither {{ISSUANCE}} nor {{PRESENTATION}} depends on this specification.
 
+This mechanism buys latency, not correctness, and it matters where an artifact is carried by the party it concerns. A tenant approval that an authorization server retrieves from the tenant's issuer ({{PRESENTATION}}) ends by ceasing to be served, so events add nothing there beyond speed. An establishment statement is carried by the client it admits, and a client has no reason to stop presenting one; withdrawing it before its expiry is what these events are for.
+
 # Conventions and Definitions
 
 {::boilerplate bcp14-tagged}

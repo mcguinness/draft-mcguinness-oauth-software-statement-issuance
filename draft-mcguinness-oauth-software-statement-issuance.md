@@ -723,6 +723,9 @@ This specification defines the following additional authorization server metadat
 `software_statement_audiences_supported`:
 : OPTIONAL. A JSON array containing authorization server issuer identifiers that the issuer is prepared to place in a software statement's `aud` claim. Omission means that the complete set is not publicly enumerable; it does not mean that no audience is supported. Publication does not guarantee that every client is eligible for every listed audience.
 
+`software_statement_approvals_endpoint`:
+: OPTIONAL. URL of the endpoint at which this issuer serves the tenant approval statements it currently has in force ({{approvals-endpoint}}). Present only for an issuer acting in the tenant approval role.
+
 `software_statement_subject_token_types_supported`:
 : REQUIRED for an authorization server that supports the token exchange profile ({{token-exchange-profile}}), and absent otherwise. A JSON array of the `subject_token_type` values the authorization server accepts when `requested_token_type` is `urn:ietf:params:oauth:token-type:software-statement`. Publication of this member is the discovery signal for the profile.
 
@@ -755,11 +758,21 @@ Establishment issuer:
 : Its statements decide which software may exist as a client at this authorization server. A marketplace publisher program or an ecosystem directory holds this role. Statements from an establishment issuer are consumed at registration or at runtime establishment, and govern registration validity where {{PRESENTATION}} applies that model. One such decision serves every tenant the authorization server hosts.
 
 Tenant approval issuer:
-: Its statements decide which software a particular tenant permits. The tenant's own review function holds this role, and the authorization server records the tenant the issuer speaks for. A tenant approval statement is recorded at the authorization server by the tenant it governs and evaluated in that tenant's request context under {{PRESENTATION}}; it neither creates nor renews a registration, and it bears on no other tenant.
+: Its statements decide which software a particular tenant permits. The tenant's own review function holds this role, and the authorization server records the tenant the issuer speaks for. An issuer in this role serves its current decisions rather than handing them to clients to carry ({{approvals-endpoint}}), because withdrawing an approval is the point of holding one and the restricted party must not control its conveyance. A tenant approval statement is recorded at the authorization server by the tenant it governs and evaluated in that tenant's request context under {{PRESENTATION}}; it neither creates nor renews a registration, and it bears on no other tenant.
 
 An issuer MAY hold both roles, and the two consumptions never collide: an establishment statement arrives in a request, a tenant approval is recorded out of band. For the events of {{SIGNALS}}, the event type determines scope.
 
 Where an authorization server hosts multiple tenants, issuer trust is configured per tenant. The authorization server MUST resolve the tenant a request belongs to and MUST evaluate only the issuers configured for that tenant; accepting a tenant approval issuer's statement outside the tenant it speaks for is a cross-tenant escalation ({{security-considerations}}).
+
+## Serving Current Approvals {#approvals-endpoint}
+
+An issuer in the tenant approval role serves the statements it currently has in force to the authorization servers they name. A request carries the requesting authorization server's issuer identifier as the audience of interest; the response is a JSON object whose `software_statements` member is an array of the statements in force naming that audience, and whose HTTP caching headers bound how long the response may be reused. An empty array is a well-formed answer, and means the issuer has no approvals in force for that audience.
+
+Absence is how an approval ends. An issuer withdrawing an approval stops serving it, and a consuming authorization server that no longer receives it treats the approval as it treats an expired one ({{PRESENTATION}}). This is why the endpoint serves the set in force rather than answering questions about individual subjects: a per-subject query cannot distinguish a withdrawn approval from one the issuer never made.
+
+The endpoint is authenticated. The two parties already exchange issuer identifiers and keys when trust is established ({{issuer-trust}}), and the credential a requesting authorization server presents is part of that configuration; this document defines no new credential type. An issuer MUST serve only the statements naming the requester's own audience, and MUST NOT reveal statements naming other authorization servers.
+
+An issuer supporting this endpoint advertises it as `software_statement_approvals_endpoint` ({{authorization-server-metadata}}). An issuer in the establishment role does not serve statements this way: those are carried by the clients they admit, and serving them on request would disclose which authorization servers a client intends to establish relationships with.
 
 Pairwise configuration bounds a statement's reach to the issuers a trusting authorization server has configured, which is why a statement's practical audience is an ecosystem or administrative domain rather than the open web. The OAuth Identity Assertion Trust Framework {{TRUST-FRAMEWORK}} generalizes the model: a trusting authorization server publishes the conditions an issuer must satisfy and evaluates published evidence, such as authorization by the owner of a client identifier's namespace, when a statement is presented, replacing enumeration of trusted issuers with open-world policy. OpenID Federation {{OPENID-FED}} provides an alternative through trust chains. Both are out of scope here.
 
@@ -993,6 +1006,18 @@ Change Controller:
 
 Specification Document(s):
 : This specification, {{authorization-server-metadata}}
+
+Metadata Name:
+: `software_statement_approvals_endpoint`
+
+Metadata Description:
+: URL of the endpoint at which a tenant approval issuer serves the statements it currently has in force to a requesting authorization server.
+
+Change Controller:
+: IESG
+
+Specification Document(s):
+: This specification, {{approvals-endpoint}}
 
 Metadata Name:
 : `software_statement_subject_token_types_supported`

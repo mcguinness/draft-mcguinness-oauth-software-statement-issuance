@@ -74,7 +74,9 @@ The enterprise reviews the application through its own process and its issuer si
 
 This is one decision, made once, in the enterprise's own system of record.
 
-Getting it to a provider is one step, and it is where the customer's decision leaves the customer's system. The customer's administrator records the statement at the provider through the provider's own interface. The application carries nothing, which is what keeps a vendor from needing an OAuth relationship with every customer's issuer, and the provider holds the approval with its expiry and re-verifies it at each use. Renewal is recording a replacement; automated retrieval by the provider from the customer's issuer is not defined, and is the obvious next mechanism if the recording step proves burdensome. The second path is closest to how consoles work today and is the practical migration route; the first suits software the customer runs itself.
+Getting it to a provider is one step, and after it the customer's system stays the source of truth. The customer publishes its approvals and the provider retrieves them. The application carries nothing, which is what keeps a vendor from needing an OAuth relationship with every customer's issuer, and it keeps the customer's decision in the customer's hands: an approval ends by ceasing to be served, with no artifact in circulation that outlives it. A provider that cannot retrieve, or a customer that has not set retrieval up, falls back to the administrator recording the statement once through the provider's interface.
+
+The reason approvals are not carried, while listings are, is worth stating: an artifact that grants may be conveyed by the party it grants to, whose incentive is to convey it faithfully, and an artifact that restricts must not be, because the restricted party would then control whether the decision is ever seen. The second path is closest to how consoles work today and is the practical migration route; the first suits software the customer runs itself.
 
 ### 5. The customer onboards a provider
 
@@ -108,7 +110,7 @@ The marketplace renews listings on its own cadence. The enterprise renews approv
 
 ### 8. Offboarding
 
-The enterprise stops renewing an application's approval. At its recorded expiry the application stops making new requests in that enterprise's tenant, at every provider where the enterprise configured its issuer, with no console visits. Existing grants stop refreshing only where the provider evaluates tenant approval on refresh, which the consumption draft requires for tenants that require approval; providers that do not are left with grants that continue until their refresh tokens expire. The vendor's listing is untouched and every other customer is unaffected.
+The enterprise stops serving an application's approval. At the next retrieval, or at expiry where the provider records rather than retrieves, the application stops making new requests in that enterprise's tenant, at every provider where the enterprise configured its issuer, with no console visits. Existing grants stop refreshing only where the provider evaluates tenant approval on refresh, which the consumption draft requires for tenants that require approval; providers that do not are left with grants that continue until their refresh tokens expire. The vendor's listing is untouched and every other customer is unaffected.
 
 The marketplace stops renewing a listing. The registration expires at the provider, and the application stops working for everyone there.
 
@@ -156,7 +158,7 @@ Because an ID-JAG assertion is validated at every grant, ceasing assertion issua
 
 ## Composition with Shared Signals
 
-Everything above is enforced on a clock. An approval or a listing ends when its statement expires unrenewed, so how fast a decision takes effect is set by how short the issuer made the lifetime, and short lifetimes buy responsiveness with renewal traffic. That trade is avoidable: the parties are already in a configured pairwise relationship, since a trusting authorization server holds each issuer's identifier, keys, scope, and role, and that same relationship can carry an event stream.
+Approvals that a provider retrieves end by absence, so nothing more is needed for them. Establishment statements are different: a client carries one and has no reason to stop, so withdrawing a listing before its expiry is enforced on a clock. An approval or a listing ends when its statement expires unrenewed, so how fast a decision takes effect is set by how short the issuer made the lifetime, and short lifetimes buy responsiveness with renewal traffic. That trade is avoidable: the parties are already in a configured pairwise relationship, since a trusting authorization server holds each issuer's identifier, keys, scope, and role, and that same relationship can carry an event stream.
 
 [Shared Signals Events for OAuth Software Statements](draft-mcguinness-oauth-sw-stmt-signals.md), the third draft in this repository, defines those events over the [Shared Signals Framework](https://openid.net/specs/openid-sharedsignals-framework-1_0.html). The statement issuer is the transmitter, the trusting authorization server is the receiver, events travel as [Security Event Tokens](https://www.rfc-editor.org/rfc/rfc8417.html) over the framework's push or poll delivery, and subjects use the [identifier formats of RFC 9493](https://www.rfc-editor.org/rfc/rfc9493.html): the `uri` format for a Client ID Metadata Document URL, and `iss_sub` for an `software_id` under the issuer that names it. Nothing new is invented at the transport or trust layer; the profile's work is naming events and their effects.
 
