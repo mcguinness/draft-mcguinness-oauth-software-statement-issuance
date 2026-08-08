@@ -1051,7 +1051,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 8 February 2027</td>
+<td class="center">Expires 9 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1064,12 +1064,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-sw-stmt-presentation-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-07" class="published">7 August 2026</time>
+<time datetime="2026-08-08" class="published">8 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-08">8 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-09">9 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1102,7 +1102,7 @@ svg {
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 8 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 9 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1540,7 +1540,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
         <h3 id="name-registration-validity">
 <a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-registration-validity" class="section-name selfRef">Registration Validity</a>
         </h3>
-<p id="section-4.1-1">An authorization server that advertises <code>software_statement_registration_validity_supported</code> as <code>true</code> <span class="bcp14">MUST</span> apply this model to every registration it creates from a validated software statement. It <span class="bcp14">MUST</span> record the governing statement's <code>iss</code>, <code>jti</code>, <code>sub</code>, <code>iat</code>, and <code>exp</code> with the registration. The registration is valid until that <code>exp</code>. After it passes without a replacement (<a href="#revalidation" class="auto internal xref">Section 4.2</a>), the authorization server <span class="bcp14">MUST</span> reject requests under the registration, using <code>invalid_client</code> at the token endpoint and, at the authorization or pushed authorization request endpoint, the error <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> defines for an unauthorized client, except for the revalidation requests <a href="#revalidation" class="auto internal xref">Section 4.2</a> permits. The server <span class="bcp14">SHOULD</span> retain the expired record so that it can process a later authenticated revalidation, and <span class="bcp14">MAY</span> allow a grace period during which it accepts a replacement without treating the registration as expired. An expired registration is not an unknown client: the difference is observable to a client that authenticates, which is what makes recovery possible (<a href="#oracle-considerations" class="auto internal xref">Section 11.8</a>). Registration expiry does not revoke tokens already issued; the disposition of outstanding grants is local policy.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.1-1">An authorization server that advertises <code>software_statement_registration_validity_supported</code> as <code>true</code> <span class="bcp14">MUST</span> apply this model to every registration it creates from a validated software statement. It <span class="bcp14">MUST</span> record the governing statement's <code>iss</code>, <code>jti</code>, <code>sub</code>, <code>iat</code>, and <code>exp</code> with the registration, together with any attested <code>software_version</code>, which <a href="#version-changes" class="auto internal xref">Section 4.3</a> compares against a replacement. The registration is valid until that <code>exp</code>. After it passes without a replacement (<a href="#revalidation" class="auto internal xref">Section 4.2</a>), the authorization server <span class="bcp14">MUST</span> reject requests under the registration, using <code>invalid_client</code> at the token endpoint and, at the authorization or pushed authorization request endpoint, the error <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> defines for an unauthorized client, except for the revalidation requests <a href="#revalidation" class="auto internal xref">Section 4.2</a> permits. The server <span class="bcp14">SHOULD</span> retain the expired record so that it can process a later authenticated revalidation, and <span class="bcp14">MAY</span> allow a grace period during which it accepts a replacement without treating the registration as expired. An expired registration is not an unknown client: the difference is observable to a client that authenticates, which is what makes recovery possible (<a href="#oracle-considerations" class="auto internal xref">Section 11.8</a>). Registration expiry does not revoke tokens already issued; the disposition of outstanding grants is local policy.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
 <p id="section-4.1-2">The metadata signal in <a href="#authorization-server-metadata" class="auto internal xref">Section 9</a> lets a client determine before registration whether this model applies. The client already holds the statement and therefore learns the initial validity boundary from its <code>exp</code>. A server that omits the signal or advertises <code>false</code> can still consume a statement as ordinary <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> registration input, but it <span class="bcp14">MUST NOT</span> claim conformance to this registration-validity model.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1594,20 +1594,27 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
           <dt id="section-5.1-2.1">
 <code>software_statement</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-5.1-2.2">
-            <p id="section-5.1-2.2.1"><span class="bcp14">REQUIRED</span> for presentation. The software statement (<a href="#cimd-profile" class="auto internal xref">Section 3.3</a>). A request carries at most one; an authorization server <span class="bcp14">MUST</span> reject a request carrying more than one value with <code>invalid_request</code>.<a href="#section-5.1-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-5.1-2.2.1"><span class="bcp14">REQUIRED</span> for presentation. The software statement (<a href="#cimd-profile" class="auto internal xref">Section 3.3</a>), consumed for establishment: a runtime presentation, a refresh replacement (<a href="#refresh" class="auto internal xref">Section 5.5.1</a>), or a revalidation delivery (<a href="#revalidation" class="auto internal xref">Section 4.2</a>).<a href="#section-5.1-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-5.1-2.3">
+<code>tenant_approval_statement</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.1-2.4">
+            <p id="section-5.1-2.4.1"><span class="bcp14">OPTIONAL</span>. A software statement carrying a tenant's approval, consumed as <a href="#tenant-approval" class="auto internal xref">Section 5.7</a> defines. It is a distinct parameter because the two artifacts answer different questions, come from different issuers, and are frequently needed on the same request.<a href="#section-5.1-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-5.1-3">The request's <code>client_id</code> is the client's Client ID Metadata Document URL. It <span class="bcp14">MUST</span> exactly equal the statement's <code>sub</code>; the authorization server <span class="bcp14">MUST</span> reject a presentation where they differ. The effective <code>client_id</code> is the statement's <code>sub</code>, and the authorization server assigns none.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
-<p id="section-5.1-4">The request <span class="bcp14">MUST</span> also carry the proof inputs required by the accepted sender-constraint mode: client authentication parameters, a DPoP proof, the fields defined by <span>[<a href="#ABCA" class="cite xref">ABCA</a>]</span>, or a Client Instance Assertion as permitted by <span>[<a href="#CLIENT-INSTANCE" class="cite xref">CLIENT-INSTANCE</a>]</span>. A successful presentation establishes the client for the request and for the grant state derived from it (<a href="#grant-lifecycle" class="auto internal xref">Section 5.5</a>).<a href="#section-5.1-4" class="pilcrow">¶</a></p>
-<p id="section-5.1-5">At the token endpoint, a runtime presentation is valid only on a request that can open a new grant or directly issue access under a grant not already bound to an establishment. Authorization-code redemption and refresh-token use continue an existing grant and follow <a href="#grant-lifecycle" class="auto internal xref">Section 5.5</a> and <a href="#refresh" class="auto internal xref">Section 5.5.1</a> instead. A request that initiates issuance under <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> <span class="bcp14">MUST NOT</span> carry the <code>software_statement</code> parameter; the authorization server rejects the combination with <code>invalid_request</code>. Such a request is recognized before validation by its issuance signals: <code>response_type=software_statement_code</code> at the authorization endpoint, and the software statement <code>requested_token_type</code> at the token endpoint (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>). A request that carries the parameter and is none of a runtime presentation, a refresh replacement (<a href="#refresh" class="auto internal xref">Section 5.5.1</a>), a revalidation delivery (<a href="#revalidation" class="auto internal xref">Section 4.2</a>), or a tenant approval (<a href="#tenant-approval" class="auto internal xref">Section 5.7</a>) is rejected with <code>invalid_request</code>. Which of these a statement-carrying request is follows from the role in which the authorization server accepts the statement's issuer (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>); where an issuer holds both roles, the consumption point distinguishes them as <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> describes.<a href="#section-5.1-5" class="pilcrow">¶</a></p>
-<p id="section-5.1-6">An authorization server advertises support through <code>software_statement_presentation_supported</code> (<a href="#authorization-server-metadata" class="auto internal xref">Section 9</a>).<a href="#section-5.1-6" class="pilcrow">¶</a></p>
+<p id="section-5.1-3">Each parameter carries at most one statement, as <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> requires of request parameters generally; an authorization server <span class="bcp14">MUST</span> reject a request repeating either with <code>invalid_request</code>. What a statement is consumed as follows from the parameter that carries it, and the authorization server <span class="bcp14">MUST</span> additionally verify that it accepts the statement's issuer in the corresponding role (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>), rejecting it otherwise. A request <span class="bcp14">MAY</span> carry both parameters.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+<p id="section-5.1-4">The request's <code>client_id</code> is the client's Client ID Metadata Document URL. It <span class="bcp14">MUST</span> exactly equal the statement's <code>sub</code>; the authorization server <span class="bcp14">MUST</span> reject a presentation where they differ. The effective <code>client_id</code> is the statement's <code>sub</code>, and the authorization server assigns none.<a href="#section-5.1-4" class="pilcrow">¶</a></p>
+<p id="section-5.1-5">The request <span class="bcp14">MUST</span> also carry the proof inputs required by the accepted sender-constraint mode: client authentication parameters, a DPoP proof, the fields defined by <span>[<a href="#ABCA" class="cite xref">ABCA</a>]</span>, or a Client Instance Assertion as permitted by <span>[<a href="#CLIENT-INSTANCE" class="cite xref">CLIENT-INSTANCE</a>]</span>. A successful presentation establishes the client for the request and for the grant state derived from it (<a href="#grant-lifecycle" class="auto internal xref">Section 5.5</a>).<a href="#section-5.1-5" class="pilcrow">¶</a></p>
+<p id="section-5.1-6">At the token endpoint, a runtime presentation is valid only on a request that can open a new grant or directly issue access under a grant not already bound to an establishment. Authorization-code redemption and refresh-token use continue an existing grant and follow <a href="#grant-lifecycle" class="auto internal xref">Section 5.5</a> and <a href="#refresh" class="auto internal xref">Section 5.5.1</a> instead. A request that initiates issuance under <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> <span class="bcp14">MUST NOT</span> carry the <code>software_statement</code> parameter; the authorization server rejects the combination with <code>invalid_request</code>. Such a request is recognized before validation by its issuance signals: <code>response_type=software_statement_code</code> at the authorization endpoint, and the software statement <code>requested_token_type</code> at the token endpoint (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>). A request that carries <code>software_statement</code> and is none of a runtime presentation, a refresh replacement (<a href="#refresh" class="auto internal xref">Section 5.5.1</a>), or a revalidation delivery (<a href="#revalidation" class="auto internal xref">Section 4.2</a>) is rejected with <code>invalid_request</code>. Because the parameter names the consumption, an issuer holding both roles (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>) creates no ambiguity here.<a href="#section-5.1-6" class="pilcrow">¶</a></p>
+<p id="section-5.1-7">An authorization server advertises support through <code>software_statement_presentation_supported</code> (<a href="#authorization-server-metadata" class="auto internal xref">Section 9</a>).<a href="#section-5.1-7" class="pilcrow">¶</a></p>
 <div id="authorization-requests">
 <section id="section-5.1.1">
           <h4 id="name-authorization-endpoint">
 <a href="#section-5.1.1" class="section-number selfRef">5.1.1. </a><a href="#name-authorization-endpoint" class="section-name selfRef">Authorization Endpoint</a>
           </h4>
-<p id="section-5.1.1-1">Presentation in an authorization request <span class="bcp14">MUST</span> use a pushed authorization request <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>. The statement and its proof are sent to the pushed authorization request endpoint, where the processing rules of <a href="#processing" class="auto internal xref">Section 5.2</a> apply. The subsequent authorization request <span class="bcp14">MUST</span> use a <code>client_id</code> exactly equal to the establishment's <code>sub</code> and <span class="bcp14">MUST NOT</span> include <code>software_statement</code>. A statement never appears in a front-channel URL, just as <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> keeps an issued statement out of authorization responses.<a href="#section-5.1.1-1" class="pilcrow">¶</a></p>
+<p id="section-5.1.1-1">Presentation in an authorization request <span class="bcp14">MUST</span> use a pushed authorization request <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>. The statement, any tenant approval, and the proof are sent to the pushed authorization request endpoint, where the processing rules of <a href="#processing" class="auto internal xref">Section 5.2</a> apply. The subsequent authorization request <span class="bcp14">MUST</span> use a <code>client_id</code> exactly equal to the establishment's <code>sub</code> and <span class="bcp14">MUST NOT</span> include either statement parameter. A statement never appears in a front-channel URL, just as <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> keeps an issued statement out of authorization responses.<a href="#section-5.1.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="token-endpoint">
@@ -1701,22 +1708,28 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
         <h3 id="name-grant-lifecycle">
 <a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-grant-lifecycle" class="section-name selfRef">Grant Lifecycle</a>
         </h3>
-<p id="section-5.5-1">A successful presentation creates an establishment comprising:<a href="#section-5.5-1" class="pilcrow">¶</a></p>
+<p id="section-5.5-1">A successful presentation creates an establishment comprising the following, which is the state a server persists for the grant:<a href="#section-5.5-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-5.5-2.1">
             <p id="section-5.5-2.1.1">the validated <code>sub</code>;<a href="#section-5.5-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-5.5-2.2">
-            <p id="section-5.5-2.2.1">the statement identity, its <code>iss</code> and <code>jti</code>, and its expiry;<a href="#section-5.5-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-5.5-2.2.1">the statement identity, its <code>iss</code>, <code>jti</code>, <code>iat</code>, and expiry;<a href="#section-5.5-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-5.5-2.3">
-            <p id="section-5.5-2.3.1">the effective metadata (<a href="#effective-metadata" class="auto internal xref">Section 5.4</a>);<a href="#section-5.5-2.3.1" class="pilcrow">¶</a></p>
+            <p id="section-5.5-2.3.1">the tenant the grant was opened for, where the authorization server hosts more than one;<a href="#section-5.5-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-5.5-2.4">
-            <p id="section-5.5-2.4.1">the issuer trust decision; and<a href="#section-5.5-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-5.5-2.4.1">any tenant approval in force for the request, recorded or carried (<a href="#tenant-approval" class="auto internal xref">Section 5.7</a>);<a href="#section-5.5-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-5.5-2.5">
-            <p id="section-5.5-2.5.1">the sender-constraint mechanism and Proven Key.<a href="#section-5.5-2.5.1" class="pilcrow">¶</a></p>
+            <p id="section-5.5-2.5.1">the effective metadata (<a href="#effective-metadata" class="auto internal xref">Section 5.4</a>);<a href="#section-5.5-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.5-2.6">
+            <p id="section-5.5-2.6.1">the issuer trust decision; and<a href="#section-5.5-2.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.5-2.7">
+            <p id="section-5.5-2.7.1">the sender-constraint mechanism and Proven Key.<a href="#section-5.5-2.7.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-5.5-3">The establishment persists for as long as the grant depends on it: it is created by the presentation, referenced by the grant continuation state bound to it, and <span class="bcp14">MAY</span> be discarded once no <code>request_uri</code>, authorization code, refresh token, or other continuation state references it. Discarding an establishment ends nothing the grant still holds; it is the removal of state no longer reachable. The authorization server <span class="bcp14">MUST</span> bind the resulting <code>request_uri</code>, authorization code, refresh token, and other grant continuation state to the establishment as applicable. A token request that redeems an authorization code <span class="bcp14">MUST</span> have a <code>client_id</code> exactly equal to the establishment's <code>sub</code>, <span class="bcp14">MUST</span> demonstrate possession of the same Proven Key under the same sender-constraint mechanism, and <span class="bcp14">MUST NOT</span> carry the <code>software_statement</code> parameter. A redemption carrying a statement is rejected with <code>invalid_request</code>; a wrong client identifier or failed key binding is rejected with <code>invalid_grant</code>. This prohibition covers redemption of a code bound to an establishment; a registered client redeeming its own code may deliver a replacement statement under <a href="#revalidation" class="auto internal xref">Section 4.2</a>, which is a delivery rather than a presentation.<a href="#section-5.5-3" class="pilcrow">¶</a></p>
@@ -1727,23 +1740,24 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <a href="#section-5.5.1" class="section-number selfRef">5.5.1. </a><a href="#name-refresh" class="section-name selfRef">Refresh</a>
           </h4>
 <p id="section-5.5.1-1">On refresh-token use the authorization server <span class="bcp14">MUST</span> verify possession of the establishment's Proven Key under the same sender-constraint mechanism. It <span class="bcp14">MAY</span>, by local policy, additionally require a current unexpired statement, and <span class="bcp14">SHOULD</span> require one once the establishment's recorded statement has expired, since that requirement is what makes ceased renewal end an existing grant (<a href="#enforcement-bounds" class="auto internal xref">Section 11.6</a>).<a href="#section-5.5.1-1" class="pilcrow">¶</a></p>
-<p id="section-5.5.1-2">Where the grant was opened for a tenant that requires approval (<a href="#tenant-approval" class="auto internal xref">Section 5.7</a>), the authorization server <span class="bcp14">MUST</span> also evaluate that tenant's approval on refresh: a recorded approval that has expired, or a required carried approval that is absent or fails validation, ends the grant's continuation with <code>invalid_grant</code>. Without this, ceasing approval renewal stops new grants while existing ones refresh for the life of their refresh tokens.<a href="#section-5.5.1-2" class="pilcrow">¶</a></p>
-<p id="section-5.5.1-3">When policy requires one, the client presents the replacement in the <code>software_statement</code> parameter of the refresh request. The replacement:<a href="#section-5.5.1-3" class="pilcrow">¶</a></p>
+<p id="section-5.5.1-2">Where the grant was opened for a tenant that requires approval (<a href="#tenant-approval" class="auto internal xref">Section 5.7</a>), the authorization server <span class="bcp14">MUST</span> also evaluate that tenant's approval on refresh, using the recorded approval where it holds one and the <code>tenant_approval_statement</code> parameter otherwise. An approval that has expired, or a required carried approval that is absent or failing validation, ends the grant's continuation with <code>invalid_grant</code>. Because the two artifacts travel in separate parameters, a refresh can carry both a replacement establishment statement and a current tenant approval.<a href="#section-5.5.1-2" class="pilcrow">¶</a></p>
+<p id="section-5.5.1-3">An authorization server that holds a record refusing a statement, such as one kept under a withdrawal (<span>[<a href="#SIGNALS" class="cite xref">SIGNALS</a>]</span>), <span class="bcp14">MUST</span> treat that statement as not current wherever this section requires currency, so that a withdrawal ends grant continuation on the same terms as an expiry.<a href="#section-5.5.1-3" class="pilcrow">¶</a></p>
+<p id="section-5.5.1-4">When policy requires one, the client presents the replacement in the <code>software_statement</code> parameter of the refresh request. The replacement:<a href="#section-5.5.1-4" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5.5.1-4.1">
-              <p id="section-5.5.1-4.1.1"><span class="bcp14">MUST</span> validate under <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> with this server in its audience;<a href="#section-5.5.1-4.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-5.5.1-5.1">
+              <p id="section-5.5.1-5.1.1"><span class="bcp14">MUST</span> validate under <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> with this server in its audience;<a href="#section-5.5.1-5.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-5.5.1-4.2">
-              <p id="section-5.5.1-4.2.1"><span class="bcp14">MUST</span> have the establishment's <code>iss</code> and <code>sub</code>;<a href="#section-5.5.1-4.2.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-5.5.1-5.2">
+              <p id="section-5.5.1-5.2.1"><span class="bcp14">MUST</span> have the establishment's <code>iss</code> and <code>sub</code>;<a href="#section-5.5.1-5.2.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-5.5.1-4.3">
-              <p id="section-5.5.1-4.3.1"><span class="bcp14">MUST</span> have an <code>iat</code> no earlier than the recorded statement's <code>iat</code>, so a client cannot roll back to an older, broader statement; and<a href="#section-5.5.1-4.3.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-5.5.1-5.3">
+              <p id="section-5.5.1-5.3.1"><span class="bcp14">MUST</span> have an <code>iat</code> no earlier than the recorded statement's <code>iat</code>, so a client cannot roll back to an older, broader statement; and<a href="#section-5.5.1-5.3.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-5.5.1-4.4">
-              <p id="section-5.5.1-4.4.1"><span class="bcp14">MUST</span> authorize the establishment's Proven Key (<a href="#sender-constraint" class="auto internal xref">Section 5.3</a>).<a href="#section-5.5.1-4.4.1" class="pilcrow">¶</a></p>
+            <li class="normal" id="section-5.5.1-5.4">
+              <p id="section-5.5.1-5.4.1"><span class="bcp14">MUST</span> authorize the establishment's Proven Key (<a href="#sender-constraint" class="auto internal xref">Section 5.3</a>).<a href="#section-5.5.1-5.4.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
-<p id="section-5.5.1-5">The refreshed access <span class="bcp14">MUST</span> fall within the replacement's effective metadata; the grant never widens beyond the original authorization. The authorization server <span class="bcp14">MUST</span> recompute the attested members from the replacement. It <span class="bcp14">MAY</span> re-resolve the Client ID Metadata Document for unattested members, in which case their current values apply; otherwise the recorded values persist for the grant. Because the replacement must authorize the existing Proven Key, this operation does not rotate the establishment's key. A client that needs a new key performs a new presentation and opens a new establishment. On success, the establishment's statement identity, <code>iat</code>, expiry, effective metadata, and trust decision are replaced in a single atomic update; concurrent deliveries resolve to the most recently issued statement. A refresh that fails these requirements, or omits a statement that policy requires, is rejected with <code>invalid_grant</code> and leaves the establishment unchanged.<a href="#section-5.5.1-5" class="pilcrow">¶</a></p>
+<p id="section-5.5.1-6">The refreshed access <span class="bcp14">MUST</span> fall within the replacement's effective metadata; the grant never widens beyond the original authorization. The authorization server <span class="bcp14">MUST</span> recompute the attested members from the replacement. It <span class="bcp14">MAY</span> re-resolve the Client ID Metadata Document for unattested members, in which case their current values apply; otherwise the recorded values persist for the grant. Because the replacement must authorize the existing Proven Key, this operation does not rotate the establishment's key. A client that needs a new key performs a new presentation and opens a new establishment. On success, the establishment's statement identity, <code>iat</code>, expiry, effective metadata, and trust decision are replaced in a single atomic update; concurrent deliveries resolve to the most recently issued statement. A refresh that fails these requirements, or omits a statement that policy requires, is rejected with <code>invalid_grant</code> and leaves the establishment unchanged.<a href="#section-5.5.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1765,7 +1779,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
             <p id="section-5.6-2.3.1">From an issuer accepted in neither role for the tenant the request belongs to, the request is rejected as <a href="#errors" class="auto internal xref">Section 7</a> defines.<a href="#section-5.6-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.6-3">A registration created from a CIMD-profile statement is statement-governed when the server advertises <code>software_statement_registration_validity_supported</code>. The validity and revalidation model of <a href="#registration-validity" class="auto internal xref">Section 4.1</a> and <a href="#revalidation" class="auto internal xref">Section 4.2</a> applies, with the delivered statement's <code>sub</code> equal to the registered <code>client_id</code> and validated under the CIMD profile. The request authenticates as the registered client under the registration's own method; the delivered statement renews validity and does not otherwise alter the registration. A refresh-token request that omits a statement this policy requires, or delivers one failing these rules, is rejected with <code>invalid_grant</code>; any other token request failing the currency requirement is rejected with <code>invalid_client</code>.<a href="#section-5.6-3" class="pilcrow">¶</a></p>
+<p id="section-5.6-3">A registration created from a CIMD-profile statement is statement-governed when the server advertises <code>software_statement_registration_validity_supported</code>. The validity and revalidation model of <a href="#registration-validity" class="auto internal xref">Section 4.1</a> and <a href="#revalidation" class="auto internal xref">Section 4.2</a> applies, with the delivered statement's <code>sub</code> equal to the registered <code>client_id</code> and validated under the CIMD profile. The request authenticates as the registered client under the registration's own method; the delivered statement renews validity and does not otherwise alter the registration. Where the registration is still valid and the server requires a current statement, a refresh-token request that omits one or delivers one failing these rules is rejected with <code>invalid_grant</code>. Where the registration has already expired, <a href="#revalidation" class="auto internal xref">Section 4.2</a> governs and the rejection is <code>invalid_client</code> at every endpoint.<a href="#section-5.6-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="tenant-approval">
@@ -1791,14 +1805,16 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <p id="section-5.7-6">A tenant approval statement reaches the authorization server by one of two paths, and a deployment chooses:<a href="#section-5.7-6" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-5.7-7.1">
-            <p id="section-5.7-7.1.1">Carried by the client, in the <code>software_statement</code> parameter of a request it makes for that tenant. The client obtains the statement from the tenant's issuer under <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>, which requires it to be a client of that issuer, a relationship the client establishes with each tenant whose approval it carries.<a href="#section-5.7-7.1.1" class="pilcrow">¶</a></p>
+            <p id="section-5.7-7.1.1">Carried by the client, in the <code>tenant_approval_statement</code> parameter of a request it makes for that tenant. The client obtains the statement from the tenant's issuer under <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>, which requires it to be a client of that issuer, a relationship the client establishes with each tenant whose approval it carries.<a href="#section-5.7-7.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-5.7-7.2">
             <p id="section-5.7-7.2.1">Recorded at the authorization server, supplied through the server's administrative interface by the tenant, in which case the client carries nothing. The authorization server validates the statement as it would a carried one, records it with the tenant, and applies it to that tenant's requests for the client the statement names.<a href="#section-5.7-7.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.7-8">A recorded tenant approval has the validity its <code>exp</code> gives it. On expiry the authorization server <span class="bcp14">MUST</span> treat the tenant as having no approval for that client, with the same effect as an absent approval, and the tenant restores it by recording a replacement whose <code>iat</code> is no earlier than the recorded one. Retrieval of a replacement by the authorization server from the tenant's issuer is not defined here.<a href="#section-5.7-8" class="pilcrow">¶</a></p>
-<p id="section-5.7-9">Where the client is not established at the authorization server at all, one statement can serve both roles if the tenant's issuer is also accepted for establishment: the presentation establishes the client under <a href="#cimd-presentation" class="auto internal xref">Section 5</a> and carries the tenant's approval in the same act.<a href="#section-5.7-9" class="pilcrow">¶</a></p>
+<p id="section-5.7-8">An authorization server recording an approval <span class="bcp14">MUST</span> authenticate the recording party as an administrator of the tenant the approval will govern, and <span class="bcp14">MUST</span> verify that the statement's issuer is one it accepts in the tenant approval role for that same tenant. A statement signed by an issuer configured for another tenant <span class="bcp14">MUST</span> be rejected rather than recorded, whichever tenant it would be recorded under. The record holds the statement's <code>iss</code>, <code>sub</code>, <code>jti</code>, <code>iat</code>, and <code>exp</code>, and the tenant it governs.<a href="#section-5.7-8" class="pilcrow">¶</a></p>
+<p id="section-5.7-9">A recorded approval has the validity its <code>exp</code> gives it. The authorization server <span class="bcp14">MUST</span> re-verify it at each use, not only when it was recorded, so that withdrawal of issuer trust, a change of issuer scope, or a record refusing the statement takes effect without waiting for expiry. On expiry the authorization server <span class="bcp14">MUST</span> treat the tenant as having no approval for that client, with the same effect as an absent approval.<a href="#section-5.7-9" class="pilcrow">¶</a></p>
+<p id="section-5.7-10">Whether carried or recorded, an approval <span class="bcp14">MUST NOT</span> be accepted with an <code>iat</code> earlier than that of the most recent approval the authorization server has accepted or recorded for the same tenant, client, and issuer, so that a client cannot present a broader approval it still holds after its tenant has narrowed one. Where a recorded approval exists, it governs the request; a carried approval from the same issuer with a later <code>iat</code> replaces the record and renews its validity, which is how a recorded approval is renewed without administrative action. Retrieval of a replacement by the authorization server from the tenant's issuer is not defined here.<a href="#section-5.7-10" class="pilcrow">¶</a></p>
+<p id="section-5.7-11">Where the client is not established at the authorization server at all, one statement can serve both roles if the tenant's issuer is also accepted for establishment: the presentation establishes the client under <a href="#cimd-presentation" class="auto internal xref">Section 5</a> and carries the tenant's approval in the same act.<a href="#section-5.7-11" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1843,13 +1859,13 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <dt id="section-7-2.7">
 <code>invalid_request</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-7-2.8">
-          <p id="section-7-2.8.1">any other rejection, including a redemption or issuance request carrying the <code>software_statement</code> parameter (<a href="#runtime-presentation" class="auto internal xref">Section 5.1</a>, <a href="#grant-lifecycle" class="auto internal xref">Section 5.5</a>).<a href="#section-7-2.8.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.8.1">any other rejection, including a redemption or issuance request carrying the <code>software_statement</code> parameter, and a request repeating either statement parameter (<a href="#runtime-presentation" class="auto internal xref">Section 5.1</a>, <a href="#grant-lifecycle" class="auto internal xref">Section 5.5</a>).<a href="#section-7-2.8.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
 <p id="section-7-3">At the pushed authorization request endpoint, the corresponding <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span> error responses apply. On refresh-token use of a runtime-established grant, <a href="#refresh" class="auto internal xref">Section 5.5.1</a> takes precedence: a missing or failing replacement statement is <code>invalid_grant</code>, the grant's continuation failing rather than client establishment. Registration validity is reported differently, as <code>invalid_client</code> under <a href="#revalidation" class="auto internal xref">Section 4.2</a>, because the registration rather than the grant is what lapsed; neither rejection indicates refresh-token replay (<span>[<a href="#RFC9700" class="cite xref">RFC9700</a>]</span>).<a href="#section-7-3" class="pilcrow">¶</a></p>
 <p id="section-7-4">When an otherwise valid proof protocol defines a recoverable, proof-specific error, including an error that supplies a DPoP nonce or client-attestation challenge, or requests a fresh attestation, that error from <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>, <span>[<a href="#ABCA" class="cite xref">ABCA</a>]</span>, or <span>[<a href="#CLIENT-INSTANCE" class="cite xref">CLIENT-INSTANCE</a>]</span> takes precedence over the generic errors above.<a href="#section-7-4" class="pilcrow">¶</a></p>
-<p id="section-7-5">This surface is coarser than the registration codes and does not tell a client whether to seek a corrected statement or a different issuer. The authorization server <span class="bcp14">MAY</span> return non-sensitive diagnostics in <code>error_description</code> to a client it has authenticated, but <span class="bcp14">MUST NOT</span> reveal issuer-trust, subject-namespace, or attester-policy details to an unauthenticated requester.<a href="#section-7-5" class="pilcrow">¶</a></p>
+<p id="section-7-5">This surface is coarser than the registration codes and does not tell a client whether to seek a corrected statement or a different issuer. The authorization server <span class="bcp14">MAY</span> return non-sensitive diagnostics in <code>error_description</code> to a client it has authenticated, but <span class="bcp14">MUST NOT</span> reveal issuer-trust, subject-namespace, or attester-policy details to an unauthenticated requester. Where a statement is refused by a record rather than merely expired, and the client is authenticated, the authorization server <span class="bcp14">SHOULD</span> indicate that a statement issued more recently is required, since re-delivering the same statement can never succeed.<a href="#section-7-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="example">
@@ -1914,13 +1930,13 @@ grant_type=client_credentials
         <dt id="section-9-2.1">
 <code>software_statement_presentation_supported</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-9-2.2">
-          <p id="section-9-2.2.1"><span class="bcp14">OPTIONAL</span>. Boolean value indicating whether the authorization server accepts a software statement presented at runtime in an authorization or token request (<a href="#runtime-presentation" class="auto internal xref">Section 5.1</a>), rather than only through <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> registration. If omitted, the default value is <code>false</code>. This member describes the consuming role. A value of <code>true</code> advertises the path as this specification defines it at every endpoint the server's supported grant types make applicable; there is no per-endpoint signal. It does not imply acceptance of any particular statement issuer, subject namespace, attested member, or sender-constraint mode, and it does not imply support for statement-governed registrations. An authorization server advertising <code>true</code> that supports a redirect grant type <span class="bcp14">MUST</span> publish <code>pushed_authorization_request_endpoint</code>, since <a href="#authorization-requests" class="auto internal xref">Section 5.1.1</a> makes presentation there the only front-channel path. A client also examines the authorization server metadata for the proof mechanism it intends to use, including client-authentication and DPoP metadata, <code>client_attestation_pop_methods_supported</code> from <span>[<a href="#ABCA" class="cite xref">ABCA</a>]</span>, and <code>client_instance_assertion_supported</code> from <span>[<a href="#CLIENT-INSTANCE" class="cite xref">CLIENT-INSTANCE</a>]</span>.<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-9-2.2.1"><span class="bcp14">OPTIONAL</span>. Indicates whether the authorization server accepts a software statement presented at runtime (<a href="#runtime-presentation" class="auto internal xref">Section 5.1</a>). The value is either a boolean or a JSON array of the endpoints at which presentation is accepted, whose members are <code>token</code> and <code>pushed_authorization_request</code>. A value of <code>true</code> is equivalent to an array naming every endpoint the server's supported grant types make applicable, and <code>false</code>, or omission, means the path is not offered. Advertising only <code>token</code> is what lets a server offer presentation to clients that need no redirect, without also promising the front-channel path. This member describes the consuming role. It does not imply acceptance of any particular statement issuer, subject namespace, attested member, or sender-constraint mode, and it does not imply support for statement-governed registrations. An authorization server advertising <code>true</code> that supports a redirect grant type <span class="bcp14">MUST</span> publish <code>pushed_authorization_request_endpoint</code>, since <a href="#authorization-requests" class="auto internal xref">Section 5.1.1</a> makes presentation there the only front-channel path. A client also examines the authorization server metadata for the proof mechanism it intends to use, including client-authentication and DPoP metadata, <code>client_attestation_pop_methods_supported</code> from <span>[<a href="#ABCA" class="cite xref">ABCA</a>]</span>, and <code>client_instance_assertion_supported</code> from <span>[<a href="#CLIENT-INSTANCE" class="cite xref">CLIENT-INSTANCE</a>]</span>.<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-9-2.3">
 <code>software_statement_registration_validity_supported</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-9-2.4">
-          <p id="section-9-2.4.1"><span class="bcp14">OPTIONAL</span>. Boolean value indicating whether every registration the authorization server creates from a validated software statement is governed by the validity and revalidation rules of <a href="#registration-validity" class="auto internal xref">Section 4.1</a> and <a href="#revalidation" class="auto internal xref">Section 4.2</a>. If omitted, the default value is <code>false</code>. A value of <code>true</code> does not imply runtime-presentation support. It tells a client that the statement's <code>exp</code> will bound the registration and that the server accepts replacement delivery through an authenticated token request or pushed authorization request and, if the server supports <span>[<a href="#RFC7592" class="cite xref">RFC7592</a>]</span>, a registration update request.<a href="#section-9-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-9-2.4.1"><span class="bcp14">OPTIONAL</span>. Boolean value indicating whether every registration the authorization server creates from a validated software statement is governed by the validity and revalidation rules of <a href="#registration-validity" class="auto internal xref">Section 4.1</a> and <a href="#revalidation" class="auto internal xref">Section 4.2</a>. If omitted, the default value is <code>false</code>. A value of <code>true</code> does not imply runtime-presentation support. It tells a client that the statement's <code>exp</code> will bound the registration and that the server accepts replacement delivery through an authenticated token request or pushed authorization request and, if the server supports <span>[<a href="#RFC7592" class="cite xref">RFC7592</a>]</span>, a registration update request. A server <span class="bcp14">MAY</span> apply the model to registrations created from statements of some configured issuers and not others, since a client learns the boundary that applies to its own registration from the <code>exp</code> of the statement it delivered; advertising <code>true</code> claims conformance for the registrations the model governs, not that every registration at the server is statement-governed.<a href="#section-9-2.4.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2064,6 +2080,34 @@ grant_type=client_credentials
 </dd>
         <dd class="break"></dd>
 </dl>
+<p id="section-13.1-4">This specification also requests registration of the <code>tenant_approval_statement</code> parameter in the same registry:<a href="#section-13.1-4" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-13.1-5">
+          <dt id="section-13.1-5.1">Parameter Name:</dt>
+          <dd style="margin-left: 1.5em" id="section-13.1-5.2">
+            <p id="section-13.1-5.2.1"><code>tenant_approval_statement</code><a href="#section-13.1-5.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-13.1-5.3">Parameter Usage Location:</dt>
+          <dd style="margin-left: 1.5em" id="section-13.1-5.4">
+            <p id="section-13.1-5.4.1">authorization request, token request<a href="#section-13.1-5.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-13.1-5.5">Note:</dt>
+          <dd style="margin-left: 1.5em" id="section-13.1-5.6">
+            <p id="section-13.1-5.6.1">In an authorization request the parameter is conveyed only through the pushed authorization request endpoint <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span> (<a href="#authorization-requests" class="auto internal xref">Section 5.1.1</a>).<a href="#section-13.1-5.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-13.1-5.7">Change Controller:</dt>
+          <dd style="margin-left: 1.5em" id="section-13.1-5.8">
+            <p id="section-13.1-5.8.1">IESG<a href="#section-13.1-5.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-13.1-5.9">Specification Document(s):</dt>
+          <dd style="margin-left: 1.5em" id="section-13.1-5.10">
+            <p id="section-13.1-5.10.1">This specification, <a href="#tenant-approval" class="auto internal xref">Section 5.7</a><a href="#section-13.1-5.10.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
 </section>
 </div>
 <div id="oauth-authorization-server-metadata-registry">
@@ -2080,7 +2124,7 @@ grant_type=client_credentials
           <dd class="break"></dd>
 <dt id="section-13.2-2.3">Metadata Description:</dt>
           <dd style="margin-left: 1.5em" id="section-13.2-2.4">
-            <p id="section-13.2-2.4.1">Boolean value indicating whether the authorization server accepts a software statement presented at runtime in an authorization or token request.<a href="#section-13.2-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-13.2-2.4.1">Boolean value, or JSON array of endpoint names, indicating whether and where the authorization server accepts a software statement presented at runtime.<a href="#section-13.2-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-13.2-2.5">Change Controller:</dt>

@@ -3,9 +3,9 @@
 
 
 Web Authorization Protocol                                 K. McGuinness
-Internet-Draft                                             7 August 2026
+Internet-Draft                                             8 August 2026
 Intended status: Standards Track                                        
-Expires: 8 February 2027
+Expires: 9 February 2027
 
 
                  OAuth 2.0 Software Statement Issuance
@@ -47,7 +47,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 February 2027.
+   This Internet-Draft will expire on 9 February 2027.
 
 Copyright Notice
 
@@ -1698,16 +1698,18 @@ Table of Contents
       this role, and the authorization server records the tenant the
       issuer speaks for.  Statements from a tenant approval issuer are
       evaluated in that tenant's request context under [PRESENTATION],
-      whether carried by the client or recorded at the authorization
-      server by the tenant; they neither create nor renew a
-      registration, and they bear on no other tenant.
+      whether carried by the client in the parameter that specification
+      defines for them or recorded at the authorization server by the
+      tenant; they neither create nor renew a registration, and they
+      bear on no other tenant.
 
-   An issuer MAY hold both roles.  The role decides how a statement is
-   consumed; where an issuer holds both, the consumption point breaks
-   the tie: a statement in a registration request is establishment, and
-   a statement accompanying a request from a client already established
-   is tenant approval.  For the events of [SIGNALS], which have no
-   consumption point, the event type alone determines scope.
+   An issuer MAY hold both roles.  The role gates acceptance rather than
+   classifying a request: [PRESENTATION] carries an establishment
+   statement and a tenant approval in distinct parameters, so what a
+   statement is consumed as follows from where it appears, and a
+   statement in an [RFC7591] registration request is establishment.  For
+   the events of [SIGNALS], which have no request at all, the event type
+   alone determines scope.
 
    Where an authorization server hosts multiple tenants, issuer trust is
    configured per tenant.  The authorization server MUST resolve the

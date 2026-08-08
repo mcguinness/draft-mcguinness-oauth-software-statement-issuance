@@ -1053,7 +1053,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 8 February 2027</td>
+<td class="center">Expires 9 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1066,12 +1066,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-software-statement-issuance-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-07" class="published">7 August 2026</time>
+<time datetime="2026-08-08" class="published">8 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-08">8 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-09">9 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1107,7 +1107,7 @@ svg {
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 8 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 9 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2412,11 +2412,11 @@ Pragma: no-cache
           <dd class="break"></dd>
 <dt id="section-15.1-2.3">Tenant approval issuer:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.4">
-            <p id="section-15.1-2.4.1">Its statements decide which software a particular tenant permits. The tenant's own review function holds this role, and the authorization server records the tenant the issuer speaks for. Statements from a tenant approval issuer are evaluated in that tenant's request context under <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>, whether carried by the client or recorded at the authorization server by the tenant; they neither create nor renew a registration, and they bear on no other tenant.<a href="#section-15.1-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.4.1">Its statements decide which software a particular tenant permits. The tenant's own review function holds this role, and the authorization server records the tenant the issuer speaks for. Statements from a tenant approval issuer are evaluated in that tenant's request context under <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>, whether carried by the client in the parameter that specification defines for them or recorded at the authorization server by the tenant; they neither create nor renew a registration, and they bear on no other tenant.<a href="#section-15.1-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-15.1-3">An issuer <span class="bcp14">MAY</span> hold both roles. The role decides how a statement is consumed; where an issuer holds both, the consumption point breaks the tie: a statement in a registration request is establishment, and a statement accompanying a request from a client already established is tenant approval. For the events of <span>[<a href="#SIGNALS" class="cite xref">SIGNALS</a>]</span>, which have no consumption point, the event type alone determines scope.<a href="#section-15.1-3" class="pilcrow">¶</a></p>
+<p id="section-15.1-3">An issuer <span class="bcp14">MAY</span> hold both roles. The role gates acceptance rather than classifying a request: <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> carries an establishment statement and a tenant approval in distinct parameters, so what a statement is consumed as follows from where it appears, and a statement in an <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> registration request is establishment. For the events of <span>[<a href="#SIGNALS" class="cite xref">SIGNALS</a>]</span>, which have no request at all, the event type alone determines scope.<a href="#section-15.1-3" class="pilcrow">¶</a></p>
 <p id="section-15.1-4">Where an authorization server hosts multiple tenants, issuer trust is configured per tenant. The authorization server <span class="bcp14">MUST</span> resolve the tenant a request belongs to and <span class="bcp14">MUST</span> evaluate only the issuers configured for that tenant; accepting a tenant approval issuer's statement outside the tenant it speaks for is a cross-tenant escalation (<a href="#security-considerations" class="auto internal xref">Section 16</a>).<a href="#section-15.1-4" class="pilcrow">¶</a></p>
 <p id="section-15.1-5">Pairwise configuration bounds a statement's reach to the issuers a trusting authorization server has configured, which is why a statement's practical audience is an ecosystem or administrative domain rather than the open web. The OAuth Identity Assertion Trust Framework <span>[<a href="#TRUST-FRAMEWORK" class="cite xref">TRUST-FRAMEWORK</a>]</span> generalizes the model: a trusting authorization server publishes the conditions an issuer must satisfy and evaluates published evidence, such as authorization by the owner of a client identifier's namespace, when a statement is presented, replacing enumeration of trusted issuers with open-world policy. OpenID Federation <span>[<a href="#OPENID-FED" class="cite xref">OPENID-FED</a>]</span> provides an alternative through trust chains. Both are out of scope here.<a href="#section-15.1-5" class="pilcrow">¶</a></p>
 </section>

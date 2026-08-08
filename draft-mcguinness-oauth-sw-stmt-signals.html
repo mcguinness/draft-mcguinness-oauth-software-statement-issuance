@@ -1049,7 +1049,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 8 February 2027</td>
+<td class="center">Expires 9 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1062,12 +1062,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-sw-stmt-signals-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-07" class="published">7 August 2026</time>
+<time datetime="2026-08-08" class="published">8 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-08">8 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-09">9 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1100,7 +1100,7 @@ svg {
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 8 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 9 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1294,7 +1294,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
           <p id="section-4-2.2.1">Software identified by an <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> <code>software_id</code> uses the <code>iss_sub</code> format, whose <code>iss</code> member carries the statement issuer's identifier and whose <code>sub</code> member carries the <code>software_id</code>.<a href="#section-4-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-4-3">A consuming authorization server <span class="bcp14">MUST</span> match the subject by exact comparison, including the <code>iss</code> member of an <code>iss_sub</code> identifier, against the <code>sub</code> of the statements it holds and the subjects of its Withdrawal Records. A statement whose <code>sub</code> is a client identifier already registered at the authorization server (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>) has no subject identifier format defined here and is outside this specification.<a href="#section-4-3" class="pilcrow">¶</a></p>
+<p id="section-4-3">A consuming authorization server <span class="bcp14">MUST</span> match the subject by exact comparison against the statements it holds and the subjects of its Withdrawal Records: the <code>uri</code> member against a statement's <code>sub</code>, and for an <code>iss_sub</code> identifier both members, its <code>iss</code> against the statement's <code>iss</code> and its <code>sub</code> against the statement's <code>sub</code>. A statement whose <code>sub</code> is a client identifier already registered at the authorization server (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>) has no subject identifier format defined here and is outside this specification.<a href="#section-4-3" class="pilcrow">¶</a></p>
 <p id="section-4-4">A receiver <span class="bcp14">MUST</span> record a withdrawal for a subject it does not currently recognize (<a href="#withdrawal-records" class="auto internal xref">Section 5</a>) rather than discarding the event. A subject unknown at the time of an event is the ordinary case in the runtime profile, where a receiver holds no state for software until it is first presented.<a href="#section-4-4" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1304,19 +1304,20 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <a href="#section-5" class="section-number selfRef">5. </a><a href="#name-withdrawal-records" class="section-name selfRef">Withdrawal Records</a>
       </h2>
 <p id="section-5-1">A withdrawal event names a decision that ended. Its effect is durable, and a receiver that only ceases some current activity has not applied it: in the runtime profile there is no current activity to cease, and in the registration profile the client holds a statement that would otherwise restore what the event withdrew.<a href="#section-5-1" class="pilcrow">¶</a></p>
-<p id="section-5-2">On applying <code>statement-revoked</code>, <code>approval-withdrawn</code>, or <code>establishment-withdrawn</code>, a consuming authorization server <span class="bcp14">MUST</span> create or update a Withdrawal Record holding the transmitting issuer, the subject, the event type, the event's <code>event_timestamp</code>, and, for <code>statement-revoked</code>, the revoked <code>jti</code>.<a href="#section-5-2" class="pilcrow">¶</a></p>
-<p id="section-5-3">While a Withdrawal Record is retained, the receiver <span class="bcp14">MUST</span> refuse a statement matching it:<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-2">On applying <code>statement-revoked</code>, <code>approval-withdrawn</code>, or <code>establishment-withdrawn</code>, a consuming authorization server <span class="bcp14">MUST</span> create or update a Withdrawal Record holding the transmitting issuer, the subject, the event type, an effective time, and, for <code>statement-revoked</code>, the revoked <code>jti</code>.<a href="#section-5-2" class="pilcrow">¶</a></p>
+<p id="section-5-3">The effective time is the later of the event's <code>event_timestamp</code> and the time the receiver accepted the event. A receiver cannot verify that an issuer stopped issuing when it decided to withdraw, and an issuer whose renewal is automated may mint a scheduled statement between the decision and the event's arrival; taking the later of the two times keeps such a statement from restoring what the withdrawal ended. An issuer <span class="bcp14">MUST NOT</span> issue a statement for a subject after transmitting a withdrawal for that subject unless it has made a new decision to do so, and <span class="bcp14">SHOULD</span> suspend automated renewal for a subject before transmitting.<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-4">While a Withdrawal Record is retained, the receiver <span class="bcp14">MUST</span> refuse a statement matching it:<a href="#section-5-4" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5-4.1">
-          <p id="section-5-4.1.1">a <code>statement-revoked</code> record refuses the statement with that <code>jti</code>, whatever its <code>iat</code>;<a href="#section-5-4.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-5-5.1">
+          <p id="section-5-5.1.1">a <code>statement-revoked</code> record refuses the statement with that <code>jti</code>, whatever its <code>iat</code>;<a href="#section-5-5.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-5-4.2">
-          <p id="section-5-4.2.1">an <code>approval-withdrawn</code> or <code>establishment-withdrawn</code> record refuses every statement from that issuer for that subject whose <code>iat</code> is at or before the record's <code>event_timestamp</code>.<a href="#section-5-4.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-5-5.2">
+          <p id="section-5-5.2.1">an <code>approval-withdrawn</code> or <code>establishment-withdrawn</code> record refuses every statement from that issuer for that subject whose <code>iat</code> is at or before the record's effective time.<a href="#section-5-5.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-5-5">A statement from that issuer for that subject with an <code>iat</code> after the record's <code>event_timestamp</code> is a later decision by the same authority. It is accepted under the ordinary rules of <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> and <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>, and restores what the withdrawal ended. This is the only recovery path, and it requires the issuer to act.<a href="#section-5-5" class="pilcrow">¶</a></p>
-<p id="section-5-6">A refusal under this section takes effect wherever the statement would otherwise be consumed: a registration governed by a refused statement is expired as <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> defines for a lapsed registration, a runtime presentation carrying one fails as it does for a statement that is not current, and a tenant approval carrying one is treated as absent.<a href="#section-5-6" class="pilcrow">¶</a></p>
-<p id="section-5-7">A receiver <span class="bcp14">MAY</span> discard a <code>statement-revoked</code> record once the revoked statement's <code>exp</code> has passed, and <span class="bcp14">MAY</span> discard any Withdrawal Record once every statement it could refuse has expired, which a receiver that does not retain statement lifetimes bounds by the maximum lifetime it honors for that issuer (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>). Discarding a record earlier reopens the withdrawal.<a href="#section-5-7" class="pilcrow">¶</a></p>
+<p id="section-5-6">A statement from that issuer for that subject with an <code>iat</code> after the record's effective time is a later decision by the same authority. It is accepted under the ordinary rules of <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> and <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>, and restores what the withdrawal ended. This is the only recovery path, and it requires the issuer to act.<a href="#section-5-6" class="pilcrow">¶</a></p>
+<p id="section-5-7">A refusal under this section takes effect wherever the statement would otherwise be consumed: a registration governed by a refused statement is expired as <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> defines for a lapsed registration, a runtime presentation carrying one fails as it does for a statement that is not current, and a tenant approval carrying one is treated as absent. A grant already open under a refused statement continues only as far as its next currency check: a receiver <span class="bcp14">MUST</span> treat a refused statement as not current when <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> requires currency at refresh, so that a withdrawal reaches running grants on the same terms as an expiry rather than waiting for the statement's own.<a href="#section-5-7" class="pilcrow">¶</a></p>
+<p id="section-5-8">A receiver <span class="bcp14">MAY</span> discard a <code>statement-revoked</code> record once the revoked statement's <code>exp</code> has passed, and <span class="bcp14">MAY</span> discard any Withdrawal Record once every statement it could refuse has expired, which a receiver that does not retain statement lifetimes bounds by the maximum lifetime it honors for that issuer (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>). Discarding a record earlier reopens the withdrawal.<a href="#section-5-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="events">
@@ -1335,7 +1336,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <dt id="section-6-2.3">
 <code>software_statement_jti</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.4">
-          <p id="section-6-2.4.1"><span class="bcp14">OPTIONAL</span>. The <code>jti</code> of the statement the event concerns. When present, the event concerns that statement alone. When absent, the event concerns every statement the transmitting issuer has issued for the subject.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-6-2.4.1"><span class="bcp14">REQUIRED</span> in <code>statement-revoked</code>, where it names the artifact withdrawn. It <span class="bcp14">MUST NOT</span> appear in <code>approval-withdrawn</code> or <code>establishment-withdrawn</code>, which withdraw a decision rather than an artifact and therefore reach every statement the issuer has issued for the subject up to the record's effective time; a receiver <span class="bcp14">MUST</span> ignore it if present in those events. Narrowing a decision withdrawal to one artifact would leave a client's other unexpired statements untouched, which is the outcome <a href="#withdrawal-records" class="auto internal xref">Section 5</a> exists to prevent.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-2.5">
@@ -1360,7 +1361,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-approval-withdrawn" class="section-name selfRef">Approval Withdrawn</a>
         </h3>
 <p id="section-6.2-1">A tenant approval issuer withdraws its tenant's approval of the subject software.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
-<p id="section-6.2-2">A receiver <span class="bcp14">MUST</span> record the withdrawal (<a href="#withdrawal-records" class="auto internal xref">Section 5</a>) and stop treating the subject as approved for that issuer's tenant, with the effect the tenant approval rules of <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> give an absent approval. Where the receiver holds a recorded tenant approval, it is discarded. The client's establishment, and every other tenant, are unaffected.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
+<p id="section-6.2-2">A receiver <span class="bcp14">MUST</span> record the withdrawal (<a href="#withdrawal-records" class="auto internal xref">Section 5</a>) and stop treating the subject as approved for that issuer's tenant, with the effect the tenant approval rules of <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> give an absent approval. Where the receiver holds a recorded tenant approval from that issuer for that subject and tenant, it is discarded unless its <code>iat</code> is after the record's effective time, in which case it was recorded from a later decision and is retained. The client's establishment, and every other tenant, are unaffected.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="establishment-withdrawn">
@@ -1369,7 +1370,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-establishment-withdrawn" class="section-name selfRef">Establishment Withdrawn</a>
         </h3>
 <p id="section-6.3-1">An establishment issuer withdraws the subject software's listing, for example on removal from a marketplace.<a href="#section-6.3-1" class="pilcrow">¶</a></p>
-<p id="section-6.3-2">A receiver <span class="bcp14">MUST</span> record the withdrawal (<a href="#withdrawal-records" class="auto internal xref">Section 5</a>) and stop treating the subject as established. At a server implementing the registration-validity model of <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>, registrations governed by statements from that issuer for that subject are expired; at a server that does not, the registrations remain subject to that server's own client lifecycle, and the record still refuses further statements. Runtime presentation of a refused statement fails as <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> defines for a statement that is not current. The effect reaches every tenant at that authorization server.<a href="#section-6.3-2" class="pilcrow">¶</a></p>
+<p id="section-6.3-2">A receiver <span class="bcp14">MUST</span> record the withdrawal (<a href="#withdrawal-records" class="auto internal xref">Section 5</a>) and stop treating the subject as established. At a server implementing the registration-validity model of <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>, registrations governed by statements from that issuer for that subject are expired; at a server that does not, the registrations remain subject to that server's own client lifecycle, and the record still refuses further statements. A consuming authorization server implementing this specification <span class="bcp14">MUST</span> retain, for each registration it creates from a statement, that statement's <code>iss</code>, <code>sub</code>, and <code>iat</code>, whether or not it implements the registration-validity model, since a withdrawal names registrations by those values. Runtime presentation of a refused statement fails as <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> defines for a statement that is not current. The effect reaches every tenant at that authorization server.<a href="#section-6.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="metadata-changed">
@@ -1436,7 +1437,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
           <p id="section-7-5.2.1">A receiver <span class="bcp14">MUST</span> continue to enforce statement expiry independently of this mechanism. Stream loss, transmitter unavailability, or delivery failure leaves standing to end at expiry, which remains the floor.<a href="#section-7-5.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-7-6">Events may arrive out of order or be duplicated. A receiver <span class="bcp14">MUST</span> apply every withdrawal event it accepts, whatever its <code>event_timestamp</code> relative to events already applied, since withdrawals accumulate and an older one may name a statement a newer one does not. The ordering rule constrains reversal only: a receiver <span class="bcp14">MUST NOT</span> discard or narrow a Withdrawal Record on the basis of an event whose <code>event_timestamp</code> precedes the event that created it. Records are kept per subject and issuer, and per <code>jti</code> for <code>statement-revoked</code>, so that a later event never silently supersedes an earlier one of a different kind.<a href="#section-7-6" class="pilcrow">¶</a></p>
+<p id="section-7-6">Events may arrive out of order or be duplicated. A receiver <span class="bcp14">MUST</span> apply every withdrawal event it accepts, whatever its <code>event_timestamp</code> relative to events already applied, since withdrawals accumulate and an older one may name a statement a newer one does not. The ordering rule constrains reversal only: a receiver <span class="bcp14">MUST NOT</span> discard or narrow a Withdrawal Record, or discard standing-bearing state whose <code>iat</code> is after the effective time of the event in hand, on the basis of an event whose <code>event_timestamp</code> precedes the event that created it. A delayed or replayed withdrawal therefore cannot destroy an approval the tenant recorded after making it. Records are kept per subject and issuer, and per <code>jti</code> for <code>statement-revoked</code>, so that a later event never silently supersedes an earlier one of a different kind.<a href="#section-7-6" class="pilcrow">¶</a></p>
 <p id="section-7-7">An effect applied by an event does not revoke access tokens already issued. A receiver applies its own grant and token lifetime policy, as it does when a statement expires.<a href="#section-7-7" class="pilcrow">¶</a></p>
 </section>
 </div>
