@@ -10,7 +10,7 @@ This is a non-normative companion to the three drafts in this repository. It ske
 
 An enterprise runs software from many vendors. Its people install software the enterprise did not procure. Devices are a mix of managed and unmanaged. Vendor-hosted applications connect to other vendor-hosted applications on the enterprise's behalf. Every one of those connections is an OAuth client at some authorization server, and there are many authorization servers.
 
-Today the enterprise expresses "these applications are allowed" once per provider, by hand, in whatever the provider's console offers. Each list is a separate copy of the same decision, in a different format, with no expiry. Removing an application means finding every copy. Providers face the mirror problem: each must decide what to enable by default for a new customer, and has no way to learn what that customer already approved elsewhere.
+Today the enterprise expresses "these applications are allowed" once per provider, in whatever the provider's console or administrative API offers. Each list is a separate copy of the same decision, in a different format, with no expiry, and each is only as trustworthy as the credentials of whatever automation writes it. Removing an application means finding every copy. Providers face the mirror problem: each must decide what to enable by default for a new customer, and has no way to learn what that customer already approved elsewhere.
 
 Two review functions are at work, and they are routinely conflated:
 
@@ -18,6 +18,17 @@ Two review functions are at work, and they are routinely conflated:
 * The customer decides which of that software may operate in its tenant. It runs procurement, security review, and a data-protection assessment.
 
 Neither substitutes for the other. An application can be listed on a marketplace and unwelcome at a particular customer, and a customer can approve software its provider has never reviewed.
+
+## What is actually new here
+
+Two capabilities in this family have no incumbent answer, and both are provider-side:
+
+* **Registrations that expire when the decision behind them expires.** No provider offers this today, and no amount of customer-side automation creates it.
+* **Admission of clients without registering them.** A sender-constrained presentation establishes a client for a request and leaves no record, which is the only workable shape for client populations that are too numerous or too short-lived to register at all.
+
+The customer-side story is different, and worth stating plainly: a determined enterprise can already hold one approval record and drive each provider's administrative API from it, unilaterally, today. What it cannot get that way is a decision the provider verifies rather than trusts, expiring registrations, or any of this at a provider that offers no such API. The portable approval is worth having, and it is an improvement on scripting rather than a capability that does not exist.
+
+A provider can therefore adopt this in two rungs, and needs no counterparty for the first. It issues statements from its own listing program for the software it lists, consumes them under the registration-validity model, and gets delistings that actually take effect. Then it accepts runtime presentation at the token endpoint for clients that need no redirect, which asks listed publishers only to host a metadata document. Tenant approval, the layer that requires a second party, comes after both.
 
 ## Four layers
 
@@ -63,7 +74,7 @@ The enterprise reviews the application through its own process and its issuer si
 
 This is one decision, made once, in the enterprise's own system of record.
 
-Getting it to a provider takes one of two paths the consumption draft defines, and the choice is the main deployment decision on the customer side. The application can carry the statement, which requires it to be a client of that customer's issuer and to renew on that customer's cadence, a relationship per customer that the vendor must establish. Or the customer's administrator can record the statement at the provider through the provider's own interface, in which case the application carries nothing and the provider holds the approval with its expiry. The second path is closest to how consoles work today and is the practical migration route; the first suits software the customer runs itself.
+Getting it to a provider takes one of two paths the consumption draft defines, and the choice is the main deployment decision on the customer side. The application can carry the statement, in the parameter the consumption draft defines for tenant approvals, which requires it to be a client of that customer's issuer and to renew on that customer's cadence, a relationship per customer that the vendor must establish. Or the customer's administrator can record the statement at the provider through the provider's own interface, in which case the application carries nothing and the provider holds the approval with its expiry. A recorded approval is renewed either by recording a replacement or by the application carrying a later one, so the administrative step is a first-time act rather than a recurring one; automated retrieval by the provider from the customer's issuer is not defined. The second path is closest to how consoles work today and is the practical migration route; the first suits software the customer runs itself.
 
 ### 5. The customer onboards a provider
 
@@ -194,7 +205,7 @@ The profile is a separate document rather than part of either draft, since it co
 | Registrations are permanent | Registration validity is the statement's expiry, renewed while the review stands |
 | Offboarding means visiting every console | Offboarding is ceasing renewal at one issuer |
 | Marketplace listing and customer approval are conflated or unrelated | Separate issuers, separate roles, separate lifecycles, both enforced |
-| Onboarding a provider means re-entering the application estate | Onboarding a provider is one issuer configuration |
+| Onboarding a provider means re-entering the application estate | Onboarding a provider is one issuer configuration, after which approvals name it as the issuer's renewal cycle reaches them |
 | A new application needs per-provider setup | A listed application arrives carrying its listing; the customer's approval arrives with it |
 
 ## Operational realities

@@ -107,7 +107,7 @@ The subject of every event defined here is client software, identified as the `s
 * Software identified by a Client ID Metadata Document URL {{CIMD}} uses the `uri` format, whose `uri` member carries that URL exactly as it appears in the statement's `sub`.
 * Software identified by an {{RFC7591}} `software_id` uses the `iss_sub` format, whose `iss` member carries the statement issuer's identifier and whose `sub` member carries the `software_id`.
 
-A consuming authorization server MUST match the subject by exact comparison, including the `iss` member of an `iss_sub` identifier, against the `sub` of the statements it holds and the subjects of its Withdrawal Records. A statement whose `sub` is a client identifier already registered at the authorization server ({{ISSUANCE}}) has no subject identifier format defined here and is outside this specification.
+A consuming authorization server MUST match the subject by exact comparison against the statements it holds and the subjects of its Withdrawal Records: the `uri` member against a statement's `sub`, and for an `iss_sub` identifier both members, its `iss` against the statement's `iss` and its `sub` against the statement's `sub`. A statement whose `sub` is a client identifier already registered at the authorization server ({{ISSUANCE}}) has no subject identifier format defined here and is outside this specification.
 
 A receiver MUST record a withdrawal for a subject it does not currently recognize ({{withdrawal-records}}) rather than discarding the event. A subject unknown at the time of an event is the ordinary case in the runtime profile, where a receiver holds no state for software until it is first presented.
 
@@ -115,16 +115,18 @@ A receiver MUST record a withdrawal for a subject it does not currently recogniz
 
 A withdrawal event names a decision that ended. Its effect is durable, and a receiver that only ceases some current activity has not applied it: in the runtime profile there is no current activity to cease, and in the registration profile the client holds a statement that would otherwise restore what the event withdrew.
 
-On applying `statement-revoked`, `approval-withdrawn`, or `establishment-withdrawn`, a consuming authorization server MUST create or update a Withdrawal Record holding the transmitting issuer, the subject, the event type, the event's `event_timestamp`, and, for `statement-revoked`, the revoked `jti`.
+On applying `statement-revoked`, `approval-withdrawn`, or `establishment-withdrawn`, a consuming authorization server MUST create or update a Withdrawal Record holding the transmitting issuer, the subject, the event type, an effective time, and, for `statement-revoked`, the revoked `jti`.
+
+The effective time is the later of the event's `event_timestamp` and the time the receiver accepted the event. A receiver cannot verify that an issuer stopped issuing when it decided to withdraw, and an issuer whose renewal is automated may mint a scheduled statement between the decision and the event's arrival; taking the later of the two times keeps such a statement from restoring what the withdrawal ended. An issuer MUST NOT issue a statement for a subject after transmitting a withdrawal for that subject unless it has made a new decision to do so, and SHOULD suspend automated renewal for a subject before transmitting.
 
 While a Withdrawal Record is retained, the receiver MUST refuse a statement matching it:
 
 * a `statement-revoked` record refuses the statement with that `jti`, whatever its `iat`;
-* an `approval-withdrawn` or `establishment-withdrawn` record refuses every statement from that issuer for that subject whose `iat` is at or before the record's `event_timestamp`.
+* an `approval-withdrawn` or `establishment-withdrawn` record refuses every statement from that issuer for that subject whose `iat` is at or before the record's effective time.
 
-A statement from that issuer for that subject with an `iat` after the record's `event_timestamp` is a later decision by the same authority. It is accepted under the ordinary rules of {{ISSUANCE}} and {{PRESENTATION}}, and restores what the withdrawal ended. This is the only recovery path, and it requires the issuer to act.
+A statement from that issuer for that subject with an `iat` after the record's effective time is a later decision by the same authority. It is accepted under the ordinary rules of {{ISSUANCE}} and {{PRESENTATION}}, and restores what the withdrawal ended. This is the only recovery path, and it requires the issuer to act.
 
-A refusal under this section takes effect wherever the statement would otherwise be consumed: a registration governed by a refused statement is expired as {{PRESENTATION}} defines for a lapsed registration, a runtime presentation carrying one fails as it does for a statement that is not current, and a tenant approval carrying one is treated as absent.
+A refusal under this section takes effect wherever the statement would otherwise be consumed: a registration governed by a refused statement is expired as {{PRESENTATION}} defines for a lapsed registration, a runtime presentation carrying one fails as it does for a statement that is not current, and a tenant approval carrying one is treated as absent. A grant already open under a refused statement continues only as far as its next currency check: a receiver MUST treat a refused statement as not current when {{PRESENTATION}} requires currency at refresh, so that a withdrawal reaches running grants on the same terms as an expiry rather than waiting for the statement's own.
 
 A receiver MAY discard a `statement-revoked` record once the revoked statement's `exp` has passed, and MAY discard any Withdrawal Record once every statement it could refuse has expired, which a receiver that does not retain statement lifetimes bounds by the maximum lifetime it honors for that issuer ({{ISSUANCE}}). Discarding a record earlier reopens the withdrawal.
 
@@ -136,7 +138,7 @@ Each event is a member of the SET `events` claim, whose value is the event paylo
 : REQUIRED. A NumericDate value giving the time the issuer made the decision the event reports. Receivers use it to order events ({{processing}}).
 
 `software_statement_jti`:
-: OPTIONAL. The `jti` of the statement the event concerns. When present, the event concerns that statement alone. When absent, the event concerns every statement the transmitting issuer has issued for the subject.
+: REQUIRED in `statement-revoked`, where it names the artifact withdrawn. It MUST NOT appear in `approval-withdrawn` or `establishment-withdrawn`, which withdraw a decision rather than an artifact and therefore reach every statement the issuer has issued for the subject up to the record's effective time; a receiver MUST ignore it if present in those events. Narrowing a decision withdrawal to one artifact would leave a client's other unexpired statements untouched, which is the outcome {{withdrawal-records}} exists to prevent.
 
 `reason_admin`:
 : OPTIONAL. A human-readable explanation intended for an administrator, as {{CAEP}} defines the member.
@@ -151,13 +153,13 @@ A receiver MUST record the revocation ({{withdrawal-records}}) and stop honoring
 
 A tenant approval issuer withdraws its tenant's approval of the subject software.
 
-A receiver MUST record the withdrawal ({{withdrawal-records}}) and stop treating the subject as approved for that issuer's tenant, with the effect the tenant approval rules of {{PRESENTATION}} give an absent approval. Where the receiver holds a recorded tenant approval, it is discarded. The client's establishment, and every other tenant, are unaffected.
+A receiver MUST record the withdrawal ({{withdrawal-records}}) and stop treating the subject as approved for that issuer's tenant, with the effect the tenant approval rules of {{PRESENTATION}} give an absent approval. Where the receiver holds a recorded tenant approval from that issuer for that subject and tenant, it is discarded unless its `iat` is after the record's effective time, in which case it was recorded from a later decision and is retained. The client's establishment, and every other tenant, are unaffected.
 
 ## Establishment Withdrawn {#establishment-withdrawn}
 
 An establishment issuer withdraws the subject software's listing, for example on removal from a marketplace.
 
-A receiver MUST record the withdrawal ({{withdrawal-records}}) and stop treating the subject as established. At a server implementing the registration-validity model of {{PRESENTATION}}, registrations governed by statements from that issuer for that subject are expired; at a server that does not, the registrations remain subject to that server's own client lifecycle, and the record still refuses further statements. Runtime presentation of a refused statement fails as {{PRESENTATION}} defines for a statement that is not current. The effect reaches every tenant at that authorization server.
+A receiver MUST record the withdrawal ({{withdrawal-records}}) and stop treating the subject as established. At a server implementing the registration-validity model of {{PRESENTATION}}, registrations governed by statements from that issuer for that subject are expired; at a server that does not, the registrations remain subject to that server's own client lifecycle, and the record still refuses further statements. A consuming authorization server implementing this specification MUST retain, for each registration it creates from a statement, that statement's `iss`, `sub`, and `iat`, whether or not it implements the registration-validity model, since a withdrawal names registrations by those values. Runtime presentation of a refused statement fails as {{PRESENTATION}} defines for a statement that is not current. The effect reaches every tenant at that authorization server.
 
 ## Metadata Changed {#metadata-changed}
 
@@ -193,7 +195,7 @@ Two constraints bound every event:
 * An event MUST NOT create standing, extend a statement's lifetime, restore a statement previously revoked, or otherwise increase what a client may do. A receiver MUST ignore any payload member that would have such an effect. Restoring standing requires a statement, presented or delivered as {{PRESENTATION}} defines.
 * A receiver MUST continue to enforce statement expiry independently of this mechanism. Stream loss, transmitter unavailability, or delivery failure leaves standing to end at expiry, which remains the floor.
 
-Events may arrive out of order or be duplicated. A receiver MUST apply every withdrawal event it accepts, whatever its `event_timestamp` relative to events already applied, since withdrawals accumulate and an older one may name a statement a newer one does not. The ordering rule constrains reversal only: a receiver MUST NOT discard or narrow a Withdrawal Record on the basis of an event whose `event_timestamp` precedes the event that created it. Records are kept per subject and issuer, and per `jti` for `statement-revoked`, so that a later event never silently supersedes an earlier one of a different kind.
+Events may arrive out of order or be duplicated. A receiver MUST apply every withdrawal event it accepts, whatever its `event_timestamp` relative to events already applied, since withdrawals accumulate and an older one may name a statement a newer one does not. The ordering rule constrains reversal only: a receiver MUST NOT discard or narrow a Withdrawal Record, or discard standing-bearing state whose `iat` is after the effective time of the event in hand, on the basis of an event whose `event_timestamp` precedes the event that created it. A delayed or replayed withdrawal therefore cannot destroy an approval the tenant recorded after making it. Records are kept per subject and issuer, and per `jti` for `statement-revoked`, so that a later event never silently supersedes an earlier one of a different kind.
 
 An effect applied by an event does not revoke access tokens already issued. A receiver applies its own grant and token lifetime policy, as it does when a statement expires.
 
