@@ -79,6 +79,7 @@ Table of Contents
      6.1.  Software Statement Code Response
    7.  Software Statement Code Redemption
    8.  Token Exchange Profile
+     8.1.  Renewal
    9.  Deferred Processing
    10. Software Statement Token Response
      10.1.  Terminal Denial
@@ -90,8 +91,9 @@ Table of Contents
      13.3.  Client Metadata Retrieval
      13.4.  Authorization Response Security
      13.5.  Token Exchange Considerations
-     13.6.  Signing Keys and Algorithms
-     13.7.  Approver Identity and Audit
+     13.6.  Renewal by Prior Statement
+     13.7.  Signing Keys and Algorithms
+     13.8.  Approver Identity and Audit
    14. Privacy Considerations
    15. IANA Considerations
      15.1.  OAuth Authorization Endpoint Response Types Registry
@@ -800,15 +802,24 @@ Table of Contents
    requested_token_type:  REQUIRED.  The value MUST be
       urn:ietf:params:oauth:token-type:software-statement.
 
-   subject_token and subject_token_type:  REQUIRED.  The subject token
-      is an initial access token: an authorization credential issued out
-      of band by this authorization server that pre-authorizes software
-      statement issuance, analogous to the initial access token of
-      [RFC7591], presented with a subject_token_type of
-      urn:ietf:params:oauth:token-type:access_token.  The credential
-      MUST be bound to the client_id of the request.  This version
-      defines no other subject token type; renewal from a previously
-      issued software statement is a deferred capability (Appendix A).
+   subject_token and subject_token_type:  REQUIRED.  One of two subject
+      tokens, according to what the client is asking for:
+
+      *  *First issuance.* An initial access token: an authorization
+         credential issued out of band by this authorization server that
+         pre-authorizes software statement issuance, analogous to the
+         initial access token of [RFC7591], presented with a
+         subject_token_type of urn:ietf:params:oauth:token-
+         type:access_token.  The credential MUST be bound to the
+         client_id of the request.  It is deployment-defined: this
+         profile standardizes the exchange, not the credential, and
+         software_statement_subject_token_types_supported (Section 12)
+         is what tells a client which types an issuer accepts.
+
+      *  *Renewal.* A software statement this authorization server
+         previously issued for the same sub, presented with a
+         subject_token_type of urn:ietf:params:oauth:token-
+         type:software-statement (Section 8.1).
 
    client_id:  REQUIRED.  The client identifier URL described in
       Section 4.
@@ -833,6 +844,29 @@ Table of Contents
    invalid_request, as Section 2.2.2 of [RFC8693] requires for a subject
    token that is invalid or unacceptable under policy.  An unacceptable
    requested audience results in invalid_target [RFC8693].
+
+8.1.  Renewal
+
+   A client renews by presenting its current or most recent software
+   statement as the subject token.  The authorization server MUST verify
+   that it issued the statement, that the statement's sub equals the
+   request's client_id, and that the client authenticated with a key
+   carried by the Client ID Metadata Document the statement vouches for.
+   That authentication is the holder binding: a statement is otherwise a
+   bearer artifact, and without it whoever held a copy could renew.
+
+   The authorization server MAY accept a statement that has expired, and
+   SHOULD bound how long after expiry it will do so, since a client
+   absent for an extended period is asking to be re-established rather
+   than renewed.  Whether renewal requires fresh review is issuer
+   policy; the request is a new issuance decision, and the issuer re-
+   evaluates the current document as it would for any other request
+   (Section 4.1).
+
+   Renewal needs no credential beyond the statement the client already
+   holds, which is what keeps automated renewal from depending on an
+   out-of-band credential outliving every statement it renews
+   (Section 13).
 
    An initial access token presented under this profile MUST be:
 
@@ -1187,7 +1221,9 @@ Table of Contents
       subject_token_type values the authorization server accepts when
       requested_token_type is urn:ietf:params:oauth:token-type:software-
       statement.  Publication of this member is the discovery signal for
-      the profile.
+      the profile, and listing urn:ietf:params:oauth:token-
+      type:software-statement among the values is how an issuer
+      advertises renewal by prior statement (Section 8.1).
 
 13.  Security Considerations
 
@@ -1337,7 +1373,22 @@ Table of Contents
    NOT treat a token exchange as implying prior user consent and MUST
    apply the same issuance and approval policy as for the redirect flow.
 
-13.6.  Signing Keys and Algorithms
+13.6.  Renewal by Prior Statement
+
+   A statement is a bearer artifact, so accepting one as a subject token
+   is safe only alongside the holder binding Section 8.1 requires: the
+   client authenticates with a key the reviewed document carries, which
+   a party holding only a stolen copy cannot do.  Binding renewal to
+   that key also keeps automated renewal from needing a long-lived
+   reusable initial access token, which would be a standing credential
+   to mint statements (Section 13.5).
+
+   An issuer accepting expired statements SHOULD bound how long after
+   expiry it will do so.  Without a bound, a client absent long enough
+   for its review to be meaningless can still renew rather than being
+   re-established.
+
+13.7.  Signing Keys and Algorithms
 
    Compromise of a software-statement signing key enables an attacker to
    mint statements for every audience that trusts that key.
@@ -1353,7 +1404,7 @@ Table of Contents
       allowed for the issuer and MUST follow [RFC8725] when selecting
       keys and validating JWTs.
 
-13.7.  Approver Identity and Audit
+13.8.  Approver Identity and Audit
 
    The software statement attests to metadata; it does not identify the
    human or system that approved issuance.  Deployments that require
