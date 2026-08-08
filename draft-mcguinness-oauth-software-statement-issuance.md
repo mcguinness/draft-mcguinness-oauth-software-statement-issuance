@@ -479,7 +479,10 @@ The client sends a token exchange request as defined in Section 2.1 of {{RFC8693
 : REQUIRED. The value MUST be `urn:ietf:params:oauth:token-type:software-statement`.
 
 `subject_token` and `subject_token_type`:
-: REQUIRED. The subject token is an initial access token: an authorization credential issued out of band by this authorization server that pre-authorizes software statement issuance, analogous to the initial access token of {{RFC7591}}, presented with a `subject_token_type` of `urn:ietf:params:oauth:token-type:access_token`. The credential MUST be bound to the `client_id` of the request. This version defines no other subject token type; renewal from a previously issued software statement is a deferred capability ({{design-rationale}}).
+: REQUIRED. One of two subject tokens, according to what the client is asking for:
+
+  * **First issuance.** An initial access token: an authorization credential issued out of band by this authorization server that pre-authorizes software statement issuance, analogous to the initial access token of {{RFC7591}}, presented with a `subject_token_type` of `urn:ietf:params:oauth:token-type:access_token`. The credential MUST be bound to the `client_id` of the request. It is deployment-defined: this profile standardizes the exchange, not the credential, and `software_statement_subject_token_types_supported` ({{authorization-server-metadata}}) is what tells a client which types an issuer accepts.
+  * **Renewal.** A software statement this authorization server previously issued for the same `sub`, presented with a `subject_token_type` of `urn:ietf:params:oauth:token-type:software-statement` ({{renewal}}).
 
 `client_id`:
 : REQUIRED. The client identifier URL described in {{client-identity}}.
@@ -495,6 +498,14 @@ The request MUST NOT contain `actor_token` or `actor_token_type`, nor the `scope
 The client authenticates according to {{client-identity}}, whose sender-constraint rules apply to the exchange; the polling rules of {{deferred-processing}} govern any resulting deferral.
 
 The authorization server MUST validate the subject token before retrieving client-controlled metadata or enqueueing any processing. An invalid, expired, or revoked subject token, or one that does not authorize issuance for the presented `client_id`, MUST result in `invalid_request`, as Section 2.2.2 of {{RFC8693}} requires for a subject token that is invalid or unacceptable under policy. An unacceptable requested audience results in `invalid_target` {{RFC8693}}.
+
+## Renewal {#renewal}
+
+A client renews by presenting its current or most recent software statement as the subject token. The authorization server MUST verify that it issued the statement, that the statement's `sub` equals the request's `client_id`, and that the client authenticated with a key carried by the Client ID Metadata Document the statement vouches for. That authentication is the holder binding: a statement is otherwise a bearer artifact, and without it whoever held a copy could renew.
+
+The authorization server MAY accept a statement that has expired, and SHOULD bound how long after expiry it will do so, since a client absent for an extended period is asking to be re-established rather than renewed. Whether renewal requires fresh review is issuer policy; the request is a new issuance decision, and the issuer re-evaluates the current document as it would for any other request ({{metadata-snapshot}}).
+
+Renewal needs no credential beyond the statement the client already holds, which is what keeps automated renewal from depending on an out-of-band credential outliving every statement it renews ({{security-considerations}}).
 
 An initial access token presented under this profile MUST be:
 
@@ -659,7 +670,7 @@ This specification defines the following additional authorization server metadat
 : REQUIRED for an authorization server that issues software statements under this specification. A JSON array containing the asymmetric JWS `alg` values that the authorization server can use to sign software statements. The array MUST NOT contain `none` or a symmetric algorithm. This member describes the issuing role; an authorization server that only accepts software statements does not publish it.
 
 `software_statement_subject_token_types_supported`:
-: REQUIRED for an authorization server that supports the token exchange profile ({{token-exchange-profile}}), and absent otherwise. A JSON array of the `subject_token_type` values the authorization server accepts when `requested_token_type` is `urn:ietf:params:oauth:token-type:software-statement`. Publication of this member is the discovery signal for the profile.
+: REQUIRED for an authorization server that supports the token exchange profile ({{token-exchange-profile}}), and absent otherwise. A JSON array of the `subject_token_type` values the authorization server accepts when `requested_token_type` is `urn:ietf:params:oauth:token-type:software-statement`. Publication of this member is the discovery signal for the profile, and listing `urn:ietf:params:oauth:token-type:software-statement` among the values is how an issuer advertises renewal by prior statement ({{renewal}}).
 
 # Security Considerations {#security-considerations}
 
@@ -718,6 +729,12 @@ A token exchange reaches the token endpoint without prior user-agent interaction
 A subject token is an authorization credential, not a client identifier or substitute for client authentication when the Client ID Metadata Document establishes a method. Because it appears in a form body, any component recording request bodies can expose it. Authorization servers MUST exclude subject tokens from logs, traces, error messages, and audit records; clients and authorization servers MUST protect the credential as a bearer credential unless its format provides proof of possession. The binding, lifetime, entropy, and replay requirements of {{token-exchange-profile}} limit disclosure impact.
 
 No response parameter transits a browser, but there is also no in-band evidence of user participation. An authorization server MUST NOT treat a token exchange as implying prior user consent and MUST apply the same issuance and approval policy as for the redirect flow.
+
+## Renewal by Prior Statement
+
+A statement is a bearer artifact, so accepting one as a subject token is safe only alongside the holder binding {{renewal}} requires: the client authenticates with a key the reviewed document carries, which a party holding only a stolen copy cannot do. Binding renewal to that key also keeps automated renewal from needing a long-lived reusable initial access token, which would be a standing credential to mint statements ({{te-considerations}}).
+
+An issuer accepting expired statements SHOULD bound how long after expiry it will do so. Without a bound, a client absent long enough for its review to be meaningless can still renew rather than being re-established.
 
 ## Signing Keys and Algorithms
 

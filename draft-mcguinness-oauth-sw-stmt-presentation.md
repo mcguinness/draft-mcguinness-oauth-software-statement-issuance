@@ -452,7 +452,9 @@ Nothing in this specification relaxes the validation rules of {{ISSUANCE}}; it a
 
 ## Renewal Authenticates the Credential
 
-Registration renewal proves possession of the registration's own credential and the currency of a statement sharing the governing `iss` and `sub`. It does not prove that the renewing party is the reviewed software: an attacker holding a stolen client credential can renew indefinitely with any current statement for that software, which circulates by design to every deployment of it. Renewal keeps the review current, not the credential honest. Deployments SHOULD pair statement-governed registrations with credential rotation, sender-constrained client authentication, and the registration limits {{ISSUANCE}} recommends, and SHOULD treat a credential compromise as requiring re-registration rather than renewal. The runtime profile does not share this gap, because the sender-constraint chain binds the presenter to the review at every presentation.
+Renewing a registration proves possession of the registration's own credential and the currency of a statement sharing the governing `iss` and `sub`. It does not prove that the renewing party is the reviewed software: an attacker holding a stolen client credential can renew indefinitely with any current statement for that software, which circulates by design to every deployment of it. Renewal keeps the review current, not the credential honest.
+
+Deployments SHOULD pair statement-governed registrations with credential rotation, sender-constrained client authentication, and the limits of {{multi-instance}}, and SHOULD treat a credential compromise as requiring re-registration rather than renewal. Runtime presentation does not share this gap, because the proof binds the presenter to the reviewed document at every presentation.
 
 ## External Retrieval and Resource Exhaustion {#external-retrieval}
 
