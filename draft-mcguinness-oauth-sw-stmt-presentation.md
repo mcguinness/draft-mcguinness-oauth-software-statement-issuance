@@ -42,6 +42,18 @@ normative:
     title: "OAuth 2.0 Software Statement Issuance"
 
 informative:
+  AU-CDR:
+    target: https://consumerdatastandardsaustralia.github.io/standards/
+    title: "Consumer Data Standards (Australia)"
+  OPENID-FED:
+    target: https://openid.net/specs/openid-federation-1_0.html
+    title: "OpenID Federation 1.0"
+  STATUS-LIST:
+    target: https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list
+    title: "Token Status List"
+  TRUST-FRAMEWORK:
+    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-assertion-framework
+    title: "OAuth Identity Assertion Trust Framework"
   ABCA:
     target: https://datatracker.ietf.org/doc/draft-ietf-oauth-attestation-based-client-auth
     title: "OAuth 2.0 Attestation-Based Client Authentication"
@@ -164,6 +176,53 @@ This document consumes the software statement of {{ISSUANCE}}. The syntax, valid
 : Binds the issuer's review to the exact document bytes evaluated and feeds the post-issuance change policy of {{ISSUANCE}}.
 
 A statement lacking any of these cannot be consumed under this specification, whatever a registration endpoint might otherwise accept, and one failing validation is rejected as {{errors}} defines.
+
+# Issuer Trust Establishment {#issuer-trust}
+
+A trusting authorization server accepts statements only from configured issuers. Trust is established out of band, for example through a marketplace publisher program or shared enterprise operation. This specification defines no in-band issuer discovery or trust decision.
+
+Configuring trust in an issuer is a one-time act that covers every client that issuer attests, so a trusting authorization server maintains a small, stable set of trusted issuers rather than per-client state. For each, it records at least:
+
+* the exact `iss` identifier it will accept;
+* the source of that issuer's signing keys: the `jwks_uri` in the issuer's authorization server metadata {{RFC8414}}, reached from the configured `iss`;
+* the signing algorithms it will accept from the issuer;
+* the client identifier namespaces the issuer may attest through `sub`;
+* the audience identifiers the issuer may name;
+* the maximum statement lifetime it will honor, which also caps registration validity where the server implements the registration-validity model of {{registration-validity}};
+* the role in which it accepts the issuer ({{issuer-roles}}); and
+* its policy on repeated and multiple registration ({{multi-instance}}).
+
+These inputs, not the signature alone, define acceptance. Because the issuer is an authorization server role, key retrieval reuses {{RFC8414}} discovery ({{authorization-server-metadata}}).
+
+A trusting authorization server MUST derive trust from this local configuration and MUST NOT derive it from an `iss`, `jku`, `x5u`, or other key-location value carried in a presented statement. Having established trust, it validates each statement as described in {{ISSUANCE}}.
+
+Issuer trust SHOULD be scoped as well as explicit. An issuer accepted for all values of `sub` can, if compromised or over-broad, mint acceptable statements about any client software; trust configuration SHOULD therefore constrain each issuer to the client identifier namespaces it is expected to attest, for example URLs under the domains of the software publishers it serves, and a statement whose `sub` falls outside that scope MUST be rejected even when its signature verifies ({{ISSUANCE}}). Where an issuer attests software across many publishers, as an enterprise issuer does, the scope is the set of identifiers it is configured for rather than a single domain; the rejection rule is the same.
+
+## Issuer Roles {#issuer-roles}
+
+A trusting authorization server accepts an issuer in one of two roles, and records which when it configures the issuer. The roles answer different questions, are held by different parties, and run on separate lifecycles.
+
+Establishment issuer:
+: Its statements decide which software may exist as a client at this authorization server. A marketplace publisher program or an ecosystem directory holds this role. Statements from an establishment issuer are consumed at registration or at runtime establishment, and govern registration validity where this specification applies that model. One such decision serves every tenant the authorization server hosts.
+
+Tenant approval issuer:
+: Its statements decide which software a particular tenant permits. The tenant's own review function holds this role, and the authorization server records the tenant the issuer speaks for. An issuer in this role serves its current decisions rather than handing them to clients to carry ({{approvals-endpoint}}), because withdrawing an approval is the point of holding one and the restricted party must not control its conveyance. A tenant approval statement is recorded at the authorization server by the tenant it governs and evaluated in that tenant's request context under this specification; it neither creates nor renews a registration, and it bears on no other tenant.
+
+An issuer MAY hold both roles, and the two consumptions never collide: an establishment statement arrives in a request, a tenant approval is recorded out of band. For the events of {{SIGNALS}}, the event type determines scope.
+
+Where an authorization server hosts multiple tenants, issuer trust is configured per tenant. The authorization server MUST resolve the tenant a request belongs to and MUST evaluate only the issuers configured for that tenant; accepting a tenant approval issuer's statement outside the tenant it speaks for is a cross-tenant escalation ({{security-considerations}}).
+
+## Serving Current Approvals {#approvals-endpoint}
+
+An issuer in the tenant approval role serves the statements it currently has in force to the authorization servers they name. A request carries the requesting authorization server's issuer identifier as the audience of interest; the response is a JSON object whose `software_statements` member is an array of the statements in force naming that audience, and whose HTTP caching headers bound how long the response may be reused. An empty array is a well-formed answer, and means the issuer has no approvals in force for that audience.
+
+Absence is how an approval ends. An issuer withdrawing an approval stops serving it, and a consuming authorization server that no longer receives it treats the approval as it treats an expired one (this specification). This is why the endpoint serves the set in force rather than answering questions about individual subjects: a per-subject query cannot distinguish a withdrawn approval from one the issuer never made.
+
+The endpoint is authenticated. The two parties already exchange issuer identifiers and keys when trust is established ({{issuer-trust}}), and the credential a requesting authorization server presents is part of that configuration; this document defines no new credential type. An issuer MUST serve only the statements naming the requester's own audience, and MUST NOT reveal statements naming other authorization servers.
+
+An issuer supporting this endpoint advertises it as `software_statement_approvals_endpoint` ({{authorization-server-metadata}}). An issuer in the establishment role does not serve statements this way: those are carried by the clients they admit, and serving them on request would disclose which authorization servers a client intends to establish relationships with.
+
+Pairwise configuration bounds a statement's reach to the issuers a trusting authorization server has configured, which is why a statement's practical audience is an ecosystem or administrative domain rather than the open web. The OAuth Identity Assertion Trust Framework {{TRUST-FRAMEWORK}} generalizes the model: a trusting authorization server publishes the conditions an issuer must satisfy and evaluates published evidence, such as authorization by the owner of a client identifier's namespace, when a statement is presented, replacing enumeration of trusted issuers with open-world policy. OpenID Federation {{OPENID-FED}} provides an alternative through trust chains. Both are out of scope here.
 
 # Presentation at Registration {#dcr-presentation}
 
@@ -318,6 +377,39 @@ A client already established at an authorization server, whether registered thro
 
 A registration created from a statement is statement-governed when the server advertises `software_statement_registration_validity_supported`. The validity and revalidation model of {{registration-validity}} and {{revalidation}} applies, with the delivered statement's `sub` equal to the registered `client_id`. The request authenticates as the registered client under the registration's own method; the delivered statement renews validity and does not otherwise alter the registration. Where the registration is still valid and the server requires a current statement, a refresh-token request that omits one or delivers one failing these rules is rejected with `invalid_grant`. Where the registration has already expired, {{revalidation}} governs and the rejection is `invalid_client` at every endpoint.
 
+# Multi-Instance Client Software {#multi-instance}
+
+A software statement attests client software, identified by `sub`; it does not attest or identify the runtime instances of that software. This specification defines no instance identifier, and instances do not obtain per-instance statements. This section concerns the registration path ({{ISSUANCE}}); under runtime presentation (this specification) the presenter proves a key that chains to the statement, an instance is identified only where that key material is per-instance, and no persistent registration is created.
+
+A single unexpired statement is therefore intended to be presented more than once: at each trusting authorization server in its audience and, where local policy permits, in more than one registration at the same authorization server, for example one registration per deployment or tenant. Where those servers implement the registration-validity model of {{registration-validity}}, every registration derived from one statement inherits its `exp` and lapses at the same moment, which is what the staggering guidance of {{ISSUANCE}} addresses. A trusting authorization server SHOULD use the statement's `sub` and `jti` to inventory the registrations derived from a statement and to enforce any local bound on their number.
+
+A trusting authorization server SHOULD bound the number of registrations derived from one statement at one local audience. The safe default is one registration per (`iss`, `sub`, `jti`, local audience), the same key this specification uses to inventory establishments. On repeated presentation, local policy can reject the request, treat it as idempotent, or create another registration; {{RFC7591}} defines no duplicate-registration protocol.
+
+A server that treats a repeat as idempotent MUST NOT disclose the credentials or registration access token of the prior registration to a later presenter unless it independently authorizes that presenter.
+
+Deployments whose client software runs many concurrent instances SHOULD register the logical client once per authorization server and differentiate instances at the token endpoint, for example with {{CLIENT-INSTANCE}} or attestation-based client authentication {{ABCA}}, rather than minting a registration per instance. The statement's key material determines which registration models it can support:
+
+* Shared client key: if the statement contains `jwks` or `jwks_uri`, that attested value takes precedence under {{RFC7591}}, and every registration derived from the statement MUST use the attested key material rather than an instance-supplied replacement. It also fixes the runtime proof, as {{statement-validation}} describes.
+* Per-instance keys: where authorization server policy is keyed on `client_id` and genuinely requires per-instance registrations, the same statement supports that model only if it omits `jwks` and `jwks_uri`; each registration then supplies its own instance key as plain metadata, subject to trusting authorization server policy and the presenter-proof guidance of {{statement-validation}}.
+* Attested delegation: the statement omits key material but attests the `instance_issuers` delegation ({{attesting-instance-issuers}}), so instance keys are endorsed by an attested authority at the token endpoint instead of appearing unattested in registration metadata.
+
+## Attesting Instance Issuers {#attesting-instance-issuers}
+
+{{CLIENT-INSTANCE}} defines the `instance_issuers` client metadata parameter, through which a client delegates attestation of its runtime instances to named authorities. For the purposes of this specification, `instance_issuers` is client metadata like any other: it can appear in the canonical Client ID Metadata Document and be carried as an attested claim in the software statement.
+
+A statement containing `instance_issuers` attests the instance-attestation delegation instead of presenting a self-asserted list. This avoids dependence on document availability or locally configured lists. An issuing authorization server SHOULD include `instance_issuers` in a statement only when it recognizes the member and its approval process covered the delegation the member expresses.
+
+For example, the following claims fragment attests one instance issuer for the client:
+
+~~~
+"instance_issuers": [
+  {
+    "issuer": "https://workload.client.example.org",
+    "jwks_uri": "https://workload.client.example.org/jwks.json"
+  }
+]
+~~~
+
 # Deployment Model: Centrally Curated Software {#deployment-model}
 
 This section is non-normative.
@@ -431,6 +523,31 @@ The `jwks_uri` chain verifies keys at an attested location, not attested keys: `
 Runtime presentation can cause the authorization server to retrieve the Client ID Metadata Document, an attested `jwks_uri`, or keys and metadata associated with an attested instance issuer. Every such retrieval inherits the server-side request forgery protections of {{CIMD}}. A trusted signature does not make a URL safe: the authorization server MUST apply its URL, redirect, address-range, transport, and content-type policy independently to every referenced location.
 
 Presentation reaches these retrievals before any client is registered or any user has interacted, so the work is available to an unauthenticated requester holding one acceptable statement. An authorization server SHOULD rate-limit presentations per statement identity, per subject, and per source, and SHOULD bound the establishments it will create from one statement ({{effective-metadata}}), before spending retrieval or storage on a new presentation. Before initiating a client-controlled retrieval, the authorization server MUST complete the statement checks that do not depend on that retrieval, including signature, issuer, audience, lifetime, subject, and claim-contract validation. It SHOULD bound JWT size and parsing work, concurrent retrievals, response size, and response time, and SHOULD cache successful and failed retrieval results for an appropriate period. A retrieval failure leaves the relevant metadata or proof chain unverified; the authorization server MUST reject the request and MUST NOT fall back to a weaker sender-constraint mode.
+
+## Statement Validation and Replay {#statement-validation}
+
+A software statement is reusable ({{multi-instance}}) and, until expiry, so is a stolen copy at every registration endpoint in its audience. Issuers SHOULD use the narrowest practical audience and lifetime, and the registration bounds of {{multi-instance}} limit what a stolen statement can create. This replay exposure is specific to the registration path; this specification requires a runtime presentation to prove a key that chains to the statement, which makes a stolen statement inert there to every party outside the issuer's review.
+
+When registrations derived from a statement are intended to share a client key, and the canonical metadata provides `jwks` or `jwks_uri`, the issuer SHOULD include that member in the attested metadata. A trusting authorization server can then require proof of the corresponding private key during or after registration, making a stolen statement unusable without that key. Attesting `jwks_uri` attests the location, not its contents: a compromised key host can add keys that satisfy such proofs with no digest change, so where that exposure matters, attest `jwks` inline and accept digest-visible rotation. When each registration is expected to supply a distinct instance key, the issuer MUST omit `jwks` and `jwks_uri` so that plain registration metadata can carry that key without conflicting with {{RFC7591}} precedence. Omitting key material also forecloses runtime presentation: this specification admits only a key the statement itself attests, so an issuer whose software will be presented at runtime attests `jwks` or `jwks_uri`.
+
+A statement authorizes metadata, not its presenter. If it omits attested key material for per-instance keys ({{multi-instance}}), any holder can register its own key. A trusting authorization server SHOULD require independent proof that the presenter is an authorized instance of the software before accepting such a registration, such as {{ABCA}}, an attested `instance_issuers` chain ({{attesting-instance-issuers}}), or a registration credential the trusting server issued. Without such proof, the one-registration-per-statement default of {{multi-instance}} bounds exposure.
+
+Renewal in this version does not accept a prior software statement as a subject token; a client renews by presenting an initial access token to the token exchange profile ({{ISSUANCE}}) or by making a new software statement request. A stolen statement therefore cannot be exchanged for a fresh one that outlives it. The consumption side carries a different exposure: delivering a replacement to an existing registration proves that registration's own credential and the currency of any statement for the software, not that the deliverer is the reviewed software, so a stolen client credential can sustain a registration indefinitely. this specification states that limit and the credential-rotation and re-registration practices that answer it. Statement-as-subject renewal, and the holder binding against current metadata it requires, is deferred to a future version ({{ISSUANCE}}).
+
+This specification does not define online revocation, and defines no status claim for it. Short lifetimes bound exposure; the Australian Consumer Data Right Register uses ten minutes ({{AU-CDR}}). Scoped trust supports emergency removal of a compromised issuer or namespace ({{issuer-trust}}). An extension could add acceptance-time status, for example a claim referencing a Token Status List {{STATUS-LIST}}, along with the processing rules a trusting authorization server would apply ({{ISSUANCE}}). {{SIGNALS}} defines the event-driven alternative, carrying withdrawal over the pairwise relationship that already exists between issuer and trusting authorization server, shortening the interval between a decision and its effect while leaving expiry as the floor.
+
+At a server that does not implement the registration-validity model of {{registration-validity}}, revocation does not undo registrations already derived from a statement, and responding to malicious software after registration is client lifecycle management at that server. Where that model is in force, a registration expires at the recorded `exp` unless a replacement renews it, so ceasing renewal retires the registration without per-server action.
+
+The explicit, scoped issuer trust configuration that acceptance depends on, and the requirement never to derive trust from key-location values in the statement itself, are specified in {{issuer-trust}}.
+
+At an authorization server hosting multiple tenants, the tenant a statement is evaluated in is part of its meaning. A tenant approval issuer speaks only for its own tenant ({{issuer-roles}}), so accepting its statement in another tenant's context grants one customer's approval authority over another customer's data. An authorization server MUST bind each configured tenant approval issuer to its tenant and resolve the tenant from the request before evaluating any statement.
+
+
+## Registration Fraud and Impersonation {#registration-fraud}
+
+Open registration permits `client_name`, `logo_uri`, and `client_uri` values that imitate trusted software on consent screens. Requiring a statement replaces self-asserted branding with issuer-reviewed values. Servers that render registration-supplied values on consent screens SHOULD prefer attested values and SHOULD apply heightened scrutiny to unattested registrations that claim user-visible branding.
+
+Statement-gated registration also makes each rotated identity require another issuer decision, rather than letting a discarded client return at no cost; `sub` and `jti` tracking bounds registrations ({{multi-instance}}). Neither control makes metadata true: a client that misleads review can obtain a genuine statement for fraudulent metadata, so issuer verification depth remains decisive ({{ISSUANCE}}).
 
 ## Approval Availability
 
