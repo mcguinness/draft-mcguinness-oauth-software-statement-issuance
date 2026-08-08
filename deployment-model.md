@@ -154,13 +154,12 @@ Approvals that a provider retrieves end by absence, so nothing more is needed fo
 
 [Shared Signals Events for OAuth Software Statements](draft-mcguinness-oauth-sw-stmt-signals.md), the third draft in this repository, defines those events over the [Shared Signals Framework](https://openid.net/specs/openid-sharedsignals-framework-1_0.html). The statement issuer is the transmitter, the trusting authorization server is the receiver, events travel as [Security Event Tokens](https://www.rfc-editor.org/rfc/rfc8417.html) over the framework's push or poll delivery, and subjects use the [identifier formats of RFC 9493](https://www.rfc-editor.org/rfc/rfc9493.html): the `uri` format for a Client ID Metadata Document URL, and `iss_sub` for an `software_id` under the issuer that names it. Nothing new is invented at the transport or trust layer; the profile's work is naming events and their effects.
 
-Four events carry the semantics this deployment needs:
+One event carries the semantics this deployment needs, in two forms:
 
-| Event | Meaning | Layer | Effect and blast radius |
-| --- | --- | --- | --- |
-| Statement revoked | This artifact, by `jti`, is no longer good | Whichever layer issued it | Refuse that statement before its expiry, durably |
-| Establishment withdrawn | The software is no longer established here | Establishment | Refuse its statements and expire the registration early, for every tenant at that provider |
-| Metadata changed | The published metadata no longer matches what was reviewed | Advisory | Apply the server's change policy as though it had observed the change; it can add a reason to distrust, never clear one |
+| Event | Meaning | Effect and blast radius |
+| --- | --- | --- |
+| Withdrawn, naming no artifact | The review is over | Refuse every statement that issuer made for that subject up to the withdrawal, durably, and expire registrations governed by one |
+| Withdrawn, naming a `jti` | One statement was mis-issued while the review stands | Refuse that statement alone |
 
 Two properties make this safe to add without weakening what is already specified.
 

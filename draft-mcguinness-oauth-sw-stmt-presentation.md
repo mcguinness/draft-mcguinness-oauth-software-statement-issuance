@@ -223,11 +223,9 @@ A request under an expired registration that does not restore it is rejected wit
 
 A delivery that fails the rules above under a still-valid registration leaves the recorded statement unchanged and does not fail the request it accompanies; the authorization server SHOULD signal the declined renewal in `error_description` on a subsequent rejection or through its registration management interface, and the client can distinguish success by the registration's continued validity past the recorded `exp`. A registration request without an {{RFC7592}} registration access token creates a new registration and never renews an existing one.
 
-## Version Changes {#version-changes}
+## Change After Review {#version-changes}
 
-A review covers the software the issuer evaluated, and `software_version` is the DCR profile's change signal: its value changes on any update to the software. When the statement attests it, the binding rules of {{ISSUANCE}} reject a registration request whose `software_version` differs. A replacement delivered outside a registration request carries no such member, so the authorization server MUST instead compare the replacement's attested `software_version` with the value recorded for the registration: a replacement attesting a different version is a version change, not a renewal. The authorization server MUST reject it as a renewal, and MAY instead treat it as a new registration decision under its registration policy, updating the recorded version if it accepts one. A new version therefore requires a new review and a statement covering it. A version string is a vendor-asserted label, not a byte binding; the guarantee is review-of-what-the-vendor-calls-that-version.
-
-The CIMD profile's change signal is `cimd_digest`, which is byte-exact: a mismatch against the currently published document is a policy input under {{ISSUANCE}}, and re-issuance against the new document is the remedy. In both profiles the statement's bounded lifetime caps how stale a review can get: drift the change signal misses still expires with the statement.
+A review covers the document the issuer evaluated, and `cimd_digest` is what says which one. A mismatch against the currently published document is a policy input under {{ISSUANCE}} rather than an automatic failure, and re-issuance against the new document is the remedy. The statement's bounded lifetime caps how stale a review can get: drift the digest comparison never observes still expires with the statement.
 
 # Runtime Presentation {#cimd-presentation}
 
@@ -325,38 +323,13 @@ A client already established at an authorization server, whether registered thro
 
 A registration created from a statement is statement-governed when the server advertises `software_statement_registration_validity_supported`. The validity and revalidation model of {{registration-validity}} and {{revalidation}} applies, with the delivered statement's `sub` equal to the registered `client_id`. The request authenticates as the registered client under the registration's own method; the delivered statement renews validity and does not otherwise alter the registration. Where the registration is still valid and the server requires a current statement, a refresh-token request that omits one or delivers one failing these rules is rejected with `invalid_grant`. Where the registration has already expired, {{revalidation}} governs and the rejection is `invalid_client` at every endpoint.
 
-# Multi-Instance Client Software {#multi-instance}
+# Registrations Derived from One Statement {#multi-instance}
 
-A software statement attests client software, identified by `sub`; it does not attest or identify the runtime instances of that software. This specification defines no instance identifier, and instances do not obtain per-instance statements. This section concerns the registration path ({{ISSUANCE}}); under runtime presentation (this specification) the presenter proves a key that chains to the statement, an instance is identified only where that key material is per-instance, and no persistent registration is created.
+A statement attests client software, identified by `sub`; it does not identify the runtime instances of that software, and this specification defines no instance identifier.
 
-A single unexpired statement is therefore intended to be presented more than once: at each trusting authorization server in its audience and, where local policy permits, in more than one registration at the same authorization server, for example one registration per deployment or tenant. Where those servers implement the registration-validity model of {{registration-validity}}, every registration derived from one statement inherits its `exp` and lapses at the same moment, which is what the staggering guidance of {{ISSUANCE}} addresses. A trusting authorization server SHOULD use the statement's `sub` and `jti` to inventory the registrations derived from a statement and to enforce any local bound on their number.
+One unexpired statement is therefore consumable more than once: at each trusting authorization server in its audience and, where local policy permits, in more than one registration at the same authorization server, for example one registration per deployment or tenant. A trusting authorization server SHOULD use the statement's `sub`, `iss`, and `jti` to inventory the registrations and establishments derived from it, and SHOULD bound their number at one local audience. The safe default is one registration per (`iss`, `sub`, `jti`, local audience). On repeated consumption, local policy can reject the request, treat it as idempotent, or create another registration; {{RFC7591}} defines no duplicate-registration protocol.
 
-A trusting authorization server SHOULD bound the number of registrations derived from one statement at one local audience. The safe default is one registration per (`iss`, `sub`, `jti`, local audience), the same key this specification uses to inventory establishments. On repeated presentation, local policy can reject the request, treat it as idempotent, or create another registration; {{RFC7591}} defines no duplicate-registration protocol.
-
-A server that treats a repeat as idempotent MUST NOT disclose the credentials or registration access token of the prior registration to a later presenter unless it independently authorizes that presenter.
-
-Deployments whose client software runs many concurrent instances SHOULD register the logical client once per authorization server and differentiate instances at the token endpoint, for example with {{CLIENT-INSTANCE}} or attestation-based client authentication {{ABCA}}, rather than minting a registration per instance. The statement's key material determines which registration models it can support:
-
-* Shared client key: if the statement contains `jwks` or `jwks_uri`, that attested value takes precedence under {{RFC7591}}, and every registration derived from the statement MUST use the attested key material rather than an instance-supplied replacement. It also fixes the runtime proof, as {{statement-validation}} describes.
-* Per-instance keys: where authorization server policy is keyed on `client_id` and genuinely requires per-instance registrations, the same statement supports that model only if it omits `jwks` and `jwks_uri`; each registration then supplies its own instance key as plain metadata, subject to trusting authorization server policy and the presenter-proof guidance of {{statement-validation}}.
-* Attested delegation: the statement omits key material but attests the `instance_issuers` delegation ({{attesting-instance-issuers}}), so instance keys are endorsed by an attested authority at the token endpoint instead of appearing unattested in registration metadata.
-
-## Attesting Instance Issuers {#attesting-instance-issuers}
-
-{{CLIENT-INSTANCE}} defines the `instance_issuers` client metadata parameter, through which a client delegates attestation of its runtime instances to named authorities. For the purposes of this specification, `instance_issuers` is client metadata like any other: it can appear in the canonical Client ID Metadata Document and be carried as an attested claim in the software statement.
-
-A statement containing `instance_issuers` attests the instance-attestation delegation instead of presenting a self-asserted list. This avoids dependence on document availability or locally configured lists. An issuing authorization server SHOULD include `instance_issuers` in a statement only when it recognizes the member and its approval process covered the delegation the member expresses.
-
-For example, the following claims fragment attests one instance issuer for the client:
-
-~~~
-"instance_issuers": [
-  {
-    "issuer": "https://workload.client.example.org",
-    "jwks_uri": "https://workload.client.example.org/jwks.json"
-  }
-]
-~~~
+Where a statement attests `jwks` or `jwks_uri`, every registration derived from it uses that attested key material rather than an instance-supplied replacement, and that same key is what a runtime presentation proves ({{sender-constraint}}). Software whose instances hold their own keys registers per instance, or waits on the endorsement extension of {{extensions}}.
 
 # Deployment Model: Centrally Curated Software {#deployment-model}
 
@@ -486,7 +459,7 @@ A software statement is reusable ({{multi-instance}}) and, until expiry, so is a
 
 When registrations derived from a statement are intended to share a client key, and the canonical metadata provides `jwks` or `jwks_uri`, the issuer SHOULD include that member in the attested metadata. A trusting authorization server can then require proof of the corresponding private key during or after registration, making a stolen statement unusable without that key. Attesting `jwks_uri` attests the location, not its contents: a compromised key host can add keys that satisfy such proofs with no digest change, so where that exposure matters, attest `jwks` inline and accept digest-visible rotation. When each registration is expected to supply a distinct instance key, the issuer MUST omit `jwks` and `jwks_uri` so that plain registration metadata can carry that key without conflicting with {{RFC7591}} precedence. Omitting key material also forecloses runtime presentation: this specification admits only a key the statement itself attests, so an issuer whose software will be presented at runtime attests `jwks` or `jwks_uri`.
 
-A statement authorizes metadata, not its presenter. If it omits attested key material for per-instance keys ({{multi-instance}}), any holder can register its own key. A trusting authorization server SHOULD require independent proof that the presenter is an authorized instance of the software before accepting such a registration, such as {{ABCA}}, an attested `instance_issuers` chain ({{attesting-instance-issuers}}), or a registration credential the trusting server issued. Without such proof, the one-registration-per-statement default of {{multi-instance}} bounds exposure.
+A statement authorizes metadata, not its presenter. If it omits attested key material for per-instance keys ({{multi-instance}}), any holder can register its own key. A trusting authorization server SHOULD require independent proof that the presenter is an authorized instance of the software before accepting such a registration, such as {{ABCA}}, an attested `instance_issuers` chain, or a registration credential the trusting server issued. Without such proof, the one-registration-per-statement default of {{multi-instance}} bounds exposure.
 
 Renewal in this version does not accept a prior software statement as a subject token; a client renews by presenting an initial access token to the token exchange profile ({{ISSUANCE}}) or by making a new software statement request. A stolen statement therefore cannot be exchanged for a fresh one that outlives it. The consumption side carries a different exposure: delivering a replacement to an existing registration proves that registration's own credential and the currency of any statement for the software, not that the deliverer is the reviewed software, so a stolen client credential can sustain a registration indefinitely. this specification states that limit and the credential-rotation and re-registration practices that answer it. Statement-as-subject renewal, and the holder binding against current metadata it requires, is deferred to a future version ({{ISSUANCE}}).
 
