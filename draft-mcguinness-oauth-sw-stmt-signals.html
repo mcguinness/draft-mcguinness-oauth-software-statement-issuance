@@ -7,7 +7,7 @@
 <title>Shared Signals Events for OAuth Software Statements</title>
 <meta content="Karl McGuinness" name="author">
 <meta content="
-       A software statement carries a reviewer's decision about client software, bounded by an expiry the issuer chose. Ending that decision early has no standard mechanism, so how quickly a withdrawal takes effect is determined by how short the issuer made the statement's lifetime. This specification profiles the Shared Signals Framework for software statement lifecycle events, so that a statement issuer can tell the authorization servers that rely on its statements that a statement is revoked, that an approval is withdrawn, that an establishment is withdrawn, or that reviewed metadata has changed. Events can only reduce a client's standing, never create or extend it, and a receiver that misses an event falls back to expiry, so the mechanism shortens the interval between a decision and its effect without becoming load-bearing for security. 
+       A software statement carries a reviewer's decision about client software, bounded by an expiry the issuer chose. Ending that decision early has no standard mechanism, so how quickly a withdrawal takes effect is determined by how short the issuer made the statement's lifetime. This specification profiles the Shared Signals Framework for software statement lifecycle events, so that a statement issuer can tell the authorization servers that rely on its statements that a statement is revoked, that an establishment is withdrawn, or that reviewed metadata has changed. Events can only reduce a client's standing, never create or extend it, and a receiver that misses an event falls back to expiry, so the mechanism shortens the interval between a decision and its effect without becoming load-bearing for security. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
 <meta content="OAuth" name="keyword">
@@ -1079,7 +1079,7 @@ svg {
 <h1 id="title">Shared Signals Events for OAuth Software Statements</h1>
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
-<p id="section-abstract-1">A software statement carries a reviewer's decision about client software, bounded by an expiry the issuer chose. Ending that decision early has no standard mechanism, so how quickly a withdrawal takes effect is determined by how short the issuer made the statement's lifetime. This specification profiles the Shared Signals Framework for software statement lifecycle events, so that a statement issuer can tell the authorization servers that rely on its statements that a statement is revoked, that an approval is withdrawn, that an establishment is withdrawn, or that reviewed metadata has changed. Events can only reduce a client's standing, never create or extend it, and a receiver that misses an event falls back to expiry, so the mechanism shortens the interval between a decision and its effect without becoming load-bearing for security.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+<p id="section-abstract-1">A software statement carries a reviewer's decision about client software, bounded by an expiry the issuer chose. Ending that decision early has no standard mechanism, so how quickly a withdrawal takes effect is determined by how short the issuer made the statement's lifetime. This specification profiles the Shared Signals Framework for software statement lifecycle events, so that a statement issuer can tell the authorization servers that rely on its statements that a statement is revoked, that an establishment is withdrawn, or that reviewed metadata has changed. Events can only reduce a client's standing, never create or extend it, and a receiver that misses an event falls back to expiry, so the mechanism shortens the interval between a decision and its effect without becoming load-bearing for security.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <div id="status-of-memo">
 <section id="section-boilerplate.1">
@@ -1151,16 +1151,13 @@ svg {
                 <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-statement-revoked" class="internal xref">Statement Revoked</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
-                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-approval-withdrawn" class="internal xref">Approval Withdrawn</a></p>
+                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-establishment-withdrawn" class="internal xref">Establishment Withdrawn</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.3">
-                <p id="section-toc.1-1.6.2.3.1"><a href="#section-6.3" class="auto internal xref">6.3</a>.  <a href="#name-establishment-withdrawn" class="internal xref">Establishment Withdrawn</a></p>
+                <p id="section-toc.1-1.6.2.3.1"><a href="#section-6.3" class="auto internal xref">6.3</a>.  <a href="#name-metadata-changed" class="internal xref">Metadata Changed</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.4">
-                <p id="section-toc.1-1.6.2.4.1"><a href="#section-6.4" class="auto internal xref">6.4</a>.  <a href="#name-metadata-changed" class="internal xref">Metadata Changed</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.5">
-                <p id="section-toc.1-1.6.2.5.1"><a href="#section-6.5" class="auto internal xref">6.5</a>.  <a href="#name-reverse-direction-reporting" class="internal xref">Reverse-Direction Reporting</a></p>
+                <p id="section-toc.1-1.6.2.4.1"><a href="#section-6.4" class="auto internal xref">6.4</a>.  <a href="#name-reverse-direction-reporting" class="internal xref">Reverse-Direction Reporting</a></p>
 </li>
             </ul>
 </li>
@@ -1232,7 +1229,7 @@ svg {
 <p id="section-1-3">The coupling is unnecessary, because the parties are already in a configured relationship. A trusting authorization server records each issuer's identifier, key source, scope, and role in order to accept its statements at all (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>). This specification uses that relationship to carry lifecycle events over the Shared Signals Framework <span>[<a href="#SSF" class="cite xref">SSF</a>]</span>: the statement issuer transmits, the trusting authorization server receives, and events are Security Event Tokens <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span> delivered by the framework's push <span>[<a href="#RFC8935" class="cite xref">RFC8935</a>]</span> or poll <span>[<a href="#RFC8936" class="cite xref">RFC8936</a>]</span> bindings.<a href="#section-1-3" class="pilcrow">¶</a></p>
 <p id="section-1-4">This specification defines the subject identification, event types, payload claims, the durable records a receiver keeps, and its processing rules. It defines no new endpoint, transport, subject identifier format, or trust establishment mechanism.<a href="#section-1-4" class="pilcrow">¶</a></p>
 <p id="section-1-5">Two properties bound what the mechanism can do, and are normative in <a href="#processing" class="auto internal xref">Section 7</a>: an event can only reduce standing, and a receiver that misses events enforces expiry exactly as it does today. A withdrawal is durable rather than momentary, which <a href="#withdrawal-records" class="auto internal xref">Section 5</a> specifies, so a client holding an unexpired statement cannot restore what an event ended. Deployments therefore keep bounded statement lifetimes, and neither <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> nor <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> depends on this specification.<a href="#section-1-5" class="pilcrow">¶</a></p>
-<p id="section-1-6">This mechanism buys latency, not correctness, and it matters where an artifact is carried by the party it concerns. A tenant approval that an authorization server retrieves from the tenant's issuer (<span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>) ends by ceasing to be served, so events add nothing there beyond speed. An establishment statement is carried by the client it admits, and a client has no reason to stop presenting one; withdrawing it before its expiry is what these events are for.<a href="#section-1-6" class="pilcrow">¶</a></p>
+<p id="section-1-6">This mechanism buys latency, not correctness. A statement is carried by the client it admits, and a client has no reason to stop presenting one, so withdrawing a review before its expiry is what these events are for. A decision a consuming server evaluates afresh on every request, such as one carried by an identity assertion, needs no event at all.<a href="#section-1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conventions-and-definitions">
@@ -1297,7 +1294,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <a href="#section-5" class="section-number selfRef">5. </a><a href="#name-withdrawal-records" class="section-name selfRef">Withdrawal Records</a>
       </h2>
 <p id="section-5-1">A withdrawal event names a decision that ended. Its effect is durable, and a receiver that only ceases some current activity has not applied it: in the runtime profile there is no current activity to cease, and in the registration profile the client holds a statement that would otherwise restore what the event withdrew.<a href="#section-5-1" class="pilcrow">¶</a></p>
-<p id="section-5-2">On applying <code>statement-revoked</code>, <code>approval-withdrawn</code>, or <code>establishment-withdrawn</code>, a consuming authorization server <span class="bcp14">MUST</span> create or update a Withdrawal Record holding the transmitting issuer, the subject, the event type, an effective time, and, for <code>statement-revoked</code>, the revoked <code>jti</code>.<a href="#section-5-2" class="pilcrow">¶</a></p>
+<p id="section-5-2">On applying <code>statement-revoked</code> or <code>establishment-withdrawn</code>, a consuming authorization server <span class="bcp14">MUST</span> create or update a Withdrawal Record holding the transmitting issuer, the subject, the event type, an effective time, and, for <code>statement-revoked</code>, the revoked <code>jti</code>.<a href="#section-5-2" class="pilcrow">¶</a></p>
 <p id="section-5-3">The effective time is the later of the event's <code>event_timestamp</code> and the time the receiver accepted the event. A receiver cannot verify that an issuer stopped issuing when it decided to withdraw, and an issuer whose renewal is automated may mint a scheduled statement between the decision and the event's arrival; taking the later of the two times keeps such a statement from restoring what the withdrawal ended. An issuer <span class="bcp14">MUST NOT</span> issue a statement for a subject after transmitting a withdrawal for that subject unless it has made a new decision to do so, and <span class="bcp14">SHOULD</span> suspend automated renewal for a subject before transmitting.<a href="#section-5-3" class="pilcrow">¶</a></p>
 <p id="section-5-4">While a Withdrawal Record is retained, the receiver <span class="bcp14">MUST</span> refuse a statement matching it:<a href="#section-5-4" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -1305,7 +1302,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
           <p id="section-5-5.1.1">a <code>statement-revoked</code> record refuses the statement with that <code>jti</code>, whatever its <code>iat</code>;<a href="#section-5-5.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-5-5.2">
-          <p id="section-5-5.2.1">an <code>approval-withdrawn</code> or <code>establishment-withdrawn</code> record refuses every statement from that issuer for that subject whose <code>iat</code> is at or before the record's effective time.<a href="#section-5-5.2.1" class="pilcrow">¶</a></p>
+          <p id="section-5-5.2.1">an <code>establishment-withdrawn</code> record refuses every statement from that issuer for that subject whose <code>iat</code> is at or before the record's effective time.<a href="#section-5-5.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-5-6">A statement from that issuer for that subject with an <code>iat</code> after the record's effective time is a later decision by the same authority. It is accepted under the ordinary rules of <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> and <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>, and restores what the withdrawal ended. This is the only recovery path, and it requires the issuer to act.<a href="#section-5-6" class="pilcrow">¶</a></p>
@@ -1329,7 +1326,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <dt id="section-6-2.3">
 <code>software_statement_jti</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.4">
-          <p id="section-6-2.4.1"><span class="bcp14">REQUIRED</span> in <code>statement-revoked</code>, where it names the artifact withdrawn. It <span class="bcp14">MUST NOT</span> appear in <code>approval-withdrawn</code> or <code>establishment-withdrawn</code>, which withdraw a decision rather than an artifact and therefore reach every statement the issuer has issued for the subject up to the record's effective time; a receiver <span class="bcp14">MUST</span> ignore it if present in those events. Narrowing a decision withdrawal to one artifact would leave a client's other unexpired statements untouched, which is the outcome <a href="#withdrawal-records" class="auto internal xref">Section 5</a> exists to prevent.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-6-2.4.1"><span class="bcp14">REQUIRED</span> in <code>statement-revoked</code>, where it names the artifact withdrawn. It <span class="bcp14">MUST NOT</span> appear in <code>establishment-withdrawn</code>, which withdraws a decision rather than an artifact and therefore reach every statement the issuer has issued for the subject up to the record's effective time; a receiver <span class="bcp14">MUST</span> ignore it if present in those events. Narrowing a decision withdrawal to one artifact would leave a client's other unexpired statements untouched, which is the outcome <a href="#withdrawal-records" class="auto internal xref">Section 5</a> exists to prevent.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-2.5">
@@ -1348,54 +1345,45 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <p id="section-6.1-2">A receiver <span class="bcp14">MUST</span> record the revocation (<a href="#withdrawal-records" class="auto internal xref">Section 5</a>) and stop honoring the named statement. Where that statement governs a registration's validity (<span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>) at a server implementing that model, the registration is expired as though its recorded <code>exp</code> had passed. A replacement statement restores it under the revalidation rules of that specification, subject to the refusal rules of <a href="#withdrawal-records" class="auto internal xref">Section 5</a>, which prevent the revoked statement itself from serving as the replacement.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="approval-withdrawn">
-<section id="section-6.2">
-        <h3 id="name-approval-withdrawn">
-<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-approval-withdrawn" class="section-name selfRef">Approval Withdrawn</a>
-        </h3>
-<p id="section-6.2-1">A tenant approval issuer withdraws its tenant's approval of the subject software.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
-<p id="section-6.2-2">A receiver <span class="bcp14">MUST</span> record the withdrawal (<a href="#withdrawal-records" class="auto internal xref">Section 5</a>) and stop treating the subject as approved for that issuer's tenant, with the effect the tenant approval rules of <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> give an absent approval. Where the receiver holds a recorded tenant approval (<span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>) from that issuer for that subject, it is discarded unless its <code>iat</code> is after the record's effective time, in which case the tenant recorded it from a later decision and it is retained. The client's establishment, and every other tenant, are unaffected.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
-</section>
-</div>
 <div id="establishment-withdrawn">
-<section id="section-6.3">
+<section id="section-6.2">
         <h3 id="name-establishment-withdrawn">
-<a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-establishment-withdrawn" class="section-name selfRef">Establishment Withdrawn</a>
+<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-establishment-withdrawn" class="section-name selfRef">Establishment Withdrawn</a>
         </h3>
-<p id="section-6.3-1">An establishment issuer withdraws the subject software's listing, for example on removal from a marketplace.<a href="#section-6.3-1" class="pilcrow">¶</a></p>
-<p id="section-6.3-2">A receiver <span class="bcp14">MUST</span> record the withdrawal (<a href="#withdrawal-records" class="auto internal xref">Section 5</a>) and stop treating the subject as established. At a server implementing the registration-validity model of <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>, registrations governed by statements from that issuer for that subject are expired; at a server that does not, the registrations remain subject to that server's own client lifecycle, and the record still refuses further statements. A consuming authorization server implementing this specification <span class="bcp14">MUST</span> retain, for each registration it creates from a statement, that statement's <code>iss</code>, <code>sub</code>, and <code>iat</code>, whether or not it implements the registration-validity model, since a withdrawal names registrations by those values. Runtime presentation of a refused statement fails as <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> defines for a statement that is not current. The effect reaches every tenant at that authorization server.<a href="#section-6.3-2" class="pilcrow">¶</a></p>
+<p id="section-6.2-1">An establishment issuer withdraws the subject software's listing, for example on removal from a marketplace.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+<p id="section-6.2-2">A receiver <span class="bcp14">MUST</span> record the withdrawal (<a href="#withdrawal-records" class="auto internal xref">Section 5</a>) and stop treating the subject as established. At a server implementing the registration-validity model of <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>, registrations governed by statements from that issuer for that subject are expired; at a server that does not, the registrations remain subject to that server's own client lifecycle, and the record still refuses further statements. A consuming authorization server implementing this specification <span class="bcp14">MUST</span> retain, for each registration it creates from a statement, that statement's <code>iss</code>, <code>sub</code>, and <code>iat</code>, whether or not it implements the registration-validity model, since a withdrawal names registrations by those values. Runtime presentation of a refused statement fails as <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> defines for a statement that is not current. The effect reaches every tenant at that authorization server.<a href="#section-6.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="metadata-changed">
-<section id="section-6.4">
+<section id="section-6.3">
         <h3 id="name-metadata-changed">
-<a href="#section-6.4" class="section-number selfRef">6.4. </a><a href="#name-metadata-changed" class="section-name selfRef">Metadata Changed</a>
+<a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-metadata-changed" class="section-name selfRef">Metadata Changed</a>
         </h3>
-<p id="section-6.4-1">The issuer reports that the software's published metadata no longer matches what it reviewed. This event carries information a receiver could otherwise learn only by retrieval, and is advisory: the issuer is not withdrawing its decision.<a href="#section-6.4-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-6.4-2">
-          <dt id="section-6.4-2.1">
+<p id="section-6.3-1">The issuer reports that the software's published metadata no longer matches what it reviewed. This event carries information a receiver could otherwise learn only by retrieval, and is advisory: the issuer is not withdrawing its decision.<a href="#section-6.3-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-6.3-2">
+          <dt id="section-6.3-2.1">
 <code>observed_cimd_digest</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.4-2.2">
-            <p id="section-6.4-2.2.1"><span class="bcp14">OPTIONAL</span>. The digest the issuer now observes at the subject's Client ID Metadata Document, in the encoding <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> defines. It is not the statement's attested <code>cimd_digest</code>, and <span class="bcp14">MUST NOT</span> be recorded as one.<a href="#section-6.4-2.2.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-6.3-2.2">
+            <p id="section-6.3-2.2.1"><span class="bcp14">OPTIONAL</span>. The digest the issuer now observes at the subject's Client ID Metadata Document, in the encoding <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> defines. It is not the statement's attested <code>cimd_digest</code>, and <span class="bcp14">MUST NOT</span> be recorded as one.<a href="#section-6.3-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-6.4-2.3">
+<dt id="section-6.3-2.3">
 <code>observed_software_version</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-6.4-2.4">
-            <p id="section-6.4-2.4.1"><span class="bcp14">OPTIONAL</span>. The <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> <code>software_version</code> the issuer now observes, for a subject whose statements attest that member rather than a digest (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>).<a href="#section-6.4-2.4.1" class="pilcrow">¶</a></p>
+          <dd style="margin-left: 1.5em" id="section-6.3-2.4">
+            <p id="section-6.3-2.4.1"><span class="bcp14">OPTIONAL</span>. The <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> <code>software_version</code> the issuer now observes, for a subject whose statements attest that member rather than a digest (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>).<a href="#section-6.3-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-6.4-3">A receiver that retrieves and compares metadata (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>) applies its post-issuance change policy as though it had made that observation itself. A receiver that does not implement retrieval and comparison <span class="bcp14">MAY</span> ignore this event.<a href="#section-6.4-3" class="pilcrow">¶</a></p>
-<p id="section-6.4-4">The event can only add a reason to distrust current metadata. A receiver <span class="bcp14">MUST NOT</span> treat it as attesting metadata, and <span class="bcp14">MUST NOT</span> use it to clear a restriction already applied, including where an observed value matches what a statement attests; only a retrieval the receiver performs itself, or a later statement, can do that.<a href="#section-6.4-4" class="pilcrow">¶</a></p>
+<p id="section-6.3-3">A receiver that retrieves and compares metadata (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>) applies its post-issuance change policy as though it had made that observation itself. A receiver that does not implement retrieval and comparison <span class="bcp14">MAY</span> ignore this event.<a href="#section-6.3-3" class="pilcrow">¶</a></p>
+<p id="section-6.3-4">The event can only add a reason to distrust current metadata. A receiver <span class="bcp14">MUST NOT</span> treat it as attesting metadata, and <span class="bcp14">MUST NOT</span> use it to clear a restriction already applied, including where an observed value matches what a statement attests; only a retrieval the receiver performs itself, or a later statement, can do that.<a href="#section-6.3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="reverse-direction-reporting">
-<section id="section-6.5">
+<section id="section-6.4">
         <h3 id="name-reverse-direction-reporting">
-<a href="#section-6.5" class="section-number selfRef">6.5. </a><a href="#name-reverse-direction-reporting" class="section-name selfRef">Reverse-Direction Reporting</a>
+<a href="#section-6.4" class="section-number selfRef">6.4. </a><a href="#name-reverse-direction-reporting" class="section-name selfRef">Reverse-Direction Reporting</a>
         </h3>
-<p id="section-6.5-1">A consuming authorization server reporting back to an issuer where its statements are consumed would give the issuer an inventory it cannot otherwise obtain. It is not defined here: the direction reverses the roles, so the authorization server would publish transmitter configuration, the issuer would discover it and create a stream, and the processing rules of <a href="#processing" class="auto internal xref">Section 7</a> would need a counterpart for the issuer as receiver. That is a separate profile, with privacy considerations of its own, since presentation-time reporting would carry near-real-time authorization activity per tenant.<a href="#section-6.5-1" class="pilcrow">¶</a></p>
+<p id="section-6.4-1">A consuming authorization server reporting back to an issuer where its statements are consumed would give the issuer an inventory it cannot otherwise obtain. It is not defined here: the direction reverses the roles, so the authorization server would publish transmitter configuration, the issuer would discover it and create a stream, and the processing rules of <a href="#processing" class="auto internal xref">Section 7</a> would need a counterpart for the issuer as receiver. That is a separate profile, with privacy considerations of its own, since presentation-time reporting would carry near-real-time authorization activity per tenant.<a href="#section-6.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1502,7 +1490,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
         <h3 id="name-event-type-assignment">
 <a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-event-type-assignment" class="section-name selfRef">Event Type Assignment</a>
         </h3>
-<p id="section-11.1-1">The event types defined in <a href="#events" class="auto internal xref">Section 6</a> require URI identifiers under a namespace this specification does not yet control. This version uses the placeholder base <code>https://schemas.openid.net/secevent/sw-stmt/event-type/</code> with the terminal segments <code>statement-revoked</code>, <code>approval-withdrawn</code>, <code>establishment-withdrawn</code>, and <code>metadata-changed</code>. Assignment of the final base URI, and registration where the publishing body maintains a registry of security event types, is to be resolved before publication.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+<p id="section-11.1-1">The event types defined in <a href="#events" class="auto internal xref">Section 6</a> require URI identifiers under a namespace this specification does not yet control. This version uses the placeholder base <code>https://schemas.openid.net/secevent/sw-stmt/event-type/</code> with the terminal segments <code>statement-revoked</code>, <code>establishment-withdrawn</code>, and <code>metadata-changed</code>. Assignment of the final base URI, and registration where the publishing body maintains a registry of security event types, is to be resolved before publication.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="set-payload-claims">

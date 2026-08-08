@@ -70,9 +70,7 @@ Table of Contents
    2.  Conventions and Definitions
    3.  Statement Requirements
    4.  Issuer Trust Establishment
-     4.1.  Issuer Roles
-     4.2.  Serving Current Approvals
-   5.  Presentation at Registration
+   5.  Consumption at Registration
      5.1.  Registration Validity
      5.2.  Revalidation
      5.3.  Version Changes
@@ -85,37 +83,36 @@ Table of Contents
      6.4.  Effective Metadata
      6.5.  Grant Lifecycle
        6.5.1.  Refresh
-     6.6.  Tenant Approval
-     6.7.  Statements from an Established Client
+     6.6.  Statements from an Established Client
    7.  Multi-Instance Client Software
      7.1.  Attesting Instance Issuers
    8.  Deployment Model: Centrally Curated Software
-   9.  Error Responses
-   10. Examples
-     10.1.  Revalidating a Statement-Governed Registration
-     10.2.  Presenting at the Token Endpoint
-   11. Authorization Server Metadata
-   12. Extension Points
-   13. Security Considerations
-     13.1.  Statement Theft
-     13.2.  Renewal Authenticates the Credential
-     13.3.  Validation Scope
-     13.4.  Key Location versus Keys
-     13.5.  External Retrieval and Resource Exhaustion
-     13.6.  Statement Validation and Replay
-     13.7.  Registration Fraud and Impersonation
-     13.8.  Approval Availability
-     13.9.  Enforcement Bounds
-     13.10. Client-Asserted Metadata
-     13.11. Observable State
-     13.12. Statement Handling
-   14. Privacy Considerations
-   15. IANA Considerations
-     15.1.  OAuth Parameters Registry
-     15.2.  OAuth Authorization Server Metadata Registry
-   16. References
-     16.1.  Normative References
-     16.2.  Informative References
+   9.  Relationship to Identity Assertions
+   10. Error Responses
+   11. Examples
+     11.1.  Revalidating a Statement-Governed Registration
+     11.2.  Presenting at the Token Endpoint
+   12. Authorization Server Metadata
+   13. Extension Points
+   14. Security Considerations
+     14.1.  Statement Theft
+     14.2.  Renewal Authenticates the Credential
+     14.3.  Validation Scope
+     14.4.  Key Location versus Keys
+     14.5.  External Retrieval and Resource Exhaustion
+     14.6.  Statement Validation and Replay
+     14.7.  Registration Fraud and Impersonation
+     14.8.  Enforcement Bounds
+     14.9.  Client-Asserted Metadata
+     14.10. Observable State
+     14.11. Statement Handling
+   15. Privacy Considerations
+   16. IANA Considerations
+     16.1.  OAuth Parameters Registry
+     16.2.  OAuth Authorization Server Metadata Registry
+   17. References
+     17.1.  Normative References
+     17.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -142,14 +139,17 @@ Table of Contents
       attests, and is established for the resulting grant without
       creating a persistent registration (Section 6.1 and Section 6.5).
 
-   Establishment is one layer of the decision to let a client act.  An
-   authorization server hosting many customers separates it from tenant
-   approval, the customer's own decision about which established clients
-   may operate in its tenant (Section 6.6); both sit above the sender-
-   constraint proof that identifies the presenter and the grant that
-   carries a user's authorization.  Each layer has its own decider,
-   artifact, and lifecycle, and this specification keeps them apart
-   rather than collapsing them into one decision.
+   Establishment is one layer of the decision to let a client act, and
+   this specification defines only that layer.  It sits above the
+   sender-constraint proof that identifies the presenter and the grant
+   that carries a user's authorization, and beside a question it
+   deliberately does not answer: whether a particular customer permits
+   this software to operate in its tenant right now.  That decision
+   changes on the customer's clock rather than the reviewer's, and where
+   a customer's identity provider mediates the grant it is answered
+   continuously by whether that provider issues an assertion at all
+   (Section 9).  A statement answers the durable question instead: who
+   reviewed this software, and what did they attest.
 
    In both profiles, ceasing statement renewal stops new establishment
    after the applicable expiry.  It also stops continued use of an
@@ -157,7 +157,7 @@ Table of Contents
    current statement.  It does not revoke access tokens already issued,
    and continuation of runtime-established grants is subject to the
    refresh policy in Section 6.5.1.  These enforcement bounds are
-   detailed in Section 13.9.
+   detailed in Section 14.8.
 
    This separation lets one issuer curate approved software across many
    authorization servers without making the issuer the final policy
@@ -329,7 +329,7 @@ Table of Contents
       (Section 5.1), is checked at every presentation, and is the
       issuer's continuous-governance lever: renewal extends standing,
       ceased renewal ends it.  The effect on registrations,
-      establishments, grants, and tokens is bounded as Section 13.9
+      establishments, grants, and tokens is bounded as Section 14.8
       describes.
 
    jti:  Identifies the statement within the issuer's namespace;
@@ -342,7 +342,7 @@ Table of Contents
 
    A statement lacking any of these cannot be consumed under this
    specification, whatever a registration endpoint might otherwise
-   accept, and one failing validation is rejected as Section 9 defines.
+   accept, and one failing validation is rejected as Section 10 defines.
 
 4.  Issuer Trust Establishment
 
@@ -374,13 +374,11 @@ Table of Contents
       registration validity where the server implements the
       registration-validity model of Section 5.1;
 
-   *  the role in which it accepts the issuer (Section 4.1); and
-
    *  its policy on repeated and multiple registration (Section 7).
 
    These inputs, not the signature alone, define acceptance.  Because
    the issuer is an authorization server role, key retrieval reuses
-   [RFC8414] discovery (Section 11).
+   [RFC8414] discovery (Section 12).
 
    A trusting authorization server MUST derive trust from this local
    configuration and MUST NOT derive it from an iss, jku, x5u, or other
@@ -400,101 +398,14 @@ Table of Contents
    scope is the set of identifiers it is configured for rather than a
    single domain; the rejection rule is the same.
 
-4.1.  Issuer Roles
+5.  Consumption at Registration
 
-   A trusting authorization server accepts an issuer in one of two
-   roles, and records which when it configures the issuer.  The roles
-   answer different questions, are held by different parties, and run on
-   separate lifecycles.
-
-   Establishment issuer:  Its statements decide which software may exist
-      as a client at this authorization server.  A marketplace publisher
-      program or an ecosystem directory holds this role.  Statements
-      from an establishment issuer are consumed at registration or at
-      runtime establishment, and govern registration validity where this
-      specification applies that model.  One such decision serves every
-      tenant the authorization server hosts.
-
-   Tenant approval issuer:  Its statements decide which software a
-      particular tenant permits.  The tenant's own review function holds
-      this role, and the authorization server records the tenant the
-      issuer speaks for.  An issuer in this role serves its current
-      decisions rather than handing them to clients to carry
-      (Section 4.2), because withdrawing an approval is the point of
-      holding one and the restricted party must not control its
-      conveyance.  A tenant approval statement is recorded at the
-      authorization server by the tenant it governs and evaluated in
-      that tenant's request context under this specification; it neither
-      creates nor renews a registration, and it bears on no other
-      tenant.
-
-   An issuer MAY hold both roles, and the two consumptions never
-   collide: an establishment statement arrives in a request, a tenant
-   approval is recorded out of band.  For the events of [SIGNALS], the
-   event type determines scope.
-
-   Where an authorization server hosts multiple tenants, issuer trust is
-   configured per tenant.  The authorization server MUST resolve the
-   tenant a request belongs to and MUST evaluate only the issuers
-   configured for that tenant; accepting a tenant approval issuer's
-   statement outside the tenant it speaks for is a cross-tenant
-   escalation (Section 13).
-
-4.2.  Serving Current Approvals
-
-   An issuer in the tenant approval role serves the statements it
-   currently has in force to the authorization servers they name.  A
-   request carries the requesting authorization server's issuer
-   identifier as the audience of interest; the response is a JSON object
-   whose software_statements member is an array of the statements in
-   force naming that audience, and whose HTTP caching headers bound how
-   long the response may be reused.  An empty array is a well-formed
-   answer, and means the issuer has no approvals in force for that
-   audience.
-
-   Absence is how an approval ends.  An issuer withdrawing an approval
-   stops serving it, and a consuming authorization server that no longer
-   receives it treats the approval as it treats an expired one (this
-   specification).  This is why the endpoint serves the set in force
-   rather than answering questions about individual subjects: a per-
-   subject query cannot distinguish a withdrawn approval from one the
-   issuer never made.
-
-   The endpoint is authenticated.  The two parties already exchange
-   issuer identifiers and keys when trust is established (Section 4),
-   and the credential a requesting authorization server presents is part
-   of that configuration; this document defines no new credential type.
-   An issuer MUST serve only the statements naming the requester's own
-   audience, and MUST NOT reveal statements naming other authorization
-   servers.
-
-   An issuer supporting this endpoint advertises it as
-   software_statement_approvals_endpoint (Section 11).  An issuer in the
-   establishment role does not serve statements this way: those are
-   carried by the clients they admit, and serving them on request would
-   disclose which authorization servers a client intends to establish
-   relationships with.
-
-   Pairwise configuration bounds a statement's reach to the issuers a
-   trusting authorization server has configured, which is why a
-   statement's practical audience is an ecosystem or administrative
-   domain rather than the open web.  The OAuth Identity Assertion Trust
-   Framework [TRUST-FRAMEWORK] generalizes the model: a trusting
-   authorization server publishes the conditions an issuer must satisfy
-   and evaluates published evidence, such as authorization by the owner
-   of a client identifier's namespace, when a statement is presented,
-   replacing enumeration of trusted issuers with open-world policy.
-   OpenID Federation [OPENID-FED] provides an alternative through trust
-   chains.  Both are out of scope here.
-
-5.  Presentation at Registration
-
-   Under the DCR profile, the statement is consumed in the
-   software_statement member of an [RFC7591] registration request.  The
-   authorization server validates and binds it as [ISSUANCE] requires,
-   with rejections using the [RFC7591] error codes defined there.  This
-   section defines the registration's relationship to the statement's
-   lifetime.
+   The statement is consumed in the software_statement member of an
+   [RFC7591] registration request.  The authorization server validates
+   it as [ISSUANCE] requires, with rejections using the [RFC7591] error
+   codes defined there, and registers the client under its ordinary
+   registration policy.  This section defines what the statement's
+   lifetime does to the resulting registration.
 
 5.1.  Registration Validity
 
@@ -515,11 +426,11 @@ Table of Contents
    it accepts a replacement without treating the registration as
    expired.  An expired registration is not an unknown client: the
    difference is observable to a client that authenticates, which is
-   what makes recovery possible (Section 13.11).  Registration expiry
+   what makes recovery possible (Section 14.10).  Registration expiry
    does not revoke tokens already issued; the disposition of outstanding
    grants is local policy.
 
-   The metadata signal in Section 11 lets a client determine before
+   The metadata signal in Section 12 lets a client determine before
    registration whether this model applies.  The client already holds
    the statement and therefore learns the initial validity boundary from
    its exp.  A server that omits the signal or advertises false can
@@ -628,14 +539,12 @@ Table of Contents
    parameter in a token request or a pushed authorization request:
 
    software_statement:  REQUIRED for presentation.  The software
-      statement (Section 3).  It is consumed for establishment: a
-      runtime presentation, a refresh replacement (Section 6.5.1), or a
-      revalidation delivery (Section 5.2).  Tenant approvals are
-      recorded rather than carried (Section 6.6), so one statement
-      parameter serves every request this specification defines.  The
-      authorization server MUST verify that it accepts the statement's
-      issuer in the establishment role ([ISSUANCE]), and MUST reject a
-      request repeating the parameter with invalid_request.
+      statement (Section 3).  It is consumed as a runtime presentation,
+      a refresh replacement (Section 6.5.1), or a revalidation delivery
+      (Section 5.2).  The authorization server MUST verify that it
+      accepts the statement's issuer for the subject (Section 4), and
+      MUST reject a request repeating the parameter with
+      invalid_request.
 
    The request's client_id is the client's Client ID Metadata Document
    URL.  It MUST exactly equal the statement's sub; the authorization
@@ -663,12 +572,10 @@ Table of Contents
    ([ISSUANCE]).  A request that carries software_statement and is none
    of a runtime presentation, a refresh replacement (Section 6.5.1), or
    a revalidation delivery (Section 5.2) is rejected with
-   invalid_request.  An issuer holding both roles ([ISSUANCE]) creates
-   no ambiguity here, because a tenant approval never arrives on a
-   request.
+   invalid_request.
 
    An authorization server advertises support through
-   software_statement_presentation_supported (Section 11).
+   software_statement_presentation_supported (Section 12).
 
 6.1.1.  Authorization Endpoint
 
@@ -689,7 +596,7 @@ Table of Contents
 6.2.  Presentation Processing
 
    On receiving a presentation, the authorization server proceeds as
-   follows, rejecting as Section 9 defines at the first failure:
+   follows, rejecting as Section 10 defines at the first failure:
 
    1.  Validate the statement under [ISSUANCE]: format, issuer trust,
        audience, lifetime, and namespace, with digest comparison as the
@@ -727,7 +634,7 @@ Table of Contents
    runtime and is consumable only through registration (Section 5).
    Endorsement of a key the statement does not name, by a client
    attester or by an issuer the statement delegates to, is left to
-   extensions (Section 12): admitting it in the core would make the
+   extensions (Section 13): admitting it in the core would make the
    accepted proof depend on configuration a client cannot observe, and
    would let a presenter reach for a weaker proof than the one the
    issuer reviewed.
@@ -738,7 +645,7 @@ Table of Contents
    recently retrieved key set within ordinary HTTP caching bounds,
    subject to a maximum reuse period of its own choosing; it MUST NOT
    let the client's cache directives alone determine how long a removed
-   key continues to verify (Section 13.5).
+   key continues to verify (Section 14.5).
 
 6.4.  Effective Metadata
 
@@ -794,10 +701,6 @@ Table of Contents
    *  the tenant the grant was opened for, where the authorization
       server hosts more than one;
 
-   *  the tenant the grant was opened for, where the tenant requires an
-      approval (Section 6.6), the approval itself being evaluated afresh
-      rather than frozen into the establishment;
-
    *  the effective metadata (Section 6.4);
 
    *  the issuer trust decision; and
@@ -836,15 +739,7 @@ Table of Contents
    mechanism.  It MAY, by local policy, additionally require a current
    unexpired statement, and SHOULD require one once the establishment's
    recorded statement has expired, since that requirement is what makes
-   ceased renewal end an existing grant (Section 13.9).
-
-   Where the grant was opened for a tenant that requires approval
-   (Section 6.6), the authorization server MUST also evaluate that
-   tenant's current approval on refresh, retrieved or recorded.  An
-   approval that has expired, that is absent from the current retrieval,
-   or that a record refuses, ends the grant's continuation with
-   invalid_grant.  Nothing additional travels on the request, because
-   the approval is state the server holds or fetches.
+   ceased renewal end an existing grant (Section 14.8).
 
    An authorization server that holds a record refusing a statement,
    such as one kept under a withdrawal ([SIGNALS]), MUST treat that
@@ -881,83 +776,7 @@ Table of Contents
    a statement that policy requires, is rejected with invalid_grant and
    leaves the establishment unchanged.
 
-6.6.  Tenant Approval
-
-   An authorization server hosting multiple tenants establishes a client
-   once and decides separately, per tenant, whether that client may
-   operate there.  A tenant approval statement carries that decision: it
-   is issued by the tenant's approval issuer ([ISSUANCE]), its sub
-   identifies the established client, and the tenant records it at the
-   authorization server.
-
-   A tenant approval is never carried on a request.  An artifact that
-   grants may be conveyed by the party it grants to, whose incentive is
-   to convey it faithfully; an artifact that restricts must not be,
-   because withdrawal is the point of holding it and the restricted
-   party would control whether the server ever sees it.  An approval
-   reaches an authorization server in one of two ways.
-
-   *Retrieved.* The authorization server retrieves the tenant's current
-   approvals from that tenant's issuer, at the location and with the
-   credential recorded when the tenant configured the issuer
-   ([ISSUANCE]).  It MAY reuse a retrieved set within the caching bounds
-   of the response and MUST NOT reuse a statement past its own exp.  An
-   approval absent from a retrieval is withdrawn: the authorization
-   server MUST treat it as it treats an expired one, which is what makes
-   ceasing to serve an approval sufficient to end it.  Where a retrieval
-   fails, the authorization server continues on what it last retrieved
-   until those statements expire, so a failure degrades to the expiry
-   behavior specified elsewhere rather than to a new one.
-
-   *Recorded.* The tenant supplies the statement through the
-   authorization server's administrative interface, for deployments that
-   cannot retrieve or have not configured it.  The authorization server
-   MUST authenticate the supplying party as an administrator of the
-   tenant the approval will govern, and MUST verify that the statement's
-   issuer is one it accepts in the tenant approval role for that same
-   tenant.  A statement signed by an issuer configured for another
-   tenant MUST be rejected rather than recorded.  The record holds the
-   statement's iss, sub, jti, iat, and exp, and the tenant it governs.
-
-   Where both are configured for a tenant, the retrieved set governs,
-   and a recorded approval covers only subjects the retrieval does not
-   mention.
-
-   The authorization server MUST re-verify an approval at each use,
-   whether retrieved or recorded, so that withdrawal of issuer trust, a
-   change of issuer scope, or a record refusing the statement takes
-   effect without waiting for expiry.  It MUST NOT record an approval
-   whose iat is earlier than that of the approval it replaces, so that a
-   narrower decision cannot be rolled back by re-recording an older one.
-   On expiry the authorization server MUST treat the tenant as having no
-   approval for that client.
-
-   Tenant approval constrains the request; it does not establish the
-   client:
-
-   *  The client's identity and metadata remain those of its
-      establishment: a tenant approval MUST NOT create a registration,
-      alter a registration record, or extend registration validity.
-
-   *  Where the statement attests metadata, that metadata narrows the
-      request and MUST NOT widen it.  The effective policy for the
-      request is the intersection of what the establishment allows and
-      what the tenant approved; a requested scope outside the
-      intersection fails as Section 9 defines.
-
-   *  Expiry bears on that tenant alone.  A lapsed tenant approval stops
-      that tenant's requests and leaves the client's registration, and
-      every other tenant, untouched.
-
-   Whether a tenant requires an approval is that tenant's policy.  A
-   tenant that expresses approval through the authorization server's own
-   interface without an artifact needs no statement; the statement is
-   what lets one decision be made once and honored at every
-   authorization server where the tenant has configured its issuer.
-   Retrieval is what keeps it current there without further
-   administrative action.
-
-6.7.  Statements from an Established Client
+6.6.  Statements from an Established Client
 
    A client already established at an authorization server, whether
    registered through [RFC7591] or registered under its Client ID
@@ -970,7 +789,7 @@ Table of Contents
    to reach the registration applies them through its registration
    policy (Section 5.2) or through [RFC7592], where a narrower record
    survives until it does.  A statement from an issuer the server
-   accepts in neither role for that client is rejected as Section 9
+   accepts in neither role for that client is rejected as Section 10
    defines.
 
    A registration created from a statement is statement-governed when
@@ -1033,14 +852,14 @@ Table of Contents
       that attested value takes precedence under [RFC7591], and every
       registration derived from the statement MUST use the attested key
       material rather than an instance-supplied replacement.  It also
-      fixes the runtime proof, as Section 13.6 describes.
+      fixes the runtime proof, as Section 14.6 describes.
 
    *  Per-instance keys: where authorization server policy is keyed on
       client_id and genuinely requires per-instance registrations, the
       same statement supports that model only if it omits jwks and
       jwks_uri; each registration then supplies its own instance key as
       plain metadata, subject to trusting authorization server policy
-      and the presenter-proof guidance of Section 13.6.
+      and the presenter-proof guidance of Section 14.6.
 
    *  Attested delegation: the statement omits key material but attests
       the instance_issuers delegation (Section 7.1), so instance keys
@@ -1077,12 +896,12 @@ Table of Contents
 
    This section is non-normative.
 
-   Two review functions operate here, and they belong to different
-   parties.  A provider's marketplace decides which software may exist
-   as a client on its platform, and a customer decides which of that
-   software may operate in its tenant.  The provider configures the
-   marketplace's issuer in the establishment role and each customer's
-   issuer in the tenant approval role ([ISSUANCE]).
+   A provider's marketplace decides which software may exist as a client
+   on its platform, and it configures that reviewer's issuer for the
+   identifier namespaces the reviewer speaks for (Section 4).  A
+   customer's separate question, which of that software may operate in
+   its own tenant, is answered on the customer's clock and is out of
+   scope here (Section 9).
 
    A marketplace application registers once.  Its listing is an
    establishment statement whose renewal keeps the registration valid,
@@ -1092,13 +911,12 @@ Table of Contents
    customer works the same way: one client, many tenants, one listing
    lifecycle.
 
-   An enterprise that reviews and approves client software operates a
-   statement issuer of its own, in the tenant approval role at each
-   provider where it has configured it.  Approval of an application is
-   the issuance of a short-lived statement whose sub names the
-   application and whose aud names the providers where the approval
-   should hold.  Renewal is automatic while the approval stands, so
-   approved applications keep working.
+   An enterprise that performs its own software review can operate an
+   issuer too, where it wants that review to travel as an auditable
+   artifact rather than as a policy decision inside its identity
+   provider.  Its statements name the application as sub and the
+   providers where the review should hold as aud, and renewal keeps them
+   current.
 
    The controls follow from the lifetime machinery, and the two
    lifecycles never have to be synchronized.  Onboarding a provider is
@@ -1120,7 +938,32 @@ Table of Contents
    enforced by multiple trusting authorization servers, subject to their
    explicit local policy.
 
-9.  Error Responses
+9.  Relationship to Identity Assertions
+
+   A statement records that a named party reviewed software and vouched
+   for its metadata.  It does not record that a particular customer
+   permits that software to act in its tenant at this moment.  The two
+   answer different questions on different clocks, and conflating them
+   is what makes an allowlist expensive to keep current.
+
+   Where a customer's identity provider mediates a grant, as it does
+   when a cross-domain identity assertion carries the customer's users
+   to a provider, the second question is already answered continuously:
+   the identity provider issues an assertion for the clients the
+   customer permits, and issues none for the rest.  Enforcement is per
+   grant, withdrawal takes effect on the next one, and no artifact
+   outlives the decision.  A deployment wanting that property should use
+   it rather than reproduce it here.
+
+   This specification is for the durable question.  A statement is worth
+   its lifecycle where the reviewer is not in the request path: a
+   publisher program or ecosystem directory vouching to servers it will
+   never see, a provider admitting software it has never registered, or
+   a customer that wants an auditable, portable record of what its
+   review covered rather than an inference from an assertion having been
+   issued.
+
+10.  Error Responses
 
    A statement consumed at registration is rejected with the [RFC7591]
    error codes as [ISSUANCE] defines.  A rejected presentation or
@@ -1134,10 +977,9 @@ Table of Contents
       (Section 5.2), at every endpoint including the refresh-token
       grant.
 
-   unauthorized_client:  the tenant has not approved this client,
-      because a required tenant approval is absent, expired, or issued
-      by an issuer configured for another tenant (Section 6.6); also the
-      grant or response type case below.
+   unauthorized_client:  the client is not permitted by its effective
+      metadata to use the requested grant type or response type,
+      although the authorization server supports it.
 
    invalid_scope:  a requested scope falls outside the effective
       metadata.
@@ -1170,11 +1012,11 @@ Table of Contents
    recently is required, since re-delivering the same statement can
    never succeed.
 
-10.  Examples
+11.  Examples
 
    Both examples are non-normative.
 
-10.1.  Revalidating a Statement-Governed Registration
+11.1.  Revalidating a Statement-Governed Registration
 
    A registered client, client_id s6BhdRkqt3, renews its registration's
    validity by delivering a replacement DCR-profile statement on an
@@ -1195,7 +1037,7 @@ Table of Contents
    the request arrived after expiry without a replacement, it would have
    failed with invalid_client (Section 5.2).
 
-10.2.  Presenting at the Token Endpoint
+11.2.  Presenting at the Token Endpoint
 
    The following presents an already-issued statement at the token
    endpoint.  The statement attests the client's jwks_uri and
@@ -1223,7 +1065,7 @@ Table of Contents
    client the statement describes.  It keeps no registration; the
    effective client_id is the statement's sub.
 
-11.  Authorization Server Metadata
+12.  Authorization Server Metadata
 
    This specification defines the following authorization server
    metadata [RFC8414] values:
@@ -1266,7 +1108,7 @@ Table of Contents
       claims conformance for the registrations the model governs, not
       that every registration at the server is statement-governed.
 
-12.  Extension Points
+13.  Extension Points
 
    Three extensions of this path are left to separate specifications.
    Endorsed keys: a client attestation [ABCA], or an assertion from an
@@ -1280,9 +1122,9 @@ Table of Contents
    embedding a statement in the document as the digest rule of
    [ISSUANCE] forbids.
 
-13.  Security Considerations
+14.  Security Considerations
 
-13.1.  Statement Theft
+14.1.  Statement Theft
 
    A runtime presentation resists statement theft because the proof
    chains to the statement.  Possession of an arbitrary key constrains
@@ -1299,10 +1141,10 @@ Table of Contents
    that key or refuses the presentation, so a presenter cannot shop the
    statement to a server with weaker configuration and there prove a key
    the issuer never reviewed.  An extension admitting endorsed keys
-   (Section 12) reopens that question and needs to answer it in its own
+   (Section 13) reopens that question and needs to answer it in its own
    terms.
 
-13.2.  Renewal Authenticates the Credential
+14.2.  Renewal Authenticates the Credential
 
    Registration renewal proves possession of the registration's own
    credential and the currency of a statement sharing the governing iss
@@ -1318,7 +1160,7 @@ Table of Contents
    does not share this gap, because the sender-constraint chain binds
    the presenter to the review at every presentation.
 
-13.3.  Validation Scope
+14.3.  Validation Scope
 
    A consumed statement is validated under the full ruleset of
    [ISSUANCE]: configured issuer trust with keys obtained from
@@ -1329,7 +1171,7 @@ Table of Contents
    sender-constraint chain, the grant bindings of Section 6.5, and the
    registration-validity model on top of them.
 
-13.4.  Key Location versus Keys
+14.4.  Key Location versus Keys
 
    The jwks_uri chain verifies keys at an attested location, not
    attested keys: cimd_digest binds the metadata document's bytes and
@@ -1341,7 +1183,7 @@ Table of Contents
    set under Section 6.3 additionally accepts that a just-removed key
    can briefly continue to verify.
 
-13.5.  External Retrieval and Resource Exhaustion
+14.5.  External Retrieval and Resource Exhaustion
 
    Runtime presentation can cause the authorization server to retrieve
    the Client ID Metadata Document, an attested jwks_uri, or keys and
@@ -1369,7 +1211,7 @@ Table of Contents
    or proof chain unverified; the authorization server MUST reject the
    request and MUST NOT fall back to a weaker sender-constraint mode.
 
-13.6.  Statement Validation and Replay
+14.6.  Statement Validation and Replay
 
    A software statement is reusable (Section 7) and, until expiry, so is
    a stolen copy at every registration endpoint in its audience.
@@ -1446,15 +1288,14 @@ Table of Contents
    depends on, and the requirement never to derive trust from key-
    location values in the statement itself, are specified in Section 4.
 
-   At an authorization server hosting multiple tenants, the tenant a
-   statement is evaluated in is part of its meaning.  A tenant approval
-   issuer speaks only for its own tenant (Section 4.1), so accepting its
-   statement in another tenant's context grants one customer's approval
-   authority over another customer's data.  An authorization server MUST
-   bind each configured tenant approval issuer to its tenant and resolve
-   the tenant from the request before evaluating any statement.
+   At an authorization server hosting multiple tenants, issuer trust may
+   be configured per tenant rather than server-wide.  Where it is, the
+   authorization server MUST resolve the tenant a request belongs to and
+   evaluate only the issuers configured for that tenant, since accepting
+   one customer's issuer in another customer's context would let it
+   speak about software it has no authority over.
 
-13.7.  Registration Fraud and Impersonation
+14.7.  Registration Fraud and Impersonation
 
    Open registration permits client_name, logo_uri, and client_uri
    values that imitate trusted software on consent screens.  Requiring a
@@ -1471,21 +1312,7 @@ Table of Contents
    misleads review can obtain a genuine statement for fraudulent
    metadata, so issuer verification depth remains decisive ([ISSUANCE]).
 
-13.8.  Approval Availability
-
-   Retrieving approvals puts the tenant's issuer in the path of that
-   tenant's requests, bounded by the caching rules of Section 6.6: an
-   unreachable issuer costs nothing until the last retrieved statements
-   expire, and then costs that tenant its approvals.  This is the same
-   trade the family already takes with statement lifetimes, and the same
-   mitigation applies, which is to choose lifetimes the issuer can
-   sustain and renew ahead of the boundary.  Retrieval also discloses to
-   each authorization server the approvals naming it, which is the
-   estate relevant to that server and no more; an issuer serving
-   statements naming other audiences would disclose where else its
-   software is approved ([ISSUANCE]).
-
-13.9.  Enforcement Bounds
+14.8.  Enforcement Bounds
 
    Expiry is enforced at every presentation and every statement-governed
    registration, so a lapsed statement stops new runtime establishment
@@ -1493,21 +1320,18 @@ Table of Contents
    It does not retroactively invalidate an establishment, revoke an
    access token, or terminate an outstanding grant.  Requiring a current
    statement on refresh under Section 6.5.1 is the control that makes
-   issuer non-renewal end runtime-established grants, and the tenant
-   approval evaluation in that section is what makes a customer's ceased
-   renewal end them; a deployment that adopts neither retains grants for
-   the life of their refresh tokens whatever the statement lifetime;
-   registration-backed grants remain subject to the server's grant
-   policy after the registration expires.  A narrowed re-review takes
-   effect through replacement effective metadata or an updated
-   registration.  Detection of post-issuance metadata change depends on
-   the signal each profile carries: software_version is a vendor-
-   asserted label, while cimd_digest covers exact bytes but requires
-   retrieval for comparison.  The bounded statement lifetime limits what
-   either signal can miss for new establishment.  [SIGNALS] defines an
-   optional event mechanism by which an issuer ends a decision before
-   its expiry; expiry remains the floor, and this specification does not
-   depend on it.
+   issuer non-renewal end runtime-established grants, and a deployment
+   that does not adopt it retains grants for the life of their refresh
+   tokens whatever the statement lifetime; registration-backed grants
+   remain subject to the server's grant policy after the registration
+   expires.  A narrowed re-review takes effect through replacement
+   effective metadata or an updated registration.  Detection of post-
+   issuance metadata change rests on cimd_digest, which covers exact
+   bytes but requires retrieval for comparison.  The bounded statement
+   lifetime limits what either signal can miss for new establishment.
+   [SIGNALS] defines an optional event mechanism by which an issuer ends
+   a decision before its expiry; expiry remains the floor, and this
+   specification does not depend on it.
 
    Renewal cadence is a deployment trade: short lifetimes tighten the
    issuer's control loop and increase issuance and delivery traffic, and
@@ -1515,7 +1339,7 @@ Table of Contents
    SHOULD stagger expiries or renew ahead of the boundary to avoid
    synchronized lapses.
 
-13.10.  Client-Asserted Metadata
+14.9.  Client-Asserted Metadata
 
    Members the statement does not attest are client-asserted, and
    omission can mean the issuer declined to attest a value.  The
@@ -1528,7 +1352,7 @@ Table of Contents
    document's caching directives, and the statement's digest binds the
    review to specific bytes regardless of cache state.
 
-13.11.  Observable State
+14.10.  Observable State
 
    A retained expired registration is distinguishable from an unknown
    client, because recovery requires the server to authenticate the
@@ -1539,10 +1363,10 @@ Table of Contents
    software_statement_registration_validity_supported additionally
    disclose that statement-derived registrations expire there, which is
    configuration a client needs before registering.  Neither discloses
-   issuer trust, subject scope, or attester policy, which Section 9
+   issuer trust, subject scope, or attester policy, which Section 10
    keeps from unauthenticated requesters.
 
-13.12.  Statement Handling
+14.11.  Statement Handling
 
    A software statement remains a sensitive artifact in transit and at
    rest: possession alone does not enable presentation, but statements
@@ -1550,10 +1374,10 @@ Table of Contents
    SHOULD avoid logging them.
 
    Error responses can also disclose trust configuration.  The
-   restrictions in Section 9 prevent unauthenticated probing of issuer,
+   restrictions in Section 10 prevent unauthenticated probing of issuer,
    namespace, and attester policy.
 
-14.  Privacy Considerations
+15.  Privacy Considerations
 
    A presentation or delivery reveals to the authorization server the
    client's issuer relationship and the full attested metadata,
@@ -1566,9 +1390,9 @@ Table of Contents
    renewal requests, which of its statements are in active use; issuance
    and renewal logs deserve the same care as the statements themselves.
 
-15.  IANA Considerations
+16.  IANA Considerations
 
-15.1.  OAuth Parameters Registry
+16.1.  OAuth Parameters Registry
 
    This specification requests registration of the software_statement
    parameter in the IANA "OAuth Parameters" registry established by
@@ -1591,7 +1415,7 @@ Table of Contents
 
    Specification Document(s):  This specification, Section 6.1
 
-15.2.  OAuth Authorization Server Metadata Registry
+16.2.  OAuth Authorization Server Metadata Registry
 
    This specification requests registration of the following values in
    the IANA "OAuth Authorization Server Metadata" registry established
@@ -1605,7 +1429,7 @@ Table of Contents
 
    Change Controller:  IESG
 
-   Specification Document(s):  This specification, Section 11
+   Specification Document(s):  This specification, Section 12
 
    Metadata Name:  software_statement_registration_validity_supported
 
@@ -1615,11 +1439,11 @@ Table of Contents
 
    Change Controller:  IESG
 
-   Specification Document(s):  This specification, Section 11
+   Specification Document(s):  This specification, Section 12
 
-16.  References
+17.  References
 
-16.1.  Normative References
+17.1.  Normative References
 
    [CIMD]     "OAuth Client ID Metadata Document", n.d.,
               <https://datatracker.ietf.org/doc/draft-ietf-oauth-client-
@@ -1672,7 +1496,7 @@ Table of Contents
               RFC 9700, DOI 10.17487/RFC9700, January 2025,
               <https://www.rfc-editor.org/rfc/rfc9700>.
 
-16.2.  Informative References
+17.2.  Informative References
 
    [ABCA]     "OAuth 2.0 Attestation-Based Client Authentication", n.d.,
               <https://datatracker.ietf.org/doc/draft-ietf-oauth-
