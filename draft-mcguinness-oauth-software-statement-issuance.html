@@ -1230,6 +1230,9 @@ svg {
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.1">
                 <p id="section-toc.1-1.15.2.1.1"><a href="#section-15.1" class="auto internal xref">15.1</a>.  <a href="#name-issuer-roles" class="internal xref">Issuer Roles</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.2">
+                <p id="section-toc.1-1.15.2.2.1"><a href="#section-15.2" class="auto internal xref">15.2</a>.  <a href="#name-serving-current-approvals" class="internal xref">Serving Current Approvals</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.16">
@@ -2259,9 +2262,15 @@ Pragma: no-cache
 </dd>
         <dd class="break"></dd>
 <dt id="section-14-9.5">
-<code>software_statement_subject_token_types_supported</code>:</dt>
+<code>software_statement_approvals_endpoint</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-14-9.6">
-          <p id="section-14-9.6.1"><span class="bcp14">REQUIRED</span> for an authorization server that supports the token exchange profile (<a href="#token-exchange-profile" class="auto internal xref">Section 8</a>), and absent otherwise. A JSON array of the <code>subject_token_type</code> values the authorization server accepts when <code>requested_token_type</code> is <code>urn:ietf:params:oauth:token-type:software-statement</code>. Publication of this member is the discovery signal for the profile.<a href="#section-14-9.6.1" class="pilcrow">¶</a></p>
+          <p id="section-14-9.6.1"><span class="bcp14">OPTIONAL</span>. URL of the endpoint at which this issuer serves the tenant approval statements it currently has in force (<a href="#approvals-endpoint" class="auto internal xref">Section 15.2</a>). Present only for an issuer acting in the tenant approval role.<a href="#section-14-9.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-14-9.7">
+<code>software_statement_subject_token_types_supported</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-14-9.8">
+          <p id="section-14-9.8.1"><span class="bcp14">REQUIRED</span> for an authorization server that supports the token exchange profile (<a href="#token-exchange-profile" class="auto internal xref">Section 8</a>), and absent otherwise. A JSON array of the <code>subject_token_type</code> values the authorization server accepts when <code>requested_token_type</code> is <code>urn:ietf:params:oauth:token-type:software-statement</code>. Publication of this member is the discovery signal for the profile.<a href="#section-14-9.8.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2317,13 +2326,24 @@ Pragma: no-cache
           <dd class="break"></dd>
 <dt id="section-15.1-2.3">Tenant approval issuer:</dt>
           <dd style="margin-left: 1.5em" id="section-15.1-2.4">
-            <p id="section-15.1-2.4.1">Its statements decide which software a particular tenant permits. The tenant's own review function holds this role, and the authorization server records the tenant the issuer speaks for. A tenant approval statement is recorded at the authorization server by the tenant it governs and evaluated in that tenant's request context under <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>; it neither creates nor renews a registration, and it bears on no other tenant.<a href="#section-15.1-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-15.1-2.4.1">Its statements decide which software a particular tenant permits. The tenant's own review function holds this role, and the authorization server records the tenant the issuer speaks for. An issuer in this role serves its current decisions rather than handing them to clients to carry (<a href="#approvals-endpoint" class="auto internal xref">Section 15.2</a>), because withdrawing an approval is the point of holding one and the restricted party must not control its conveyance. A tenant approval statement is recorded at the authorization server by the tenant it governs and evaluated in that tenant's request context under <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>; it neither creates nor renews a registration, and it bears on no other tenant.<a href="#section-15.1-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
 <p id="section-15.1-3">An issuer <span class="bcp14">MAY</span> hold both roles, and the two consumptions never collide: an establishment statement arrives in a request, a tenant approval is recorded out of band. For the events of <span>[<a href="#SIGNALS" class="cite xref">SIGNALS</a>]</span>, the event type determines scope.<a href="#section-15.1-3" class="pilcrow">¶</a></p>
 <p id="section-15.1-4">Where an authorization server hosts multiple tenants, issuer trust is configured per tenant. The authorization server <span class="bcp14">MUST</span> resolve the tenant a request belongs to and <span class="bcp14">MUST</span> evaluate only the issuers configured for that tenant; accepting a tenant approval issuer's statement outside the tenant it speaks for is a cross-tenant escalation (<a href="#security-considerations" class="auto internal xref">Section 16</a>).<a href="#section-15.1-4" class="pilcrow">¶</a></p>
-<p id="section-15.1-5">Pairwise configuration bounds a statement's reach to the issuers a trusting authorization server has configured, which is why a statement's practical audience is an ecosystem or administrative domain rather than the open web. The OAuth Identity Assertion Trust Framework <span>[<a href="#TRUST-FRAMEWORK" class="cite xref">TRUST-FRAMEWORK</a>]</span> generalizes the model: a trusting authorization server publishes the conditions an issuer must satisfy and evaluates published evidence, such as authorization by the owner of a client identifier's namespace, when a statement is presented, replacing enumeration of trusted issuers with open-world policy. OpenID Federation <span>[<a href="#OPENID-FED" class="cite xref">OPENID-FED</a>]</span> provides an alternative through trust chains. Both are out of scope here.<a href="#section-15.1-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="approvals-endpoint">
+<section id="section-15.2">
+        <h3 id="name-serving-current-approvals">
+<a href="#section-15.2" class="section-number selfRef">15.2. </a><a href="#name-serving-current-approvals" class="section-name selfRef">Serving Current Approvals</a>
+        </h3>
+<p id="section-15.2-1">An issuer in the tenant approval role serves the statements it currently has in force to the authorization servers they name. A request carries the requesting authorization server's issuer identifier as the audience of interest; the response is a JSON object whose <code>software_statements</code> member is an array of the statements in force naming that audience, and whose HTTP caching headers bound how long the response may be reused. An empty array is a well-formed answer, and means the issuer has no approvals in force for that audience.<a href="#section-15.2-1" class="pilcrow">¶</a></p>
+<p id="section-15.2-2">Absence is how an approval ends. An issuer withdrawing an approval stops serving it, and a consuming authorization server that no longer receives it treats the approval as it treats an expired one (<span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>). This is why the endpoint serves the set in force rather than answering questions about individual subjects: a per-subject query cannot distinguish a withdrawn approval from one the issuer never made.<a href="#section-15.2-2" class="pilcrow">¶</a></p>
+<p id="section-15.2-3">The endpoint is authenticated. The two parties already exchange issuer identifiers and keys when trust is established (<a href="#issuer-trust" class="auto internal xref">Section 15</a>), and the credential a requesting authorization server presents is part of that configuration; this document defines no new credential type. An issuer <span class="bcp14">MUST</span> serve only the statements naming the requester's own audience, and <span class="bcp14">MUST NOT</span> reveal statements naming other authorization servers.<a href="#section-15.2-3" class="pilcrow">¶</a></p>
+<p id="section-15.2-4">An issuer supporting this endpoint advertises it as <code>software_statement_approvals_endpoint</code> (<a href="#authorization-server-metadata" class="auto internal xref">Section 14</a>). An issuer in the establishment role does not serve statements this way: those are carried by the clients they admit, and serving them on request would disclose which authorization servers a client intends to establish relationships with.<a href="#section-15.2-4" class="pilcrow">¶</a></p>
+<p id="section-15.2-5">Pairwise configuration bounds a statement's reach to the issuers a trusting authorization server has configured, which is why a statement's practical audience is an ecosystem or administrative domain rather than the open web. The OAuth Identity Assertion Trust Framework <span>[<a href="#TRUST-FRAMEWORK" class="cite xref">TRUST-FRAMEWORK</a>]</span> generalizes the model: a trusting authorization server publishes the conditions an issuer must satisfy and evaluates published evidence, such as authorization by the owner of a client identifier's namespace, when a statement is presented, replacing enumeration of trusted issuers with open-world policy. OpenID Federation <span>[<a href="#OPENID-FED" class="cite xref">OPENID-FED</a>]</span> provides an alternative through trust chains. Both are out of scope here.<a href="#section-15.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2685,12 +2705,12 @@ Pragma: no-cache
           <dd class="break"></dd>
 <dt id="section-18.5-2.17">Metadata Name:</dt>
           <dd style="margin-left: 1.5em" id="section-18.5-2.18">
-            <p id="section-18.5-2.18.1"><code>software_statement_subject_token_types_supported</code><a href="#section-18.5-2.18.1" class="pilcrow">¶</a></p>
+            <p id="section-18.5-2.18.1"><code>software_statement_approvals_endpoint</code><a href="#section-18.5-2.18.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-18.5-2.19">Metadata Description:</dt>
           <dd style="margin-left: 1.5em" id="section-18.5-2.20">
-            <p id="section-18.5-2.20.1">JSON array of subject token type values accepted for exchanging into software statements; signals support for the token exchange profile.<a href="#section-18.5-2.20.1" class="pilcrow">¶</a></p>
+            <p id="section-18.5-2.20.1">URL of the endpoint at which a tenant approval issuer serves the statements it currently has in force to a requesting authorization server.<a href="#section-18.5-2.20.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-18.5-2.21">Change Controller:</dt>
@@ -2700,7 +2720,27 @@ Pragma: no-cache
           <dd class="break"></dd>
 <dt id="section-18.5-2.23">Specification Document(s):</dt>
           <dd style="margin-left: 1.5em" id="section-18.5-2.24">
-            <p id="section-18.5-2.24.1">This specification, <a href="#authorization-server-metadata" class="auto internal xref">Section 14</a> and <a href="#token-exchange-profile" class="auto internal xref">Section 8</a><a href="#section-18.5-2.24.1" class="pilcrow">¶</a></p>
+            <p id="section-18.5-2.24.1">This specification, <a href="#approvals-endpoint" class="auto internal xref">Section 15.2</a><a href="#section-18.5-2.24.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-18.5-2.25">Metadata Name:</dt>
+          <dd style="margin-left: 1.5em" id="section-18.5-2.26">
+            <p id="section-18.5-2.26.1"><code>software_statement_subject_token_types_supported</code><a href="#section-18.5-2.26.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-18.5-2.27">Metadata Description:</dt>
+          <dd style="margin-left: 1.5em" id="section-18.5-2.28">
+            <p id="section-18.5-2.28.1">JSON array of subject token type values accepted for exchanging into software statements; signals support for the token exchange profile.<a href="#section-18.5-2.28.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-18.5-2.29">Change Controller:</dt>
+          <dd style="margin-left: 1.5em" id="section-18.5-2.30">
+            <p id="section-18.5-2.30.1">IESG<a href="#section-18.5-2.30.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-18.5-2.31">Specification Document(s):</dt>
+          <dd style="margin-left: 1.5em" id="section-18.5-2.32">
+            <p id="section-18.5-2.32.1">This specification, <a href="#authorization-server-metadata" class="auto internal xref">Section 14</a> and <a href="#token-exchange-profile" class="auto internal xref">Section 8</a><a href="#section-18.5-2.32.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>

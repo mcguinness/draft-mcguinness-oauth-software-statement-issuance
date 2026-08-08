@@ -127,6 +127,14 @@ Table of Contents
    ended.  Deployments therefore keep bounded statement lifetimes, and
    neither [ISSUANCE] nor [PRESENTATION] depends on this specification.
 
+   This mechanism buys latency, not correctness, and it matters where an
+   artifact is carried by the party it concerns.  A tenant approval that
+   an authorization server retrieves from the tenant's issuer
+   ([PRESENTATION]) ends by ceasing to be served, so events add nothing
+   there beyond speed.  An establishment statement is carried by the
+   client it admits, and a client has no reason to stop presenting one;
+   withdrawing it before its expiry is what these events are for.
+
 2.  Conventions and Definitions
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
