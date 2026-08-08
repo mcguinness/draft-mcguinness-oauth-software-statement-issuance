@@ -16,19 +16,20 @@ Abstract
    RFC 7591 defines the software statement as input to dynamic client
    registration but does not define how long the resulting registration
    remains valid or how a client renews the statement on which it was
-   based.  This specification defines two consumption profiles.  In the
-   registration profile, a statement bound to an RFC 7591 software_id
-   governs the registration until the statement expires and a
-   replacement renews that validity.  In the runtime profile, a
-   statement bound to a Client ID Metadata Document URL establishes an
-   otherwise unregistered client for an authorization or token request
-   and the grant state derived from it.  Runtime presentation requires
-   proof of a key directly attested by the statement or covered by an
-   accepted endorsement chain, so possession of the statement alone is
-   insufficient.  Together, the profiles let an issuer curate approved
-   client software across the authorization servers in a statement's
-   audience while preserving each server's control over trust, metadata
-   authority, grants, and token lifetime.
+   based.  This specification defines everything a trusting
+   authorization server does with a software statement: which issuers it
+   configures and in which role, how it validates and applies one, and
+   the two points at which it consumes one.  Consumed in a registration
+   request, a statement governs that registration until it expires and a
+   replacement renews it.  Presented in an authorization or token
+   request, it establishes an otherwise unregistered client for that
+   request and the grant state derived from it, on proof of a key the
+   statement itself attests, so possession of the statement alone is
+   insufficient.  A tenant's approval of already-established software is
+   retrieved from that tenant's issuer rather than carried by the
+   client.  Together these let an issuer curate approved client software
+   across the authorization servers in a statement's audience while each
+   server keeps control of trust, grants, and token lifetime.
 
 Status of This Memo
 
@@ -128,8 +129,9 @@ Table of Contents
    therefore has no interoperable way to keep that review current at the
    authorization servers that relied on it.
 
-   This specification defines two ways to consume the statement format
-   and validation rules of [ISSUANCE]:
+   It defines the trust configuration a consuming server keeps
+   (Section 4) and two points at which it consumes the artifact
+   [ISSUANCE] defines:
 
    *  *At registration* (Section 5): the statement is consumed in an
       [RFC7591] registration request and at renewal, and its exp bounds
