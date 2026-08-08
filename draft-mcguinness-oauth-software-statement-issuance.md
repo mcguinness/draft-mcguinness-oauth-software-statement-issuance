@@ -164,7 +164,7 @@ This specification uses the following building blocks:
 
 * {{RFC7591}} defines the software statement and the client metadata carried in it.
 * {{CIMD}} defines the client identifier, canonical metadata source, pre-registration, and metadata-change handling. Those mechanisms can serve as approval-carrying enrollment, while the metadata digest ({{metadata-snapshot}}) makes changes precisely detectable.
-* {{DTR}} defines client opt-in, token endpoint deferral, polling, cancellation, and sender constraint. This specification profiles it for both issuance flows.
+* {{DTR}} defines client opt-in, token endpoint deferral, polling, cancellation, and sender constraint. This specification uses it as-is for asynchronous issuance and adds only a delivery restriction ({{deferred-processing}}).
 * {{RFC8693}} defines both the response convention for non-access security tokens and the exchange profiled in {{token-exchange-profile}}.
 
 {{APPROVAL-DCR}} creates an authorization-server-specific `client_id` and, when applicable, client credentials after approval. This specification issues a portable statement for later {{RFC7591}} registration. The two compose.
@@ -451,7 +451,7 @@ A redemption attempt consumes the software statement code whenever the presented
 
 * **Approved:** the authorization server returns the software statement token response ({{software-statement-response}}).
 * **Denied:** it returns the terminal denial of {{terminal-denial}}.
-* **Pending:** a deferred issuer returns the deferred token response of {{DTR}}. It binds the deferral to the code's client identifier, metadata snapshot, audience, and client authentication or DPoP key. The client then polls according to {{deferred-processing}}.
+* **Pending:** the authorization server returns the deferred token response of {{DTR}}, binding the deferral to the code's metadata snapshot and audience alongside the bindings {{DTR}} itself requires. The client then polls as {{DTR}} defines ({{deferred-processing}}).
 
 A synchronous issuer never reaches the pending branch, having decided before it returned the code ({{deferred-processing}}).
 
@@ -525,48 +525,25 @@ Issuance policy determines whether an initial access token authorizes only the r
 
 # Deferred Processing {#deferred-processing}
 
-An authorization server supports one of two conformance levels:
+Approval can take hours or days rather than the seconds typical of user authentication, so an authorization server MAY answer an originating request, a software statement code redemption ({{software-statement-code-redemption}}) or a token exchange ({{token-exchange-profile}}), with a deferred token response {{DTR}} instead of a statement.
 
-* A **synchronous issuer** answers every originating request with a statement or terminal denial ({{terminal-denial}}), so it MUST reach the issuance decision before responding, which in the redirect flow means before returning the software statement code. It never defers, need not implement {{DTR}}, and does not advertise `deferred_token_response_supported`.
-* A **deferred issuer** returns a deferred token response when a decision needs out-of-band processing. It implements {{DTR}} and advertises `deferred_token_response_supported` ({{authorization-server-metadata}}).
+An authorization server that does so implements {{DTR}} and advertises `deferred_token_response_supported` ({{authorization-server-metadata}}); one that always answers with a statement or a terminal denial ({{terminal-denial}}) does neither. Everything about the deferral, the `completion_mode` opt-in, the polling grant and its parameters, pending and denied and expired behavior, polling rate, sender constraint across polls, and cancellation, is as {{DTR}} specifies, and clients and authorization servers MUST follow it. This document adds only two constraints and one recommendation:
 
-Against a deferred issuer, every deferral originates from a deferred token response of {{DTR}}, issued for a software statement code redemption ({{software-statement-code-redemption}}) or a token exchange ({{token-exchange-profile}}), and the client polls the token endpoint using the polling grant defined by {{DTR}}.
+* A deferral created under this specification MUST be delivered by polling. A client MUST NOT send the `client_notification_token` parameter of {{DTR}}, and an authorization server MUST NOT deliver a callback, whatever the client's metadata says. Polling over the authenticated token endpoint needs no outbound channel, and a future version can adopt callbacks ({{design-rationale}}).
+* A successful polling response is the software statement token response of {{software-statement-response}}, not an access token response.
+* Issuers SHOULD set deferral code lifetimes that reflect their actual approval latency.
 
-A client contacting a deferred issuer MUST include the `completion_mode` parameter of {{DTR}} with a value that includes `deferred` on the originating request, and MUST support the polling grant; the issuer MAY still complete synchronously. A deferred issuer MUST reject an originating request that does not carry that opt-in with `invalid_request`, because {{DTR}} treats an absent or non-`deferred` value as a requirement for synchronous handling, which an issuer whose decisions can outlive a request cannot guarantee. This deliberately raises the parameter from OPTIONAL in {{DTR}} to REQUIRED here. A synchronous issuer neither requires nor processes `completion_mode`.
+The following is a non-normative first polling request for a deferral created by a token exchange, using the polling grant of {{DTR}} with the origination sender constraint:
 
-This specification profiles polling delivery only: a client MUST NOT include the `client_notification_token` parameter of {{DTR}} on any request under this specification, a request containing it is rejected with `invalid_request`, and an authorization server MUST NOT deliver callback notifications for a deferral created under this specification, regardless of any `deferred_client_notification_endpoint` in the client's metadata. Polling over the authenticated token endpoint retrieves the statement without an outbound channel, so this version does not require an issuer to operate one; a future version can adopt the callback mechanism of {{DTR}} ({{design-rationale}}).
+~~~ http
+POST /token HTTP/1.1
+Host: issuer.example
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic czZCaGRSa3F0Mzo3RmpmcDBaQnIxS3REUmJuZlZkbUl3
 
-When an issuer defers a request, it MUST record the sender-constraint context established at origination and bind it to the deferral:
-
-* the client identifier;
-* the client authentication method; and
-* for a method that binds a key, that specific key: the DPoP JWK thumbprint, or the authenticated key for a method such as `private_key_jwt` or mTLS.
-
-A method that does not bind a key freezes only the client identity and method. Every polling request MUST match the recorded context. The authorization server MUST NOT re-derive that context from the current metadata document. A client that loses the origination key cannot complete the deferral and instead makes a new request.
-
-Approval of software statement issuance can take hours or days rather than the seconds typical of user authentication, for example when it involves reviewing the client's policy or compliance documentation. Issuers SHOULD set deferral code lifetimes that reflect their actual approval latency.
-
-## First Polling Request {#first-polling-request}
-
-The first polling request is an HTTP `POST` request to the token endpoint using the `application/x-www-form-urlencoded` format. It contains:
-
-`grant_type`:
-: REQUIRED. The value MUST be `urn:ietf:params:oauth:grant-type:deferred`.
-
-`deferral_code`:
-: REQUIRED. The deferral code returned in the deferred response.
-
-The polling request carries no PKCE parameter: for a redirect-flow deferral, the verifier was consumed when the software statement code was redeemed ({{software-statement-code-redemption}}). The polling request MUST NOT contain a `software_statement_code`, `code_verifier`, `redirect_uri`, `audience`, `subject_token`, `subject_token_type`, or `requested_token_type` parameter; a polling request containing any of them is rejected with `invalid_request`.
-
-On this and every subsequent polling request, the client MUST satisfy the sender-constraint context recorded for the deferral ({{deferred-processing}}): it uses the origination client authentication method and, when that method or a DPoP sender constraint binds a key, signs with the origination key. The authorization server verifies the request against the stored context, not against the current metadata document, and MUST reject a request that does not match, including a DPoP proof whose key differs from the recorded thumbprint.
-
-## Subsequent Polling Requests
-
-If the request remains pending, the client continues polling according to {{DTR}} using only the polling grant's normal parameters and the sender constraint described in {{first-polling-request}}.
-
-Pending, denied, expired, canceled, and polling-rate behavior follows {{DTR}}. A successful first or subsequent polling response is the software statement token response defined in {{software-statement-response}}.
-
-Cancellation of a deferral follows the revocation mechanism of {{DTR}}: the client presents the deferral code to the authorization server's revocation endpoint {{RFC7009}} with a `token_type_hint` of `urn:ietf:params:oauth:token-type:deferral-code`. For a deferral created under this specification, the authorization server MUST require the deferral's sender constraint on the revocation request: client authentication where the deferral is bound to client authentication, or a DPoP proof with the origination-bound key otherwise. A revocation request that does not present the bound constraint MUST be treated as presenting an unrecognized token per {{DTR}}.
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adeferred
+&deferral_code=8xLOxBtZp8
+~~~
 
 # Software Statement Token Response {#software-statement-response}
 
@@ -734,7 +711,7 @@ Deferral codes travel only over a direct TLS connection and are protected by sen
 
 ## Deferral Sender Constraint
 
-Every deferral is created by a token request, and every poll is bound to the client authentication or DPoP key fixed at origination ({{deferred-processing}}), so a public redirect-flow client's `dpop_jkt` carries sender constraint continuously from the authorization response through polling. All additional sender-constraint, polling-rate, replay, cancellation, and logging requirements of {{DTR}} apply.
+A deferral outlives the request that created it, so the binding between the two matters. {{DTR}} specifies that binding, including what a polling request must present and what an authorization server must verify; this document neither relaxes nor restates it. What it adds is the polling-only rule of {{deferred-processing}}, which keeps the statement on the authenticated token endpoint rather than an outbound channel.
 
 ## Token Exchange Considerations {#te-considerations}
 
