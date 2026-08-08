@@ -183,7 +183,9 @@ These inputs, not the signature alone, define acceptance. Because the issuer is 
 
 A trusting authorization server MUST derive trust from this local configuration and MUST NOT derive it from an `iss`, `jku`, `x5u`, or other key-location value carried in a presented statement. Having established trust, it validates each statement as described in {{ISSUANCE}}.
 
-Issuer trust SHOULD be scoped as well as explicit. An issuer accepted for all values of `sub` can, if compromised or over-broad, mint acceptable statements about any client software; trust configuration SHOULD therefore constrain each issuer to the client identifier namespaces it is expected to attest, for example URLs under the domains of the software publishers it serves, and a statement whose `sub` falls outside that scope MUST be rejected even when its signature verifies ({{ISSUANCE}}). Where an issuer attests software across many publishers, as an enterprise issuer does, the scope is the set of identifiers it is configured for rather than a single domain; the rejection rule is the same.
+Issuer trust SHOULD be scoped as well as explicit. Trust configuration SHOULD constrain each issuer to the client identifier namespaces it is expected to attest, for example URLs under the domains of the software publishers it serves, and a statement whose `sub` falls outside that scope MUST be rejected even when its signature verifies ({{ISSUANCE}}). An issuer accepted for all values of `sub` can, if compromised or over-broad, mint acceptable statements about any client software.
+
+Where an issuer attests software across many publishers, as an enterprise issuer does, the scope is the set of identifiers it is configured for rather than a single domain. The rejection rule is the same.
 
 # Consumption at Registration {#dcr-presentation}
 
@@ -191,7 +193,14 @@ The statement is consumed in the `software_statement` member of an {{RFC7591}} r
 
 ## Registration Validity {#registration-validity}
 
-An authorization server that advertises `software_statement_registration_validity_supported` as `true` MUST apply this model to every registration it creates from a validated software statement. It MUST record the governing statement's `iss`, `jti`, `sub`, `iat`, and `exp` with the registration. The registration is valid until that `exp`. After it passes without a replacement ({{revalidation}}), the authorization server MUST reject requests under the registration, using `invalid_client` at the token endpoint and, at the authorization or pushed authorization request endpoint, the error {{RFC6749}} defines for an unauthorized client, except for the revalidation requests {{revalidation}} permits. The server SHOULD retain the expired record so that it can process a later authenticated revalidation ({{oracle-considerations}}), and MAY allow a grace period during which it accepts a replacement without treating the registration as expired. The disposition of outstanding grants is local policy ({{enforcement-bounds}}).
+An authorization server that advertises `software_statement_registration_validity_supported` as `true` MUST apply this model to every registration it creates from a validated software statement:
+
+* It MUST record the governing statement's `iss`, `jti`, `sub`, `iat`, and `exp` with the registration.
+* The registration is valid until that `exp`.
+* Once that time passes without a replacement ({{revalidation}}), it MUST reject requests under the registration: `invalid_client` at the token endpoint, and at the authorization or pushed authorization request endpoint the error {{RFC6749}} defines for an unauthorized client. The revalidation requests {{revalidation}} permits are the exception.
+* It SHOULD retain the expired record so that it can process a later authenticated revalidation ({{oracle-considerations}}), and MAY allow a grace period during which it accepts a replacement without treating the registration as expired.
+
+The disposition of outstanding grants is local policy ({{enforcement-bounds}}).
 
 The metadata signal in {{authorization-server-metadata}} lets a client determine before registration whether this model applies. The client already holds the statement and therefore learns the initial validity boundary from its `exp`. A server that omits the signal or advertises `false` can still consume a statement as ordinary {{RFC7591}} registration input, but it MUST NOT claim conformance to this registration-validity model.
 
@@ -203,7 +212,14 @@ The client renews a statement-governed registration by delivering a replacement 
 * in the `software_statement` parameter of an authenticated pushed authorization request {{RFC9126}} under the registration, which is the renewal path available to a client that holds no refresh token and whose only grant type is the authorization code; or
 * in the `software_statement` member of an authenticated {{RFC7592}} update request, where the deployment offers registration management. Such a request replaces the registration's metadata in full, as {{RFC7592}} requires, so the client sends its complete current metadata alongside the statement; a renewal-only request omitting other members would reset them.
 
-The replacement MUST validate under {{ISSUANCE}} with this server in its audience, MUST have the governing statement's `iss` and `sub`, MUST be unexpired, and MUST have an `iat` no earlier than the recorded statement's `iat`. On success the authorization server MUST replace the recorded statement identity, `iat`, and `exp` in a single atomic update; concurrent deliveries resolve to the most recently issued statement. Whether attested changes in the replacement update the registration record is local registration policy, and a server that relies on narrowing to take effect applies them.
+The replacement MUST:
+
+* validate under {{ISSUANCE}} with this server in its audience;
+* carry the governing statement's `iss` and `sub`;
+* be unexpired; and
+* have an `iat` no earlier than the recorded statement's `iat`.
+
+On success the authorization server MUST replace the recorded statement identity, `iat`, and `exp` in a single atomic update, and concurrent deliveries resolve to the most recently issued statement. Whether attested changes in the replacement update the registration record is local registration policy, and a server that relies on narrowing to take effect applies them.
 
 When an expired registration sends a request containing a replacement, the authorization server MUST authenticate the retained registration and evaluate the replacement before applying the expiry rejection. A valid replacement therefore restores the registration; an omitted or invalid replacement does not.
 
@@ -286,7 +302,15 @@ A successful presentation creates an establishment comprising the following, whi
 * the issuer trust decision; and
 * the sender-constraint mechanism and Proven Key.
 
-The establishment persists for as long as the grant depends on it: it is created by the presentation, referenced by the grant continuation state bound to it, and MAY be discarded once no `request_uri`, authorization code, refresh token, or other continuation state references it. Discarding an establishment ends nothing the grant still holds; it is the removal of state no longer reachable. The authorization server MUST bind the resulting `request_uri`, authorization code, refresh token, and other grant continuation state to the establishment as applicable. A token request that redeems an authorization code MUST have a `client_id` exactly equal to the establishment's `sub`, MUST demonstrate possession of the same Proven Key under the same sender-constraint mechanism, and MUST NOT carry the `software_statement` parameter. A redemption carrying a statement is rejected with `invalid_request`; a wrong client identifier or failed key binding is rejected with `invalid_grant`. This prohibition covers redemption of a code bound to an establishment; a registered client redeeming its own code may deliver a replacement statement under {{revalidation}}, which is a delivery rather than a presentation.
+The establishment persists for as long as the grant depends on it. The authorization server MUST bind the resulting `request_uri`, authorization code, refresh token, and other grant continuation state to it, as applicable, and MAY discard it once no such state references it.
+
+A token request that redeems an authorization code opened by a presentation:
+
+* MUST have a `client_id` exactly equal to the establishment's `sub`;
+* MUST demonstrate possession of the same Proven Key under the same sender-constraint mechanism; and
+* MUST NOT carry the `software_statement` parameter.
+
+A redemption carrying a statement is rejected with `invalid_request`; a wrong client identifier or failed key binding is rejected with `invalid_grant`. This prohibition covers redemption of a code bound to an establishment; a registered client redeeming its own code may deliver a replacement statement under {{revalidation}}, which is a delivery rather than a presentation.
 
 A statement MUST be unexpired when presented. Expiry after presentation does not by itself invalidate an establishment already bound. The authorization server controls continued use through its grant and refresh-token policy; {{refresh}} defines how it can require a current replacement statement.
 
@@ -303,7 +327,9 @@ When policy requires one, the client presents the replacement in the `software_s
 * MUST have an `iat` no earlier than the recorded statement's `iat`; and
 * MUST authorize the establishment's Proven Key ({{sender-constraint}}).
 
-The refreshed access MUST fall within the replacement's effective metadata; the grant never widens beyond the original authorization. The authorization server MUST recompute the attested members from the replacement. It MAY re-resolve the Client ID Metadata Document for unattested members, in which case their current values apply; otherwise the recorded values persist for the grant. This operation does not rotate the establishment's key; a client that needs a new key performs a new presentation. On success, the establishment's statement identity, `iat`, expiry, effective metadata, and trust decision are replaced in a single atomic update; concurrent deliveries resolve to the most recently issued statement. A refresh that fails these requirements, or omits a statement that policy requires, is rejected with `invalid_grant` and leaves the establishment unchanged.
+The refreshed access MUST fall within the replacement's effective metadata.
+
+On success, the establishment's statement identity, `iat`, expiry, effective metadata, and trust decision are replaced in a single atomic update, and concurrent deliveries resolve to the most recently issued statement. A refresh that fails these requirements, or omits a statement that policy requires, is rejected with `invalid_grant` and leaves the establishment unchanged. The operation never rotates the establishment's key; a client that needs a new key performs a new presentation.
 
 ## Statements from an Established Client {#registered-delivery}
 
@@ -435,7 +461,13 @@ Registration renewal proves possession of the registration's own credential and 
 
 Runtime presentation can cause the authorization server to retrieve the Client ID Metadata Document, an attested `jwks_uri`, or keys and metadata associated with an attested instance issuer. Every such retrieval inherits the server-side request forgery protections of {{CIMD}}. A trusted signature does not make a URL safe: the authorization server MUST apply its URL, redirect, address-range, transport, and content-type policy independently to every referenced location.
 
-Presentation reaches these retrievals before any client is registered or any user has interacted, so the work is available to an unauthenticated requester holding one acceptable statement. An authorization server SHOULD rate-limit presentations per statement identity, per subject, and per source, and SHOULD bound the establishments it will create from one statement ({{multi-instance}}), before spending retrieval or storage on a new presentation. It SHOULD bound JWT size and parsing work, concurrent retrievals, response size, and response time, and SHOULD cache successful and failed retrieval results for an appropriate period. A retrieval failure leaves the relevant metadata or proof chain unverified; the authorization server MUST reject the request and MUST NOT fall back to a weaker sender-constraint mode.
+Presentation reaches these retrievals before any client is registered or any user has interacted, so the work is available to an unauthenticated requester holding one acceptable statement. An authorization server SHOULD therefore bound it:
+
+* rate-limit presentations per statement identity, per subject, and per source, and bound the establishments it will create from one statement ({{multi-instance}}), before spending retrieval or storage on a new presentation;
+* bound JWT size and parsing work, concurrent retrievals, response size, and response time; and
+* cache successful and failed retrieval results for an appropriate period.
+
+A retrieval failure leaves the relevant metadata or proof unverified; the authorization server MUST reject the request and MUST NOT fall back to a weaker proof.
 
 ## Registration Fraud and Impersonation {#registration-fraud}
 
