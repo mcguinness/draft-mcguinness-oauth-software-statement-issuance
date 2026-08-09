@@ -1049,7 +1049,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 9 February 2027</td>
+<td class="center">Expires 10 February 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1062,16 +1062,17 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-sw-stmt-signals-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-08-08" class="published">8 August 2026</time>
+<time datetime="2026-08-09" class="published">9 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-02-09">9 February 2027</time></dd>
+<dd class="expires"><time datetime="2027-02-10">10 February 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
       <div class="author-name">K. McGuinness</div>
+<div class="org">Independent</div>
 </div>
 </dd>
 </dl>
@@ -1100,7 +1101,7 @@ svg {
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 9 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 10 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1215,7 +1216,7 @@ svg {
       <h2 id="name-introduction">
 <a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
       </h2>
-<p id="section-1-1"><span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> defines a software statement in which an issuer attests reviewed client metadata, and <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> defines how a trusting authorization server consumes one: at registration, where the statement's expiry can bound the registration's validity; at runtime, where it establishes a client for a request; and as a tenant approval evaluated in one tenant's context. In every case the decision ends when the statement expires unrenewed.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-1"><span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> defines a software statement in which an issuer attests reviewed client metadata, and <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> defines how a trusting authorization server consumes one: at registration, where the statement's expiry can bound the registration's validity, and at runtime, where it establishes a client for a request. In both cases the decision ends when the statement expires unrenewed.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">That leaves responsiveness coupled to lifetime. An issuer that wants a withdrawal to take effect within minutes must issue statements that live for minutes, and pay the renewal traffic for every client at every audience. An issuer that wants a manageable renewal cadence accepts that a withdrawal takes as long as the remaining lifetime.<a href="#section-1-2" class="pilcrow">¶</a></p>
 <p id="section-1-3">The coupling is unnecessary, because the parties are already in a configured relationship. A trusting authorization server records each issuer's identifier, key source, scope, and role in order to accept its statements at all (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>). This specification uses that relationship to carry lifecycle events over the Shared Signals Framework <span>[<a href="#SSF" class="cite xref">SSF</a>]</span>: the statement issuer transmits, the trusting authorization server receives, and events are Security Event Tokens <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span> delivered by the framework's push <span>[<a href="#RFC8935" class="cite xref">RFC8935</a>]</span> or poll <span>[<a href="#RFC8936" class="cite xref">RFC8936</a>]</span> bindings.<a href="#section-1-3" class="pilcrow">¶</a></p>
 <p id="section-1-4">This specification defines the subject identification, event types, payload claims, the durable records a receiver keeps, and its processing rules. It defines no new endpoint, transport, subject identifier format, or trust establishment mechanism.<a href="#section-1-4" class="pilcrow">¶</a></p>
@@ -1232,7 +1233,7 @@ svg {
 "<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
 described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
 appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
-<p id="section-2-2">Transmitter, Receiver, Stream, and the delivery and configuration mechanisms are defined by <span>[<a href="#SSF" class="cite xref">SSF</a>]</span>. Security Event Token, or SET, is defined by <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span>. Subject identifier formats are defined by <span>[<a href="#RFC9493" class="cite xref">RFC9493</a>]</span>. Software statement, issuer roles including the establishment and tenant approval roles, and statement validation are defined by <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>. Registration validity, runtime presentation, tenant approval evaluation, and the per-grant establishment state are defined by <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<p id="section-2-2">Transmitter, Receiver, Stream, and the delivery and configuration mechanisms are defined by <span>[<a href="#SSF" class="cite xref">SSF</a>]</span>. Security Event Token, or SET, is defined by <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span>. Subject identifier formats are defined by <span>[<a href="#RFC9493" class="cite xref">RFC9493</a>]</span>. The software statement, its claims, and its validation are defined by <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>. Issuer trust configuration, registration validity, runtime presentation, and the per-grant establishment state are defined by <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>.<a href="#section-2-2" class="pilcrow">¶</a></p>
 <p id="section-2-3">This specification additionally defines the following terms:<a href="#section-2-3" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-2-4">
         <dt id="section-2-4.1">Statement Issuer:</dt>
@@ -1247,7 +1248,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
         <dd class="break"></dd>
 <dt id="section-2-4.5">Standing:</dt>
         <dd style="margin-left: 1.5em" id="section-2-4.6">
-          <p id="section-2-4.6.1">What a client may do at a consuming authorization server by virtue of a software statement: its registration and that registration's validity (<span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>), its establishment at request time, and any tenant approval in force. Standing is created and extended only by statements, never by the events defined here.<a href="#section-2-4.6.1" class="pilcrow">¶</a></p>
+          <p id="section-2-4.6.1">What a client may do at a consuming authorization server by virtue of a software statement: its registration and that registration's validity, and its establishment at request time (<span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>). Standing is created and extended only by statements, never by the events defined here.<a href="#section-2-4.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-2-4.7">Withdrawal Record:</dt>
@@ -1297,7 +1298,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 </li>
       </ul>
 <p id="section-5-6">A statement from that issuer for that subject with an <code>iat</code> after the record's effective time is a later decision by the same authority. It is accepted under the ordinary rules of <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> and <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>, and restores what the withdrawal ended. This is the only recovery path, and it requires the issuer to act.<a href="#section-5-6" class="pilcrow">¶</a></p>
-<p id="section-5-7">A refusal under this section takes effect wherever the statement would otherwise be consumed: a registration governed by a refused statement is expired as <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> defines for a lapsed registration, a runtime presentation carrying one fails as it does for a statement that is not current, and a tenant approval carrying one is treated as absent. A grant already open under a refused statement continues only as far as its next currency check: a receiver <span class="bcp14">MUST</span> treat a refused statement as not current when <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> requires currency at refresh, so that a withdrawal reaches running grants on the same terms as an expiry rather than waiting for the statement's own.<a href="#section-5-7" class="pilcrow">¶</a></p>
+<p id="section-5-7">A refusal under this section takes effect wherever the statement would otherwise be consumed: a registration governed by a refused statement is expired as <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> defines for a lapsed registration, and a runtime presentation carrying one fails as it does for a statement that is not current. A grant already open under a refused statement continues only as far as its next currency check: a receiver <span class="bcp14">MUST</span> treat a refused statement as not current when <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> requires currency at refresh, so that a withdrawal reaches running grants on the same terms as an expiry rather than waiting for the statement's own.<a href="#section-5-7" class="pilcrow">¶</a></p>
 <p id="section-5-8">A receiver <span class="bcp14">MAY</span> discard a record naming a <code>jti</code> once that statement's <code>exp</code> has passed, and <span class="bcp14">MAY</span> discard any Withdrawal Record once every statement it could refuse has expired, which a receiver that does not retain statement lifetimes bounds by the maximum lifetime it honors for that issuer (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>). Discarding a record earlier reopens the withdrawal.<a href="#section-5-8" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1550,6 +1551,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
       </h2>
 <address class="vcard">
         <div dir="auto" class="left"><span class="fn nameRole">Karl McGuinness</span></div>
+<div dir="auto" class="left"><span class="org">Independent</span></div>
 <div class="email">
 <span>Email:</span>
 <a href="mailto:public@karlmcguinness.com" class="email">public@karlmcguinness.com</a>
