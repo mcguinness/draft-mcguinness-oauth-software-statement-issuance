@@ -4,7 +4,7 @@ This is a non-normative companion to the three drafts in this repository. It ske
 
 * [CIMD Software Statement](draft-mcguinness-oauth-cimd-sw-stmt.md), the statement draft: the artifact, its validation, issuer trust, and the two points at which a statement is consumed.
 * [CIMD Software Statement Issuance](draft-mcguinness-oauth-cimd-sw-stmt-issuance.md), the issuance draft: how a client obtains one.
-* [Shared Signals Events for CIMD Software Statements](draft-mcguinness-oauth-cimd-sw-stmt-signals.md), the signals draft: ending a review before the statement expires. Optional to both.
+* [Shared Signals Events for CIMD Software Statements](draft-mcguinness-oauth-cimd-sw-stmt-signals.md), the signals draft: telling a provider that a status changed, so it resolves sooner than its schedule would. Optional to both.
 
 ## The situation being addressed
 
@@ -105,7 +105,7 @@ The reviewer stops renewing. At the recorded expiry the registration lapses wher
 
 Where the customer's identity provider carries the permission, the customer stops issuing assertions and new grants stop at once, with the vendor's listing untouched and other customers unaffected.
 
-Neither revokes tokens already issued. A provider wanting an immediate stop uses its own controls, or consumes the signals draft's events.
+Neither revokes tokens already issued. A provider wanting an immediate stop uses its own controls, and narrows the window by resolving statement status more often.
 
 ## Variants
 
@@ -136,22 +136,24 @@ They compose, and a deployment needing only the first can stop there and never t
 
 ## Composition with Shared Signals
 
-A statement is carried by the client it admits, and a client has no reason to stop presenting one, so ending a review early is enforced on a clock: how fast a decision takes effect is set by how short the reviewer made the lifetime, and short lifetimes buy responsiveness with renewal traffic. That trade is avoidable, because the parties are already in a configured pairwise relationship that can carry an event stream.
+A statement is carried by the client it admits, and a client has no reason to stop presenting one, so ending a review early needs somewhere a provider can check. That place is the reviewer's status list. Statements carry a `status` claim locating them in it, per [Token Status List](https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list/), and a provider resolves that status on its own schedule. Withdrawing a review is then a matter of setting one entry, and one signed list answers for every statement the reviewer has issued.
 
-The signals draft defines those events over the [Shared Signals Framework](https://openid.net/specs/openid-sharedsignals-framework-1_0-final.html). The reviewer transmits, the authorization server receives, events travel as [Security Event Tokens](https://www.rfc-editor.org/rfc/rfc8417.html), and subjects use the `uri` format of [RFC 9493](https://www.rfc-editor.org/rfc/rfc9493.html). Nothing new is invented at the transport or trust layer.
+What remains is latency. A provider resolving hourly learns of a delisting within the hour. Shortening that for everyone means everyone polls harder, and nearly every poll reports no change.
 
-One event, in two forms:
+The signals draft closes that gap over the [Shared Signals Framework](https://openid.net/specs/openid-sharedsignals-framework-1_0-final.html). The reviewer transmits, the authorization server receives, events travel as [Security Event Tokens](https://www.rfc-editor.org/rfc/rfc8417.html), and subjects use the `uri` format of [RFC 9493](https://www.rfc-editor.org/rfc/rfc9493.html). Nothing new is invented at the transport or trust layer.
 
-| Event | Meaning | Effect and blast radius |
+One event, carrying no decision:
+
+| Event | Meaning | What the receiver does |
 | --- | --- | --- |
-| Withdrawn, naming no artifact | The review is over | Durably refuse every statement that issuer made for that subject up to the cutoff, and expire registrations governed by one |
-| Withdrawn, naming a `jti` | One statement was mis-issued while the review stands | Refuse that statement alone |
+| Status changed, naming a `jti` | The status of one statement moved | Invalidate any cached status list, resolve that statement now, apply what the list says |
+| Status changed, naming none | Some statement for this software moved | The same, across the statements it holds for that subject and issuer |
 
-Two properties keep this additive. **Events only reduce standing, durably.** A receiver records the withdrawal and refuses statements issued at or before its cutoff, so a client holding an unexpired copy cannot restore what the event ended; only a statement issued afterwards, a fresh decision by the same authority, restores it. Nothing an event carries creates standing, so a forged or replayed event grants nothing, and the worst case is an availability failure the reviewer corrects by issuing again.
+Two properties keep this additive. **The event names no status.** It says look, not what to conclude. A forged or replayed event costs a resolution and cannot assert a withdrawal the reviewer never published, so the list stays the single authority, and a receiver that resolves `VALID` after an event has applied that event correctly.
 
-**Missed events fall back to the clock.** A lost stream leaves the deployment where it would have been without the mechanism: standing ends at expiry where registration validity or refresh currency is in force, and otherwise at whatever the provider's own client lifecycle provides, with the refusal record still stopping later statements. Signals shorten the interval between a decision and its effect; they are not load-bearing, which is why neither other draft depends on them.
+**Missed events fall back to the schedule.** A lost stream leaves the deployment where it would have been without the mechanism: the provider resolves status on its ordinary cadence, and failing that, standing ends at expiry. Signals shorten the interval between a decision and its effect and carry no state of their own, which is why neither other draft depends on them.
 
-The consequence is that lifetime and responsiveness stop being one dial. A reviewer can pick a lifetime that suits its renewal capacity, days rather than minutes, and still act in seconds.
+The consequence is that cadence and responsiveness stop being one dial. A reviewer picks a resolution interval that suits its consumers and still acts in seconds when it must.
 
 ## What each draft supplies
 
@@ -166,7 +168,8 @@ The consequence is that lifetime and responsiveness stop being one dial. A revie
 | Discovery | Statement | Authorization Server Metadata |
 | How a client obtains a statement | Issuance | Authorization Request, Token Exchange Profile, Deferred Processing |
 | Renewal from a prior statement | Issuance | Renewal |
-| Ending a review before expiry | Signals | Withdrawn, Receiver Processing |
+| Ending a review before expiry | Statement, Issuance | `status` claim, Status Publication |
+| Reducing withdrawal latency | Signals | Status Changed, Receiver Processing |
 
 ## What changes, concretely
 
@@ -188,7 +191,7 @@ The consequence is that lifetime and responsiveness stop being one dial. A revie
 
 ## What these drafts do not solve
 
-* **Immediate revocation.** Enforcement is bounded by statement lifetime plus the provider's own controls unless the provider also consumes signals events. An acceptance-time status claim is the pull-based alternative, named as a deferred capability.
+* **Immediate revocation.** Enforcement is bounded by the provider's status resolution interval, the statement lifetime behind it, and the provider's own controls. Status resolution narrows the window to that interval; the signals profile narrows it to delivery latency. Neither reaches tokens already issued.
 * **Software that cannot host metadata.** The family requires a Client ID Metadata Document. Software without one registers as it does today and gets none of this, which is a deliberate boundary.
 * **Discovery of policy.** There is no in-band way to learn which reviewers a provider accepts. Trust configuration is deliberately out of band, and error responses guide the client.
 * **Delegation.** These drafts establish what the client is and whether a reviewer vouched for it. Which user or organization it acts for is separate work; see [Composition with ID-JAG](#composition-with-id-jag).

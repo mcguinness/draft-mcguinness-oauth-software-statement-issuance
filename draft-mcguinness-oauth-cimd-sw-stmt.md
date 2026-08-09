@@ -42,6 +42,9 @@ normative:
   CIMD:
     target: https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document
     title: "OAuth Client ID Metadata Document"
+  STATUSLIST:
+    target: https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list
+    title: "Token Status List"
 
 informative:
   ISSUANCE:
@@ -165,7 +168,7 @@ A statement says that its issuer evaluated the Client ID Metadata Document whose
 : OPTIONAL. One or more audience identifiers restricting which authorization servers may accept the statement, each an authorization server issuer identifier as defined by {{RFC8414}}. Where the claim is present, a trusting authorization server MUST reject the statement unless one of its locally configured audience identifiers exactly matches a value in it. The corresponding constraint on an issuer, that a requested audience bounds what it may name, is stated in {{ISSUANCE}}. Where the claim is absent, the statement is unrestricted and acceptance rests on the consumer's configured trust in the issuer and its identifier scope ({{issuer-trust}}). Omitting the claim lets one review serve every server that trusts the issuer, which is the portability the artifact exists for; it also lets whoever holds a copy use it at any of them. Nothing in a statement says which way it will be consumed, and a holder can always choose registration, which requires no key. An issuer SHOULD therefore name an audience, and omit it only where it accepts that any server trusting it may register the software on the strength of a copy ({{statement-validation}}).
 
 `iat`:
-: REQUIRED. A NumericDate value representing the time at which the software statement was issued. An issuer MUST NOT issue two statements for a given `iss` and `sub` pair with the same `iat`, and MUST ensure the value increases strictly across its signing nodes, so that the order in which it made its decisions is recoverable from the statements themselves. Consumers rely on that order when one statement replaces another ({{revalidation}}, {{refresh}}) and when a withdrawal separates statements issued before it from those issued after ({{SIGNALS}}). Back-dating a statement to allow for clock skew makes it unusable as a replacement.
+: REQUIRED. A NumericDate value representing the time at which the software statement was issued. An issuer MUST NOT issue two statements for a given `iss` and `sub` pair with the same `iat`, and MUST ensure the value increases strictly across its signing nodes, so that the order in which it made its decisions is recoverable from the statements themselves. Consumers rely on that order when one statement replaces another ({{revalidation}}, {{refresh}}). Back-dating a statement to allow for clock skew makes it unusable as a replacement.
 
 `exp`:
 : REQUIRED. A NumericDate value representing the expiration time. A trusting authorization server MUST reject an expired statement.
@@ -175,6 +178,9 @@ A statement says that its issuer evaluated the Client ID Metadata Document whose
 
 `cimd_digest`:
 : REQUIRED. The metadata digest ({{metadata-digest}}) of the Client ID Metadata Document the issuer evaluated. This claim binds the statement to the exact document content evaluated during issuance and lets any party determine whether the client's currently published metadata still matches what was attested.
+
+`status`:
+: OPTIONAL. A status reference as {{STATUSLIST}} defines, locating this statement in the issuer's Status List Token. It is what lets an issuer end a decision before `exp` without a trusting authorization server contacting it per statement. An issuer that publishes status SHOULD carry the claim in every statement it issues, since a consumer cannot distinguish a statement that omits it from one whose issuer publishes no status at all.
 
 A statement carries no client metadata. The reviewed metadata is the document the digest names, which a consuming authorization server retrieves and verifies for itself, so copying members into the statement would duplicate what the digest already binds and reopen questions of precedence and partial review that the digest settles. A statement issued under this specification MUST NOT contain client metadata claims.
 
@@ -188,9 +194,15 @@ The `sub` claim is the client identifier URL, not the local `client_id` assigned
 
 ## Metadata Digest {#metadata-digest}
 
-The metadata digest is the unpadded base64url-encoded SHA-256 hash {{RFC6234}} of the retrieved representation body after removal of content coding. No transcoding, normalization, or re-serialization occurs; a byte order mark and trailing newline are included. Retrieval for snapshot purposes SHOULD NOT use content negotiation, and an issuance source SHOULD serve the document without negotiated variants, so that independent fetchers obtain identical bytes.
+The metadata digest is the unpadded base64url-encoded SHA-256 hash {{RFC6234}} of the retrieved representation body after removal of content coding. No transcoding, normalization, or re-serialization occurs; a byte order mark and trailing newline are included. Retrieval for digest purposes MUST NOT use content negotiation and MUST follow the retrieval rules of {{CIMD}}, including its prohibition on automatically following redirects. A document served as negotiated variants cannot carry a usable statement, because independent fetchers obtain different octets. That is a consequence of the digest, not a requirement this specification places on what a publisher may serve.
 
 An issuer computes the digest over the document it evaluated; a consumer computes it over the document it retrieves, and equality is what says the two are the same bytes ({{effective-metadata}}).
+
+Three retrieval conditions bear on the comparison:
+
+* {{CIMD}} recommends reading no more than a bounded number of octets and treating a longer response as an error. A digest computed over a truncated read is not the digest of the document, so a trusting authorization server MUST treat a response exceeding its configured bound as a retrieval failure rather than digesting what it read.
+* A shared cache may hold a variant selected for some other request. A server MUST NOT compare a digest against a representation it did not itself retrieve or store under this section. A `304 Not Modified` response confirms that a stored representation is still current, and the digest already computed over it continues to apply.
+* Issuer and consumer must obtain identical octets. Any condition that makes retrieval depend on who is asking defeats the comparison, whatever its cause.
 
 ## Validating a Statement {#validation}
 
@@ -204,6 +216,10 @@ Before accepting a statement, a trusting authorization server MUST:
 * verify that `sub` is a client identifier URL conforming to {{CIMD}}, and that it falls within the identifier scope for which this server accepts the issuer ({{issuer-trust}});
 * reject a statement carrying any claim registered in the IANA "OAuth Dynamic Client Registration Metadata" registry, which {{profiles}} forbids, and ignore any other claim it does not recognize; and
 * apply the JWT validation guidance in {{RFC8725}}.
+
+Where the statement carries `status` and the trusting authorization server resolves statuses for that issuer, it MUST reject a statement whose status is `INVALID`, and MUST apply its configured policy for that issuer to a statement whose status is `SUSPENDED`. Resolution follows {{STATUSLIST}}, including its caching rules, so a server MAY decide from a Status List Token it already holds within that token's validity.
+
+Status constrains and never relaxes. Expiry is the floor: a statement carrying no `status`, or whose status the server cannot resolve, is bounded by `exp` as it would be otherwise, and a server MUST NOT treat status as grounds to accept a statement past `exp`. What a server does when resolution fails is local policy, and it is a real trade. Refusing makes issuer availability a precondition for every request the statement governs; proceeding widens the window in which a withdrawn statement is still accepted to that statement's remaining lifetime.
 
 An issuer URL or JWK Set does not establish trust. A trusting authorization server accepts only configured issuers ({{issuer-trust}}) and obtains their keys from that issuer's authorization server metadata {{RFC8414}}, never from the statement.
 
@@ -240,11 +256,14 @@ The statement is consumed in the `software_statement` member of an {{RFC7591}} r
 Because a statement carries no client metadata ({{profiles}}), the binding that {{RFC7591}} obtained from attested claims taking precedence over the request comes from the document instead. An authorization server consuming a statement under this specification:
 
 * MUST resolve the Client ID Metadata Document at the statement's `sub`;
+* MUST validate the retrieved document as {{CIMD}} requires, including that its `client_id` member matches the URL from which it was retrieved;
 * MUST verify that the digest of the retrieved representation equals `cimd_digest`, and MUST derive the registered metadata by parsing the same octets it digested, not a second retrieval or a cached copy it has not digested;
 * MUST take every client metadata value from that document, and MUST NOT take any client metadata value from the registration request, whether or not the document carries that member. A request MAY carry metadata, as {{RFC7591}} clients do; it does not contribute to the registration;
 * MUST ignore a `software_statement` member of the reviewed document, which {{CIMD}} permits the document to carry. A statement consumed under this specification is the one the client presented, whose digest binds the document; treating a statement inside the document as a second review would make acceptance depend on bytes the presented statement covers but no issuer separately vouched for.
 
 Taking only the document closes the substitution the statement exists to prevent. A rule that constrained only the members the document carries would leave every member it omits attacker-supplied: a document naming `jwks_uri` and no `jwks` would admit a request-supplied `jwks`, giving a holder of someone else's statement a registration with reviewed branding and its own key, at an endpoint that requires no key at all.
+
+An authorization server that associates a client identifier URL with metadata by pre-registering it, which {{CIMD}} permits and names as the expected enterprise pattern, participates by retaining the exact octets it digested when it onboarded that URL. Such a server MAY satisfy the resolution requirement above by comparing `cimd_digest` against the digest of the retained octets, and MUST retrieve the document afresh where that comparison fails. Retaining the octets is what makes the two paths equivalent: the registered metadata is derived from the same bytes the digest covers, whether they arrived at onboarding or at consumption. A server holding no such octets for the identifier retrieves the document.
 
 Three failures have defined outcomes:
 
@@ -265,6 +284,8 @@ An authorization server that advertises `software_statement_registration_validit
 
 The disposition of outstanding grants is local policy ({{enforcement-bounds}}).
 
+Where {{CIMD}} defines an expiry the document asserts for its own client identifier, that value MAY only shorten the effective expiry and MUST NOT extend it. A statement-governed registration is bounded by the earliest of the statement's `exp`, the maximum statement lifetime the server honors for the issuer, and any expiry the reviewed document asserts. An issuer cannot lengthen the life of a client identifier its subject has declared ephemeral.
+
 An authorization server advertising this model MUST publish `pushed_authorization_request_endpoint`, since {{revalidation}} otherwise leaves a client whose only grant type is the authorization code, and which holds no refresh token, with no way to renew. The metadata signal in {{authorization-server-metadata}} lets a client determine before registration whether this model applies. Because an authorization server may honor less than a statement's full lifetime ({{issuer-trust}}), a client cannot compute the boundary from the statement alone: a server applying this model MUST return a `registration_expires_at` member, a NumericDate giving the time the registration ceases to be valid, in the {{RFC7591}} registration response and in the response to any request that renews the registration ({{revalidation}}), and SHOULD return it in any {{RFC7592}} read or update response it supports. A server that omits the signal or advertises `false` does not bound registrations by statement expiry. It still consumes the statement as {{dcr-presentation}} requires: a statement carries no metadata, so consuming one as ordinary {{RFC7591}} input would leave the registration entirely self-asserted, which is the outcome this specification exists to prevent.
 
 ## Revalidation {#revalidation}
@@ -282,7 +303,7 @@ The replacement MUST:
 * be unexpired; and
 * have an `iat` later than the recorded statement's `iat`.
 
-A replacement names a document as any statement does, so the authorization server MUST resolve the Client ID Metadata Document at the replacement's `sub`, MUST verify that the digest of the retrieved representation equals the replacement's `cimd_digest`, and MUST re-derive the registration's metadata from those same octets, under the rules of {{dcr-presentation}}. Renewing on the statement alone would leave a registration carrying metadata the new review never covered, which is how a removed key, redirect URI, or scope would survive its own withdrawal.
+A replacement names a document as any statement does, so the authorization server MUST obtain the Client ID Metadata Document at the replacement's `sub`, by retrieval or from retained octets as {{dcr-presentation}} permits, MUST verify that the digest of the retrieved representation equals the replacement's `cimd_digest`, and MUST re-derive the registration's metadata from those same octets, under the rules of {{dcr-presentation}}. Renewing on the statement alone would leave a registration carrying metadata the new review never covered, which is how a removed key, redirect URI, or scope would survive its own withdrawal.
 
 On success the authorization server MUST replace the recorded statement identity, `iat`, `exp`, and derived metadata in a single atomic update, and concurrent deliveries resolve to the most recently issued statement.
 
@@ -382,7 +403,7 @@ A statement MUST be unexpired when presented. Expiry after presentation does not
 
 On refresh-token use the authorization server MUST verify possession of the establishment's Proven Key under the same sender-constraint mechanism. It MAY, by local policy, additionally require a current unexpired statement, and SHOULD require one once the establishment's recorded statement has expired ({{enforcement-bounds}}).
 
-An authorization server holds a refusal record when it has learned that a statement is no longer good before its expiry, whether from its own operator or from a withdrawal mechanism such as {{SIGNALS}}, whose Withdrawal Record is one. Where it holds one for a statement, it MUST treat that statement as not current wherever this section requires currency, so that a withdrawal ends grant continuation on the same terms as an expiry.
+An authorization server holds a refusal record when it has learned that a statement is no longer good before its expiry, whether from a status it resolved ({{validation}}) or from its own operator. Where it holds one for a statement, it MUST treat that statement as not current wherever this section requires currency, so that a withdrawn review ends grant continuation on the same terms as an expiry.
 
 When policy requires one, the client presents the replacement in the `software_statement` parameter of the refresh request. The replacement:
 
@@ -531,7 +552,7 @@ This specification defines the following authorization server metadata {{RFC8414
 
 # Extension Points {#extensions}
 
-Four extensions of this path are left to separate specifications. Endorsed keys: a client attestation {{ABCA}}, or an assertion from an issuer named by an `instance_issuers` delegation in the reviewed document {{CLIENT-INSTANCE}}, vouching for a key that document does not carry, which would admit software whose instances hold their own keys. Statement conveyance within a client attestation, rather than as a request parameter. A Client ID Metadata Document that references where the client publishes its current statements, so a resolving server fetches the review out of band, which differs from embedding a statement in the document as the digest rule of {{metadata-digest}} forbids. And partial review, by which an issuer vouches for particular members rather than a whole document ({{profiles}}).
+Four extensions of this path are left to separate specifications. Endorsed keys: a client attestation {{ABCA}}, or an assertion from an issuer named by an `instance_issuers` delegation in the reviewed document {{CLIENT-INSTANCE}}, vouching for a key that document does not carry, which would admit software whose instances hold their own keys. Statement conveyance within a client attestation, rather than as a request parameter. A Client ID Metadata Document that references where the client publishes its current statements, so a resolving server fetches the review out of band. That differs from embedding a statement in the document: a document cannot carry a statement issued over itself, and one carrying a statement issued over an earlier version offers a review of octets that are no longer the octets being served, which is a stale review behind current branding. {{dcr-presentation}} accordingly has a consumer ignore an embedded statement rather than treat it as a second review. And partial review, by which an issuer vouches for particular members rather than a whole document ({{profiles}}).
 
 # Security Considerations {#security-considerations}
 
@@ -571,9 +592,15 @@ Statement-gated registration also makes each rotated identity require another is
 
 ## Enforcement Bounds {#enforcement-bounds}
 
-Expiry is enforced at every presentation and every statement-governed registration, so a lapsed statement stops new runtime establishment and causes registration-backed requests to fail at the recorded `exp`. It does not retroactively invalidate an establishment, revoke an access token, or terminate an outstanding grant. Requiring a current statement on refresh under {{refresh}} is the control that makes issuer non-renewal end runtime-established grants, and a deployment that does not adopt it retains grants for the life of their refresh tokens whatever the statement lifetime; registration-backed grants remain subject to the server's grant policy after the registration expires. A narrowed re-review takes effect when the client publishes the narrower document and obtains a statement over it. Detection of post-issuance metadata change rests on `cimd_digest`, which covers exact bytes but requires retrieval for comparison. The bounded statement lifetime limits what either signal can miss for new establishment. {{SIGNALS}} defines an optional event mechanism by which an issuer ends a decision before its expiry; expiry remains the floor, and this specification does not depend on it.
+Expiry is enforced at every presentation and every statement-governed registration, so a lapsed statement stops new runtime establishment and causes registration-backed requests to fail at the recorded `exp`. It does not retroactively invalidate an establishment, revoke an access token, or terminate an outstanding grant. Requiring a current statement on refresh under {{refresh}} is the control that makes issuer non-renewal end runtime-established grants, and a deployment that does not adopt it retains grants for the life of their refresh tokens whatever the statement lifetime; registration-backed grants remain subject to the server's grant policy after the registration expires. A narrowed re-review takes effect when the client publishes the narrower document and obtains a statement over it. Detection of post-issuance metadata change rests on `cimd_digest`, which covers exact bytes but requires retrieval for comparison. The bounded statement lifetime limits what either signal can miss for new establishment. The `status` claim of {{profiles}} is how an issuer ends a decision before its expiry, resolved through {{STATUSLIST}}. Expiry remains the floor: a statement carrying no status, or whose status a server cannot resolve, is bounded by `exp` alone. {{SIGNALS}} defines an optional notification path that tells a receiver a status changed sooner than its next scheduled fetch would, and neither this specification nor the status mechanism depends on it.
 
 Renewal cadence is a deployment trade: short lifetimes tighten the issuer's control loop and increase issuance and delivery traffic, and a fleet of registrations issued together expires together, so issuers SHOULD stagger expiries or renew ahead of the boundary to avoid synchronized lapses.
+
+## Status Resolution
+
+Resolving status adds a dependency on the issuer and a fetch the client does not control. {{STATUSLIST}} aggregates many statements into one signed list, so a fetch tells the issuer that some consumer is checking rather than which statement it is checking, and a server SHOULD fetch on the list's own schedule rather than once per request, so that its request timing does not disclose the client population it serves. Per-request resolution discloses that pattern and makes issuer availability a precondition for the requests the statement governs.
+
+A status list is signed by the issuer, and a server MUST obtain its verification keys the same way it obtains statement signing keys ({{issuer-trust}}), never from the list itself. An issuer that publishes status for some statements and not others gives a consumer no way to tell an unpublished status from a withdrawn one, which is why {{profiles}} has such an issuer carry the claim throughout.
 
 ## Document Resolution
 
@@ -597,7 +624,7 @@ A presentation or delivery reveals to the authorization server the client's issu
 
 This specification requests registration of the `software_statement` parameter in the IANA "OAuth Parameters" registry established by {{RFC6749}}, for runtime presentation and statement delivery of the artifact defined by {{RFC7591}}:
 
-The OAuth Dynamic Client Registration Metadata registry already contains a metadata member with the same name. That entry is in a different registry and is unaffected by this registration.
+The OAuth Dynamic Client Registration Metadata registry already contains a metadata member with the same name. That entry is in a different registry and is unaffected by this registration. The name is deliberately reused: the artifact is the same {{RFC7591}} software statement, carried to the same server for the same purpose, and only the location differs. A distinct parameter name would oblige a client to carry one artifact under two names depending on which endpoint it reached, and would leave a server unable to recognize at the token endpoint what it already accepts at the registration endpoint.
 
 Parameter Name:
 : `software_statement`

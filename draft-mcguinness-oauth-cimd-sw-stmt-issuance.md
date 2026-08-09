@@ -43,6 +43,9 @@ normative:
   RFC9396:
   RFC9449:
   RFC9700:
+  STATUSLIST:
+    target: https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list
+    title: "Token Status List"
   DTR:
     target: https://datatracker.ietf.org/doc/draft-gerber-oauth-deferred-token-response
     title: "Deferred Token Response"
@@ -90,7 +93,7 @@ In the redirect flow, the authorization endpoint returns a short-lived `software
 
 A client that holds an initial access token authorizing issuance instead uses OAuth 2.0 Token Exchange (RFC 8693), without a redirect.
 
-The issued statement is consumed through RFC 7591 dynamic client registration; the companion the companion specification defines the artifact, its validation, and its consumption.
+The issued statement is consumed through RFC 7591 dynamic client registration; the companion specification defines the artifact, its validation, and its consumption.
 
 --- middle
 
@@ -298,11 +301,11 @@ The metadata digest is defined in {{STATEMENT}} and computed over the retrieved 
 
 Equal digests identify the same document for this specification. A changed digest marks a new trust state for the same client identifier and is the signal used by the re-evaluation rule above. The digest also supplies the `cimd_digest` claim ({{STATEMENT}}) and audit guidance ({{security-considerations}}).
 
-Byte identity deliberately detects serialization-only changes. A digest mismatch is fatal at registration and an input to policy at runtime, as {{STATEMENT}} defines. A publisher SHOULD serve a stable byte artifact whose octets change only with its metadata; a document rendered dynamically or served through content negotiation produces digest changes unrelated to its metadata. The authorization server MUST reject duplicate object member names, because parsers can interpret them differently despite an identical digest.
+Byte identity deliberately detects serialization-only changes. A digest mismatch is fatal at registration and an input to policy at runtime, as {{STATEMENT}} defines. A document whose octets change only with its metadata carries a statement across its whole lifetime; one rendered dynamically or served through content negotiation produces digest changes unrelated to its metadata, and a statement over it stops matching for reasons its publisher did not intend. That is a consequence of binding to octets, not a requirement this specification places on what a publisher may serve. The authorization server MUST reject duplicate object member names, because parsers can interpret them differently despite an identical digest.
 
 An issuance source SHOULD publish keys by reference through `jwks_uri` rather than inline through `jwks`. Rotation behind a stable URI leaves the document and digest unchanged; inline rotation changes both, so the attested keys no longer match the current document and a new statement is needed. The document carries either the key location or the inline keys, and the digest binds whichever it is. The convenience cuts both ways: rotation invisible to the digest means key-host compromise is also invisible to it, and where that key is the runtime proof under {{STATEMENT}} the compromise substitutes the presenter as well; {{STATEMENT}} weighs the trade, and an issuer serving theft-sensitive deployments attests `jwks` inline instead.
 
-An issuing authorization server MUST reject a metadata document that contains a `software_statement` member, although {{CIMD}} otherwise permits one.
+{{CIMD}} permits a document to carry a `software_statement` member, and this specification places no requirement on whether a publisher does so. An issuing authorization server evaluates the document as served and MUST NOT refuse a document because it carries the member. A statement issued under {{STATEMENT}} is the one the client presents, and a consumer ignores any statement embedded in the reviewed document; refusing to issue over such a document would instead leave a client that published its statement unable to renew it for the life of the identifier.
 
 # Software Statement Authorization Request {#authorization-request}
 
@@ -555,7 +558,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adeferred
 A successful response has HTTP status code 200, a media type of `application/json`, and the following members:
 
 `access_token`:
-: REQUIRED. The software statement issued by the authorization server. It MUST conform to {{STATEMENT}}: `sub` is the client identifier URL of the request, `cimd_digest` is the digest of the bound metadata snapshot, `aud` is the selected audience where one is restricted, and the statement carries no claim registered as client metadata ({{STATEMENT}}).
+: REQUIRED. The software statement issued by the authorization server. It MUST conform to {{STATEMENT}}: `sub` is the client identifier URL of the request, `cimd_digest` is the digest of the bound metadata snapshot, `aud` is the selected audience where one is restricted, and the statement carries no claim registered as client metadata ({{STATEMENT}}). An issuer that publishes status carries the `status` claim locating this statement in its Status List Token ({{status-publication}}).
 
 `issued_token_type`:
 : REQUIRED. The value MUST be `urn:ietf:params:oauth:token-type:software-statement`.
@@ -599,6 +602,18 @@ A client obtains a replacement for an expiring or expired software statement by 
 When the authorization server decides not to issue the requested software statement, whether that decision is already complete when the originating request arrives or completes during deferred processing, it returns a token error response per Section 5.2 of {{RFC6749}} with the error code `access_denied` and HTTP status code 400, and MUST include the `Cache-Control: no-store` response header field. The same rule applies to both originating requests: a software statement code redemption ({{software-statement-code-redemption}}) and a token exchange ({{token-exchange-profile}}). A decision that completes as a denial during deferred processing is delivered in response to a polling request ({{deferred-processing}}).
 
 The denial is terminal for the request. A deferral resolves to the denied state, in which subsequent polling requests return the same `access_denied` response for the remainder of the deferral code's lifetime, as {{DTR}} requires for a request that has resolved with an error. A denial does not preclude a later issuance request; whether to accept one is issuance policy.
+
+# Status Publication {#status-publication}
+
+An issuing authorization server that ends decisions before their expiry publishes statement status as {{STATUSLIST}} defines and carries the `status` claim in the statements it issues ({{STATEMENT}}). Issuance and withdrawal are then one record read at two times: the statement says what was decided, and the status list says whether that decision still stands.
+
+An issuer that publishes status:
+
+* MUST publish it for every statement it issues under a given `iss`, rather than for a subset, so that a consumer may read an absent claim as meaning this issuer publishes no status at all;
+* MUST assign each statement its own index and MUST NOT reuse an index across statements. Withdrawing a statement sets that statement's index and affects no other. A replacement obtained through {{renewal}} occupies its own index, so withdrawing a superseded statement does not withdraw its replacement, and withdrawing a replacement does not restore its predecessor; and
+* MUST sign the Status List Token with a key a consumer obtains the way it obtains statement signing keys, through the issuer's authorization server metadata {{RFC8414}}.
+
+Status does not replace lifetime. A consumer is not obliged to resolve status, so an issuer chooses `exp` on the assumption that none does, and treats status as what shortens a decision rather than what bounds it.
 
 # Authorization Server Metadata {#authorization-server-metadata}
 

@@ -18,7 +18,7 @@ This repository also hosts the companion Internet-Draft, "CIMD Software Statemen
 
 ## Shared Signals Events for CIMD Software Statements
 
-The repository also hosts "Shared Signals Events for CIMD Software Statements", an optional profile that lets a statement issuer withdraw a review before the statement expires. The issuer transmits one withdrawal event over the Shared Signals Framework to the authorization servers that already trust it, naming a single statement or the decision behind all of them. Events can only reduce standing, and a receiver that misses one falls back to expiry, so neither of the other drafts depends on this one.
+The repository also hosts "Shared Signals Events for CIMD Software Statements", an optional profile that reduces how long a withdrawal takes to reach a consumer. An issuer ends a decision before its expiry by publishing status through Token Status List, which a trusting authorization server resolves on its own schedule; this profile lets the issuer say that a status changed so the server resolves it at once instead. The event names no status, so the list remains the only authority on whether a statement stands, and a receiver that misses every event reaches the same answer on its ordinary schedule. Neither of the other drafts depends on this one.
 
 * [Editor's Copy (HTML)](https://mcguinness.github.io/draft-mcguinness-oauth-cimd-sw-stmt-issuance/draft-mcguinness-oauth-cimd-sw-stmt-signals.html)
 * [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-cimd-sw-stmt-issuance/draft-mcguinness-oauth-cimd-sw-stmt-signals.txt)
