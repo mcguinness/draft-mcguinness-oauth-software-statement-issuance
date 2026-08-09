@@ -22,6 +22,7 @@ author:
  -
     ins: K. McGuinness
     name: Karl McGuinness
+    organization: Independent
     email: public@karlmcguinness.com
 
 normative:
@@ -60,7 +61,7 @@ A software statement carries a reviewer's decision about client software, bounde
 
 # Introduction
 
-{{ISSUANCE}} defines a software statement in which an issuer attests reviewed client metadata, and {{PRESENTATION}} defines how a trusting authorization server consumes one: at registration, where the statement's expiry can bound the registration's validity; at runtime, where it establishes a client for a request; and as a tenant approval evaluated in one tenant's context. In every case the decision ends when the statement expires unrenewed.
+{{ISSUANCE}} defines a software statement in which an issuer attests reviewed client metadata, and {{PRESENTATION}} defines how a trusting authorization server consumes one: at registration, where the statement's expiry can bound the registration's validity, and at runtime, where it establishes a client for a request. In both cases the decision ends when the statement expires unrenewed.
 
 That leaves responsiveness coupled to lifetime. An issuer that wants a withdrawal to take effect within minutes must issue statements that live for minutes, and pay the renewal traffic for every client at every audience. An issuer that wants a manageable renewal cadence accepts that a withdrawal takes as long as the remaining lifetime.
 
@@ -76,7 +77,7 @@ This mechanism buys latency, not correctness. A statement is carried by the clie
 
 {::boilerplate bcp14-tagged}
 
-Transmitter, Receiver, Stream, and the delivery and configuration mechanisms are defined by {{SSF}}. Security Event Token, or SET, is defined by {{RFC8417}}. Subject identifier formats are defined by {{RFC9493}}. Software statement, issuer roles including the establishment and tenant approval roles, and statement validation are defined by {{ISSUANCE}}. Registration validity, runtime presentation, tenant approval evaluation, and the per-grant establishment state are defined by {{PRESENTATION}}.
+Transmitter, Receiver, Stream, and the delivery and configuration mechanisms are defined by {{SSF}}. Security Event Token, or SET, is defined by {{RFC8417}}. Subject identifier formats are defined by {{RFC9493}}. The software statement, its claims, and its validation are defined by {{ISSUANCE}}. Issuer trust configuration, registration validity, runtime presentation, and the per-grant establishment state are defined by {{PRESENTATION}}.
 
 This specification additionally defines the following terms:
 
@@ -87,7 +88,7 @@ Consuming Authorization Server:
 : A trusting authorization server that has configured the statement issuer, acting as a Receiver of the events defined here.
 
 Standing:
-: What a client may do at a consuming authorization server by virtue of a software statement: its registration and that registration's validity ({{PRESENTATION}}), its establishment at request time, and any tenant approval in force. Standing is created and extended only by statements, never by the events defined here.
+: What a client may do at a consuming authorization server by virtue of a software statement: its registration and that registration's validity, and its establishment at request time ({{PRESENTATION}}). Standing is created and extended only by statements, never by the events defined here.
 
 Withdrawal Record:
 : The state a receiver retains when it applies a withdrawal event, defined in {{withdrawal-records}}.
@@ -125,7 +126,7 @@ While a Withdrawal Record is retained, the receiver MUST refuse a statement matc
 
 A statement from that issuer for that subject with an `iat` after the record's effective time is a later decision by the same authority. It is accepted under the ordinary rules of {{ISSUANCE}} and {{PRESENTATION}}, and restores what the withdrawal ended. This is the only recovery path, and it requires the issuer to act.
 
-A refusal under this section takes effect wherever the statement would otherwise be consumed: a registration governed by a refused statement is expired as {{PRESENTATION}} defines for a lapsed registration, a runtime presentation carrying one fails as it does for a statement that is not current, and a tenant approval carrying one is treated as absent. A grant already open under a refused statement continues only as far as its next currency check: a receiver MUST treat a refused statement as not current when {{PRESENTATION}} requires currency at refresh, so that a withdrawal reaches running grants on the same terms as an expiry rather than waiting for the statement's own.
+A refusal under this section takes effect wherever the statement would otherwise be consumed: a registration governed by a refused statement is expired as {{PRESENTATION}} defines for a lapsed registration, and a runtime presentation carrying one fails as it does for a statement that is not current. A grant already open under a refused statement continues only as far as its next currency check: a receiver MUST treat a refused statement as not current when {{PRESENTATION}} requires currency at refresh, so that a withdrawal reaches running grants on the same terms as an expiry rather than waiting for the statement's own.
 
 A receiver MAY discard a record naming a `jti` once that statement's `exp` has passed, and MAY discard any Withdrawal Record once every statement it could refuse has expired, which a receiver that does not retain statement lifetimes bounds by the maximum lifetime it honors for that issuer ({{ISSUANCE}}). Discarding a record earlier reopens the withdrawal.
 

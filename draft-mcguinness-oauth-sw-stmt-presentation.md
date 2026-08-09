@@ -24,12 +24,13 @@ author:
  -
     ins: K. McGuinness
     name: Karl McGuinness
+    organization: Independent
     email: public@karlmcguinness.com
 
 normative:
   RFC6749:
+  RFC7521:
   RFC7591:
-  RFC7592:
   RFC8414:
   RFC9126:
   RFC9449:
@@ -42,6 +43,7 @@ normative:
     title: "OAuth 2.0 Software Statement Issuance"
 
 informative:
+  RFC7592:
   ABCA:
     target: https://datatracker.ietf.org/doc/draft-ietf-oauth-attestation-based-client-auth
     title: "OAuth 2.0 Attestation-Based Client Authentication"
@@ -54,7 +56,7 @@ informative:
 
 --- abstract
 
-RFC 7591 defines the software statement as input to dynamic client registration but does not define how long the resulting registration remains valid or how a client renews the statement on which it was based. This specification defines everything a trusting authorization server does with a software statement: which issuers it trusts, how it validates and applies one, and the two points at which it consumes one. Consumed in a registration request, a statement governs that registration until it expires and a replacement renews it. Presented in an authorization or token request, it establishes an otherwise unregistered client for that request and the grant state derived from it, on proof of a key the statement itself attests, so possession of the statement alone is insufficient. Together these let an issuer curate approved client software across the authorization servers in a statement's audience while each server keeps control of trust, grants, and token lifetime.
+RFC 7591 defines the software statement as input to dynamic client registration but does not define how long the resulting registration remains valid or how a client renews the statement on which it was based. This specification defines everything a trusting authorization server does with a software statement: which issuers it trusts, how it validates and applies one, and the two points at which it consumes one. Consumed in a registration request, a statement governs that registration until it expires and a replacement renews it. Presented in an authorization or token request, it establishes an otherwise unregistered client for that request and the grant state derived from it, on proof of a key the reviewed document carries, so possession of the statement alone is insufficient. Together these let an issuer curate approved client software across the authorization servers in a statement's audience while each server keeps control of trust, grants, and token lifetime.
 
 --- middle
 
@@ -149,7 +151,7 @@ This document consumes the software statement of {{ISSUANCE}}. The syntax, valid
 : The client's Client ID Metadata Document URL {{CIMD}}. In a runtime presentation the request's `client_id` equals it, by the rule of {{runtime-presentation}}.
 
 `aud`:
-: Where present, restricts which authorization servers may accept the statement; where absent, acceptance rests on configured issuer trust ({{issuer-trust}}).
+: OPTIONAL ({{ISSUANCE}}). Where present, the authorization server MUST reject the statement unless the claim names it; where absent, acceptance rests on configured issuer trust ({{issuer-trust}}).
 
 `iat`:
 : The issuance time, which orders one statement against another when a replacement arrives ({{revalidation}}, {{refresh}}).
@@ -163,7 +165,7 @@ This document consumes the software statement of {{ISSUANCE}}. The syntax, valid
 `cimd_digest`:
 : Binds the issuer's review to the exact document bytes evaluated and feeds the post-issuance change policy of {{ISSUANCE}}.
 
-A statement lacking any of these cannot be consumed under this specification, and one failing validation is rejected as {{errors}} defines.
+A statement lacking any of the required elements above cannot be consumed under this specification, and one failing validation is rejected as {{errors}} defines.
 
 # Issuer Trust Establishment {#issuer-trust}
 
@@ -202,7 +204,7 @@ An authorization server that advertises `software_statement_registration_validit
 
 The disposition of outstanding grants is local policy ({{enforcement-bounds}}).
 
-The metadata signal in {{authorization-server-metadata}} lets a client determine before registration whether this model applies. The client already holds the statement and therefore learns the initial validity boundary from its `exp`. A server that omits the signal or advertises `false` can still consume a statement as ordinary {{RFC7591}} registration input, but it MUST NOT claim conformance to this registration-validity model.
+The metadata signal in {{authorization-server-metadata}} lets a client determine before registration whether this model applies. Because an authorization server may honor less than a statement's full lifetime ({{issuer-trust}}), a client cannot compute the boundary from the statement alone: a server applying this model MUST return a `registration_expires_at` member, a NumericDate giving the time the registration ceases to be valid, in the {{RFC7591}} registration response and in any {{RFC7592}} read or update response. A server that omits the signal or advertises `false` can still consume a statement as ordinary {{RFC7591}} registration input, but it MUST NOT claim conformance to this registration-validity model.
 
 ## Revalidation {#revalidation}
 
@@ -225,7 +227,7 @@ When an expired registration sends a request containing a replacement, the autho
 
 A request under an expired registration that does not restore it is rejected with `invalid_client`, at every endpoint, including the refresh-token grant. Such a rejection MUST NOT by itself trigger the refresh-token family revocation of {{RFC9700}}; a client recovers by delivering a valid replacement.
 
-A delivery that fails the rules above under a still-valid registration leaves the recorded statement unchanged and does not fail the request it accompanies; the authorization server SHOULD signal the declined renewal in `error_description` on a subsequent rejection or through its registration management interface, and the client can distinguish success by the registration's continued validity past the recorded `exp`. A registration request without an {{RFC7592}} registration access token creates a new registration and never renews an existing one.
+A delivery that fails the rules above is rejected with `statement_required`, whatever the state of the registration, so that a client learns immediately rather than by a later outage. A rejected delivery leaves the recorded statement unchanged. A registration request without an {{RFC7592}} registration access token creates a new registration and never renews an existing one.
 
 ## Change After Review {#version-changes}
 
@@ -246,7 +248,7 @@ The request's `client_id` is the client's Client ID Metadata Document URL. It MU
 
 The request MUST also carry the proof required by {{sender-constraint}}: client authentication under a method the reviewed document specifies, or a DPoP proof with a key that document carries. A successful presentation establishes the client for the request and for the grant state derived from it ({{grant-lifecycle}}).
 
-At the token endpoint, a runtime presentation is valid only on a request that can open a new grant or directly issue access under a grant not already bound to an establishment. Authorization-code redemption and refresh-token use continue an existing grant and follow {{grant-lifecycle}} and {{refresh}} instead. A request that initiates issuance under {{ISSUANCE}}, recognized by `response_type=software_statement_code` or the software statement `requested_token_type`, MUST NOT carry the `software_statement` parameter. A request that carries `software_statement` and is none of a runtime presentation, a refresh replacement ({{refresh}}), or a revalidation delivery ({{revalidation}}) is rejected with `invalid_request`.
+At the token endpoint, a runtime presentation is valid on a request using the `client_credentials` grant, the JWT or SAML assertion grants of {{RFC7521}}, or another grant an authorization server names in `software_statement_presentation_grant_types_supported` ({{authorization-server-metadata}}). Authorization-code redemption and refresh-token use continue an existing grant and follow {{grant-lifecycle}} and {{refresh}} instead. A request that initiates issuance under {{ISSUANCE}}, recognized by `response_type=software_statement_code` or the software statement `requested_token_type`, MUST NOT carry the `software_statement` parameter. A request that carries `software_statement` and is none of a runtime presentation, a refresh replacement ({{refresh}}), or a revalidation delivery ({{revalidation}}) is rejected with `invalid_request`.
 
 An authorization server advertises support through `software_statement_presentation_supported` ({{authorization-server-metadata}}).
 
@@ -264,8 +266,8 @@ On receiving a presentation, the authorization server proceeds as follows, rejec
 
 1. Validate the statement under {{ISSUANCE}}: format, issuer trust, audience, lifetime, and namespace, with digest comparison as the policy input defined there. Complete all validation that does not require a client-controlled network retrieval before performing such a retrieval.
 2. Verify the statement requirements of {{profiles}} and the `client_id` rule of {{runtime-presentation}}.
-3. Verify the sender-constraint chain ({{sender-constraint}}).
-4. Resolve the reviewed document and evaluate the request against it ({{effective-metadata}}).
+3. Resolve the reviewed document ({{effective-metadata}}), which is the first step requiring a client-controlled retrieval.
+4. Verify the sender constraint against that document ({{sender-constraint}}), then evaluate the request against its metadata ({{effective-metadata}}).
 5. On success, create the establishment ({{grant-lifecycle}}).
 
 ## Sender Constraint {#sender-constraint}
@@ -276,7 +278,7 @@ The proven key MUST appear in the `jwks` or at the `jwks_uri` of the reviewed do
 
 A statement whose reviewed document carries no key material cannot be presented at runtime and is consumable only through registration ({{dcr-presentation}}). Endorsement of a key the statement does not name, by a client attester or by an issuer the statement delegates to, is left to extensions ({{extensions}}).
 
-Verifying a key at the document's `jwks_uri` is a retrieval at presentation time. A fetch failure leaves the key unverified, and the presentation is rejected as `invalid_client`. A server MAY reuse a recently retrieved key set within ordinary HTTP caching bounds, subject to a maximum reuse period of its own choosing; it MUST NOT let the client's cache directives alone determine how long a removed key continues to verify ({{external-retrieval}}).
+Verifying a key at the document's `jwks_uri` is a retrieval at presentation time. A fetch failure leaves the key unverified, and the presentation is rejected as `temporarily_unavailable`. A server MAY reuse a recently retrieved key set within ordinary HTTP caching bounds, subject to a maximum reuse period of its own choosing; it MUST NOT let the client's cache directives alone determine how long a removed key continues to verify ({{external-retrieval}}).
 
 ## Reviewed Metadata {#effective-metadata}
 
@@ -319,26 +321,28 @@ An authorization server that holds a record refusing a statement, such as one ke
 
 When policy requires one, the client presents the replacement in the `software_statement` parameter of the refresh request. The replacement:
 
-* MUST validate under {{ISSUANCE}} with this server in its audience;
+* MUST validate under {{ISSUANCE}}, including its audience where it carries one;
 * MUST have the establishment's `iss` and `sub`;
 * MUST have an `iat` no earlier than the recorded statement's `iat`; and
 * MUST authorize the establishment's Proven Key ({{sender-constraint}}).
 
 The refreshed access MUST fall within the metadata of the document the replacement names.
 
-On success, the establishment's statement identity, `iat`, expiry, reviewed metadata, and trust decision are replaced in a single atomic update, and concurrent deliveries resolve to the most recently issued statement. A refresh that fails these requirements, or omits a statement that policy requires, is rejected with `invalid_grant` and leaves the establishment unchanged. The operation never rotates the establishment's key; a client that needs a new key performs a new presentation.
+On success, the establishment's statement identity, `iat`, expiry, reviewed metadata, and trust decision are replaced in a single atomic update, and concurrent deliveries resolve to the most recently issued statement. A refresh that fails these requirements, or omits a statement that policy requires, is rejected with `statement_required` and leaves the establishment unchanged. The operation never rotates the establishment's key; a client that needs a new key performs a new presentation.
 
 ## Statements from an Established Client {#registered-delivery}
 
 A client already established at an authorization server, whether registered through {{RFC7591}} or registered under its Client ID Metadata Document URL as its `client_id`, can still carry a statement. From the issuer governing its registration, the statement is a delivery: it renews validity under {{registration-validity}} and does not change the client's metadata for the request. Runtime presentation establishes clients the server does not have; it does not reopen metadata for a client it does. A server that wishes a reviewed change to reach the registration applies it through its registration policy ({{revalidation}}) or through {{RFC7592}}, where a narrower record survives until it does. A statement from an issuer the server does not accept for that client is rejected as {{errors}} defines.
 
-A registration created from a statement is statement-governed when the server advertises `software_statement_registration_validity_supported`. The validity and revalidation model of {{registration-validity}} and {{revalidation}} applies, with the delivered statement's `sub` equal to the registered `client_id`. The request authenticates as the registered client under the registration's own method; the delivered statement renews validity and does not otherwise alter the registration. Where the registration is still valid and the server requires a current statement, a refresh-token request that omits one or delivers one failing these rules is rejected with `invalid_grant`. Where the registration has already expired, {{revalidation}} governs and the rejection is `invalid_client` at every endpoint.
+A registration created from a statement is statement-governed when the server advertises `software_statement_registration_validity_supported`. The validity and revalidation model of {{registration-validity}} and {{revalidation}} applies, with the delivered statement's `sub` equal to the registered `client_id`. The request authenticates as the registered client under the registration's own method; the delivered statement renews validity and does not otherwise alter the registration. Where the registration is still valid and the server requires a current statement, a refresh-token request that omits one or delivers one failing these rules is rejected with `statement_required`. Where the registration has already expired, {{revalidation}} governs and the rejection is `invalid_client` at every endpoint.
 
 # Registrations Derived from One Statement {#multi-instance}
 
 A statement attests client software, identified by `sub`; it does not identify the runtime instances of that software, and this specification defines no instance identifier.
 
-One unexpired statement is therefore consumable more than once: at each trusting authorization server in its audience and, where local policy permits, in more than one registration at the same authorization server, for example one registration per deployment or tenant. A trusting authorization server SHOULD use the statement's `sub`, `iss`, and `jti` to inventory the registrations and establishments derived from it, and SHOULD bound their number at one local audience. The safe default is one registration per (`iss`, `sub`, `jti`, local audience). On repeated consumption, local policy can reject the request, treat it as idempotent, or create another registration; {{RFC7591}} defines no duplicate-registration protocol.
+One unexpired statement is therefore consumable more than once: at each trusting authorization server in its audience and, where local policy permits, in more than one registration at the same authorization server, for example one registration per deployment or tenant. An authorization server hosting multiple tenants resolves which tenant a request belongs to by its own means, such as a per-tenant issuer identifier or a per-tenant endpoint. This specification defines no tenant parameter, and a `client_id` that is a Client ID Metadata Document URL is the same value in every tenant. Bounds and inventories below are counted within whatever scope the authorization server treats as one deployment, which at a multi-tenant server is one tenant.
+
+A trusting authorization server SHOULD use the statement's `sub` and `iss` to inventory the registrations and establishments derived from that issuer's statements about that software, and SHOULD bound their number. The safe default is one registration per (`iss`, `sub`) at one authorization server, counted across replacements, since a replacement statement carries a new `jti` and a bound keyed on it would reset at every renewal. On repeated consumption, local policy can reject the request, treat it as idempotent, or create another registration; {{RFC7591}} defines no duplicate-registration protocol.
 
 Where the reviewed document carries `jwks` or `jwks_uri`, every registration derived from the statement uses that key material rather than an instance-supplied replacement, and the same key is what a runtime presentation proves ({{sender-constraint}}). Software whose instances hold their own keys registers per instance, or waits on the endorsement extension of {{extensions}}.
 
@@ -367,7 +371,13 @@ This specification is for the durable question. A statement is worth its lifecyc
 A statement consumed at registration is rejected with the {{RFC7591}} error codes as {{ISSUANCE}} defines. A rejected presentation or delivery uses the error responses of {{RFC6749}} for the endpoint at which it was presented. At the token endpoint:
 
 `invalid_client`:
-: the statement or its proof fails to establish the client, including failed statement requirements ({{profiles}}), chain ({{sender-constraint}}), or `jwks_uri` retrieval; also any request under an expired statement-governed registration that does not restore it ({{revalidation}}), at every endpoint including the refresh-token grant.
+: the statement or its proof fails to establish the client, including failed statement requirements ({{profiles}}) or sender constraint ({{sender-constraint}}); also any request under an expired statement-governed registration that does not restore it ({{revalidation}}), at every endpoint including the refresh-token grant.
+
+`statement_required`:
+: a current statement is required and none was supplied, or the one supplied is expired or refused. A client recovers by obtaining a newer statement and retrying; re-sending the same one cannot succeed. This code is returned in place of `invalid_grant` wherever this specification requires a current statement on a refresh-token request, so that a client does not read the rejection as a dead refresh token ({{RFC9700}}).
+
+`temporarily_unavailable`:
+: a retrieval this specification requires, of the reviewed document or of a key set it names, did not complete. The client retries; nothing about the statement is in question.
 
 `unauthorized_client`:
 : the reviewed document does not authorize the requested grant type or response type, although the authorization server supports it.
@@ -413,6 +423,7 @@ The following presents an already-issued statement at the token endpoint. The st
 POST /token HTTP/1.1
 Host: as.example
 Content-Type: application/x-www-form-urlencoded
+
 grant_type=client_credentials
 &scope=tools.read
 &client_id=https%3A%2F%2Fclient.example%2Fapp
@@ -429,7 +440,10 @@ The authorization server validates the statement, retrieves the document its dig
 This specification defines the following authorization server metadata {{RFC8414}} values:
 
 `software_statement_presentation_supported`:
-: OPTIONAL. Indicates whether the authorization server accepts a software statement presented at runtime ({{runtime-presentation}}). The value is either a boolean or a JSON array of the endpoints at which presentation is accepted, whose members are `token` and `pushed_authorization_request`. A value of `true` is equivalent to an array naming every endpoint the server's supported grant types make applicable, and `false`, or omission, means the path is not offered. Advertising only `token` is what lets a server offer presentation to clients that need no redirect, without also promising the front-channel path. This member describes the consuming role. It does not imply acceptance of any particular statement issuer or subject namespace, and it does not imply support for statement-governed registrations. An authorization server advertising presentation at the pushed authorization request endpoint MUST publish `pushed_authorization_request_endpoint`, since {{authorization-requests}} makes presentation there the only front-channel path. A client also examines the ordinary client-authentication and DPoP metadata for the proof it intends to use.
+: OPTIONAL. A JSON array naming the endpoints at which the authorization server accepts a software statement presented at runtime ({{runtime-presentation}}). Defined members are `token` and `pushed_authorization_request`; a member a client does not recognize is ignored. Omission, or an empty array, means the path is not offered. Advertising only `token` is what lets a server offer presentation to clients that need no redirect, without also promising the front-channel path. This member describes the consuming role. It does not imply acceptance of any particular statement issuer or subject namespace, and it does not imply support for statement-governed registrations. An authorization server advertising presentation at the pushed authorization request endpoint MUST publish `pushed_authorization_request_endpoint`, since {{authorization-requests}} makes presentation there the only front-channel path. A client also examines the ordinary client-authentication and DPoP metadata for the proof it intends to use.
+
+`software_statement_presentation_grant_types_supported`:
+: OPTIONAL. A JSON array of grant type identifiers on which the authorization server accepts a runtime presentation, in addition to those {{runtime-presentation}} names. Omission means only those.
 
 `software_statement_registration_validity_supported`:
 : OPTIONAL. Boolean value indicating whether every registration the authorization server creates from a validated software statement is governed by the validity and revalidation rules of {{registration-validity}} and {{revalidation}}. If omitted, the default value is `false`. A value of `true` does not imply runtime-presentation support. It tells a client that the statement's `exp` will bound the registration and that the server accepts replacement delivery through an authenticated token request or pushed authorization request and, if the server supports {{RFC7592}}, a registration update request. A server MAY apply the model to registrations created from statements of some configured issuers and not others, since a client learns the boundary that applies to its own registration from the `exp` of the statement it delivered; advertising `true` claims conformance for the registrations the model governs, not that every registration at the server is statement-governed.
@@ -442,7 +456,7 @@ Three extensions of this path are left to separate specifications. Endorsed keys
 
 ## Statement Theft and Replay {#statement-validation}
 
-A runtime presentation resists statement theft because the proof is a key the statement attests. Possession of a stolen statement is insufficient unless the attacker also controls that key, and admitting only that key is what prevents downgrade: every server in the audience either binds the presenter to it or refuses the presentation. An extension admitting endorsed keys ({{extensions}}) reopens that question and needs to answer it in its own terms.
+A runtime presentation resists statement theft because the proof is a key the reviewed document carries. Possession of a stolen statement is insufficient unless the attacker also controls that key, and admitting only that key is what prevents downgrade: every server in the audience either binds the presenter to it or refuses the presentation. An extension admitting endorsed keys ({{extensions}}) reopens that question and needs to answer it in its own terms.
 
 A statement consumed at registration is a reusable bearer artifact until it expires, so {{ISSUANCE}} relies on narrow audience and lifetime, and the bounds of {{multi-instance}} limit what a stolen statement can create.
 
@@ -519,6 +533,56 @@ Change Controller:
 Specification Document(s):
 : This specification, {{runtime-presentation}}
 
+## OAuth Extensions Error Registry
+
+This specification requests registration of the following error codes in the IANA "OAuth Extensions Error Registry" established by {{RFC6749}}:
+
+Error Name:
+: `statement_required`
+
+Error Usage Location:
+: token error response
+
+Related Protocol Extension:
+: OAuth 2.0 Software Statement Consumption
+
+Change Controller:
+: IESG
+
+Specification Document(s):
+: This specification, {{errors}}
+
+Error Name:
+: `temporarily_unavailable`
+
+Existing Registration:
+: {{RFC6749}}
+
+Error Usage Location:
+: token error response, in addition to the locations already registered
+
+Change Controller:
+: IESG
+
+Specification Document(s):
+: {{RFC6749}}, this specification ({{errors}})
+
+## OAuth Dynamic Client Registration Metadata Registry
+
+This specification requests registration of the following client metadata member, returned by an authorization server in a registration response:
+
+Client Metadata Name:
+: `registration_expires_at`
+
+Client Metadata Description:
+: Time at which a statement-governed registration ceases to be valid, as a NumericDate.
+
+Change Controller:
+: IESG
+
+Specification Document(s):
+: This specification, {{registration-validity}}
+
 ## OAuth Authorization Server Metadata Registry
 
 This specification requests registration of the following values in the IANA "OAuth Authorization Server Metadata" registry established by {{RFC8414}}.
@@ -528,6 +592,18 @@ Metadata Name:
 
 Metadata Description:
 : Boolean value, or JSON array of endpoint names, indicating whether and where the authorization server accepts a software statement presented at runtime.
+
+Change Controller:
+: IESG
+
+Specification Document(s):
+: This specification, {{authorization-server-metadata}}
+
+Metadata Name:
+: `software_statement_presentation_grant_types_supported`
+
+Metadata Description:
+: JSON array of grant type identifiers on which the authorization server accepts a runtime presentation, beyond those the specification names.
 
 Change Controller:
 : IESG
