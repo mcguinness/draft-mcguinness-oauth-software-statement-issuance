@@ -82,13 +82,13 @@ Once per reviewer: the issuer identifier, its key source, the signing algorithms
 sequenceDiagram
     participant App as Application instance
     participant AS as Provider authorization server
-    App->>AS: Request + statement + key proof
-    AS->>AS: Validate the statement: typ, signature, claims, issuer, scope
-    AS->>AS: Resolve the document at sub; compare its digest
-    AS->>AS: Verify the proof against a key that document carries
-    AS->>AS: Evaluate the request against that document's metadata
-    AS->>AS: Tenant permission and grant, by their own mechanisms
-    AS-->>App: Access token, or an error naming what failed
+    App->>AS: Request with statement and key proof
+    AS->>AS: Validate typ, signature, claims and issuer scope
+    AS->>AS: Resolve document at sub and compare digest
+    AS->>AS: Verify proof against a key the document carries
+    AS->>AS: Evaluate request against document metadata
+    AS->>AS: Apply tenant permission and grant policy
+    AS-->>App: Access token or error naming what failed
 ```
 
 Everything that needs no network happens before the document is fetched, which keeps an unauthenticated request from spending retrieval on a statement that was never going to validate.
