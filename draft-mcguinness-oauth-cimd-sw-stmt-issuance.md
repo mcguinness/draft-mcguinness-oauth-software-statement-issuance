@@ -90,7 +90,7 @@ In the redirect flow, the authorization endpoint returns a short-lived `software
 
 A client that holds an initial access token authorizing issuance instead uses OAuth 2.0 Token Exchange (RFC 8693), without a redirect.
 
-The issued statement is consumed through RFC 7591 dynamic client registration; a companion specification defines sender-constrained runtime presentation in authorization and token requests.
+The issued statement is consumed through RFC 7591 dynamic client registration; the companion {{STATEMENT}} defines the artifact, its validation, and its consumption.
 
 --- middle
 
@@ -106,7 +106,7 @@ Pre-registration {{CIMD}}, pushed registration {{PUSHED-DCR}}, and approval-base
 
 A software statement makes an issuer's decision portable. A publisher program, enterprise security function, or ecosystem operator reviews the software once; each authorization server in the audience can rely on the signed decision under its own policy ({{what-issuance-attests}}, {{STATEMENT}}, {{beyond-pre-registration}}).
 
-This specification supplies the missing issuance protocol and hardens the existing artifact for interoperability ({{STATEMENT}}). This document owns the artifact and how a client obtains one. Everything a consuming authorization server does with a statement, validating it, applying it, bounding a registration by its expiry, and presenting it at runtime, is defined by the companion {{STATEMENT}}. It introduces no new client credential or federation architecture. Portability remains bounded by configured issuer trust, typically within an ecosystem or administrative domain rather than the open web.
+This specification supplies the missing issuance protocol. The artifact itself, its claims, its validation, and everything a consuming authorization server does with it are defined by {{STATEMENT}}; this document defines how a client obtains one. It introduces no new client credential or federation architecture. Portability remains bounded by configured issuer trust, typically within an ecosystem or administrative domain rather than the open web.
 
 A client identified by its {{CIMD}} URL obtains a statement through either:
 
@@ -148,7 +148,7 @@ A software statement makes one decision portable, binds it to the exact content 
 
 This specification uses the following building blocks:
 
-* {{RFC7591}} defines the software statement and the client metadata carried in it.
+* {{RFC7591}} defines the software statement; {{STATEMENT}} profiles it for clients identified by a Client ID Metadata Document.
 * {{CIMD}} defines the client identifier, canonical metadata source, pre-registration, and metadata-change handling. Those mechanisms can serve as approval-carrying enrollment, while the metadata digest ({{metadata-snapshot}}) makes changes precisely detectable.
 * {{DTR}} defines client opt-in, token endpoint deferral, polling, cancellation, and sender constraint. This specification uses it as-is for asynchronous issuance and adds only a delivery restriction ({{deferred-processing}}).
 * {{RFC8693}} defines both the response convention for non-access security tokens and the exchange profiled in {{token-exchange-profile}}.
@@ -192,7 +192,7 @@ Metadata Snapshot:
 : The validated canonical metadata bound to a request, as defined in {{metadata-snapshot}}.
 
 Metadata Digest:
-: The unpadded base64url encoding of the SHA-256 hash of the retrieved octets of a metadata document, as defined in {{metadata-snapshot}}.
+: As defined in {{STATEMENT}}.
 
 # Protocol Overview
 
@@ -336,7 +336,7 @@ The client sends an authorization request as described in Section 4.1.1 of {{RFC
 `audience`:
 : OPTIONAL. A target service at which the client intends to use the statement, with the semantics defined in Section 2.1 of {{RFC8693}}, and repeatable to request several. Each value MUST be an authorization server issuer identifier as defined by {{RFC8414}}; values MUST NOT be repeated, and order is insignificant.
 
-The authorization server selects the final audience according to policy. When the parameter is present, every value in the statement's `aud` claim MUST have appeared in the request, and where no requested audience is acceptable the authorization server MUST reject the request with `invalid_target` {{RFC8693}}, following the authorization-request precedent of {{RFC8707}}. These semantics apply only to software statement requests and do not affect proprietary uses of `audience` for access-token targeting.
+The authorization server selects the final audience according to policy. The claim constraint that follows from a present parameter is stated in {{STATEMENT}}. Where no requested audience is acceptable the authorization server MUST reject the request with `invalid_target` {{RFC8693}}, following the authorization-request precedent of {{RFC8707}}. These semantics apply only to software statement requests and do not affect proprietary uses of `audience` for access-token targeting.
 
 `completion_mode`:
 : OPTIONAL. A value that includes `deferred`, sent as the advance hint {{DTR}} defines for an endpoint preceding a token request. It lets the authorization server choose a review path suited to out-of-band completion before it begins work, and does not replace the opt-in required at redemption ({{deferred-processing}}).
@@ -559,7 +559,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adeferred
 A successful response has HTTP status code 200, a media type of `application/json`, and the following members:
 
 `access_token`:
-: REQUIRED. The software statement issued by the authorization server.
+: REQUIRED. The software statement issued by the authorization server. It MUST conform to {{STATEMENT}}: `sub` is the client identifier URL of the request, `cimd_digest` is the digest of the bound metadata snapshot, `aud` is the selected audience where one is restricted, and the statement carries no client metadata claims.
 
 `issued_token_type`:
 : REQUIRED. The value MUST be `urn:ietf:params:oauth:token-type:software-statement`.
@@ -652,7 +652,7 @@ It SHOULD present the intended lifetime, and SHOULD make narrowing visible when 
 
 A software statement is an attestation about software: a signed, attributable claim by a named issuer, bounded by that issuer's process rather than proof that its contents are true. {{STATEMENT}} sets it beside the client attestation and instance assertion that attest a presenter, which differ in subject, authority, lifetime, and effect and compose with it rather than replace it.
 
-A software statement means one thing: the issuer evaluated the exact document content captured in the metadata snapshot ({{metadata-snapshot}}), under its issuance policy, at the time recorded in `iat`, and decided to attest the contained metadata for the named audience.
+A software statement means one thing: the issuer evaluated the exact document content captured in the metadata snapshot ({{metadata-snapshot}}), under its issuance policy, at the time recorded in `iat`, and decided to vouch for it to the named audience.
 
 The client authors the metadata document, so issuance does not make every value an independently verified fact. It records an accountable evaluation of a deterministic, digest-bound input ({{metadata-snapshot}}). An issuer SHOULD corroborate security-relevant metadata through evidence beyond the document itself. Verification depth is part of the trust relationship.
 
@@ -699,8 +699,7 @@ An issuer accepting expired statements SHOULD bound how long after expiry it wil
 Compromise of a software-statement signing key enables an attacker to mint statements for every audience that trusts that key.
 
 * Issuers SHOULD protect signing keys according to the scope of their trust relationships and support controlled key rotation.
-* Issuers SHOULD prefer signature algorithms with modern security properties, such as `PS256`, `ES256`, or `EdDSA`, over RSASSA-PKCS1-v1_5 (`RS256`).
-* Trusting authorization servers MUST restrict algorithms to those allowed for the issuer and MUST follow {{RFC8725}} when selecting keys and validating JWTs.
+* Issuers SHOULD prefer signature algorithms with modern security properties, such as `PS256`, `ES256`, or `EdDSA`, over RSASSA-PKCS1-v1_5 (`RS256`), and MUST follow {{RFC8725}} when signing.
 
 ## Approver Identity and Audit
 
@@ -845,6 +844,8 @@ Specification Document(s):
 : This specification, {{authorization-server-metadata}} and {{token-exchange-profile}}
 
 
+--- back
+
 # Design Rationale {#design-rationale}
 
 **Why the issuer is an authorization server role.** Issuance is an OAuth interaction: it authenticates a client, applies policy, and returns a signed artifact. Reusing the role gives key publication, discovery, and client authentication without inventing any of them.
@@ -864,5 +865,6 @@ Specification Document(s):
 **Deliberately deferred capabilities.** This version omits several capabilities, each with an extension point: callback delivery for deferral, a canonicalized digest, acceptance-time status, and CIMD-native conveyance of an issued statement, and partial review, by which an issuer would vouch for particular members rather than a whole document. Consumption-side extensions, including endorsed instance keys, are named by {{STATEMENT}}.
 
 # Acknowledgments
+{:numbered="false"}
 
 This specification builds on {{DTR}}, {{CIMD}}, and {{APPROVAL-DCR}}. The author thanks the authors and contributors to those specifications and the OAuth working group participants whose discussions informed this work.

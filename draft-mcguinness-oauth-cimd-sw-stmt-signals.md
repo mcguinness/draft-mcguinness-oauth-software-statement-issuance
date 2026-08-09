@@ -26,6 +26,8 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  RFC8935:
+  RFC8936:
   RFC8414:
   RFC8417:
   RFC9493:
@@ -40,8 +42,6 @@ normative:
     title: "OpenID Shared Signals Framework Specification 1.0"
 
 informative:
-  RFC8935:
-  RFC8936:
   CAEP:
     target: https://openid.net/specs/openid-caep-1_0.html
     title: "OpenID Continuous Access Evaluation Profile 1.0"
@@ -57,15 +57,15 @@ A software statement carries a reviewer's decision about client software, bounde
 
 # Introduction
 
-{{STATEMENT}} defines a software statement in which an issuer attests reviewed client metadata, and {{STATEMENT}} defines how a trusting authorization server consumes one: at registration, where the statement's expiry can bound the registration's validity, and at runtime, where it establishes a client for a request. In both cases the decision ends when the statement expires unrenewed.
+{{STATEMENT}} defines a software statement, in which an issuer vouches for a reviewed Client ID Metadata Document, and how a trusting authorization server consumes one: at registration, where the statement's expiry can bound the registration's validity, and at runtime, where it establishes a client for a request. In both cases the decision ends when the statement expires unrenewed.
 
 That leaves responsiveness coupled to lifetime. An issuer that wants a withdrawal to take effect within minutes must issue statements that live for minutes, and pay the renewal traffic for every client at every audience. An issuer that wants a manageable renewal cadence accepts that a withdrawal takes as long as the remaining lifetime.
 
 The coupling is unnecessary, because the parties are already in a configured relationship. A trusting authorization server records each issuer's identifier, key source, scope, and role in order to accept its statements at all ({{STATEMENT}}). This specification uses that relationship to carry lifecycle events over the Shared Signals Framework {{SSF}}: the statement issuer transmits, the trusting authorization server receives, and events are Security Event Tokens {{RFC8417}} delivered by the framework's push {{RFC8935}} or poll {{RFC8936}} bindings.
 
-This specification defines the subject identification, event types, payload claims, the durable records a receiver keeps, and its processing rules. It defines no new endpoint, transport, subject identifier format, or trust establishment mechanism.
+This specification defines the subject identification, the event, its payload claims, the durable records a receiver keeps, and its processing rules. It defines no new endpoint, transport, subject identifier format, or trust establishment mechanism.
 
-Two properties bound what the mechanism can do, and are normative in {{processing}}: an event can only reduce standing, and a receiver that misses events enforces expiry exactly as it does today. A withdrawal is durable rather than momentary, which {{withdrawal-records}} specifies, so a client holding an unexpired statement cannot restore what an event ended. Deployments therefore keep bounded statement lifetimes, and neither {{STATEMENT}} nor {{STATEMENT}} depends on this specification.
+Two properties bound what the mechanism can do, and are normative in {{processing}}: an event can only reduce standing, and a receiver that misses events enforces expiry exactly as it does today. A withdrawal is durable rather than momentary, which {{withdrawal-records}} specifies, so a client holding an unexpired statement cannot restore what an event ended. Deployments therefore keep bounded statement lifetimes, and {{STATEMENT}} does not depend on this specification.
 
 This mechanism buys latency, not correctness. A statement is carried by the client it admits, and a client has no reason to stop presenting one, so withdrawing a review before its expiry is what these events are for. A decision a consuming server evaluates afresh on every request, such as one carried by an identity assertion, needs no event at all.
 
@@ -73,7 +73,7 @@ This mechanism buys latency, not correctness. A statement is carried by the clie
 
 {::boilerplate bcp14-tagged}
 
-Transmitter, Receiver, Stream, and the delivery and configuration mechanisms are defined by {{SSF}}. Security Event Token, or SET, is defined by {{RFC8417}}. Subject identifier formats are defined by {{RFC9493}}. The software statement, its claims, and its validation are defined by {{STATEMENT}}. Issuer trust configuration, registration validity, runtime presentation, and the per-grant establishment state are defined by {{STATEMENT}}.
+Transmitter, Receiver, Stream, and the delivery and configuration mechanisms are defined by {{SSF}}. Security Event Token, or SET, is defined by {{RFC8417}}. Subject identifier formats are defined by {{RFC9493}}. The software statement, its claims, its validation, issuer trust configuration, registration validity, runtime presentation, and the per-grant establishment state are defined by {{STATEMENT}}.
 
 This specification additionally defines the following terms:
 
@@ -81,7 +81,7 @@ Statement Issuer:
 : The party that signed a software statement, acting as a Transmitter of the events defined here.
 
 Consuming Authorization Server:
-: A trusting authorization server that has configured the statement issuer, acting as a Receiver of the events defined here.
+: An authorization server that has configured the statement issuer under {{STATEMENT}}, acting as a Receiver of the events defined here.
 
 Standing:
 : What a client may do at a consuming authorization server by virtue of a software statement: its registration and that registration's validity, and its establishment at request time ({{STATEMENT}}). Standing is created and extended only by statements, never by the events defined here.
@@ -120,7 +120,7 @@ While a Withdrawal Record is retained, the receiver MUST refuse a statement matc
 * a record naming a `jti` refuses that statement, whatever its `iat`;
 * a record naming none refuses every statement from that issuer for that subject whose `iat` is at or before the record's effective time.
 
-A statement from that issuer for that subject with an `iat` after the record's effective time is a later decision by the same authority. It is accepted under the ordinary rules of {{STATEMENT}} and {{STATEMENT}}, and restores what the withdrawal ended. This is the only recovery path, and it requires the issuer to act.
+A statement from that issuer for that subject with an `iat` after the record's effective time is a later decision by the same authority. It is accepted under the ordinary rules of {{STATEMENT}}, and restores what the withdrawal ended. This is the only recovery path, and it requires the issuer to act.
 
 A refusal under this section takes effect wherever the statement would otherwise be consumed: a registration governed by a refused statement is expired as {{STATEMENT}} defines for a lapsed registration, and a runtime presentation carrying one fails as it does for a statement that is not current. A grant already open under a refused statement continues only as far as its next currency check: a receiver MUST treat a refused statement as not current when {{STATEMENT}} requires currency at refresh, so that a withdrawal reaches running grants on the same terms as an expiry rather than waiting for the statement's own.
 
@@ -153,17 +153,17 @@ A consuming authorization server that receives an event defined here MUST:
 
 1. verify the SET as {{RFC8417}} requires, including its `typ`, and verify that its issuer is configured and its keys were obtained as {{relationship}} requires;
 2. reject an event whose `aud` does not contain its issuer identifier ({{relationship}}), and an event whose type it does not recognize;
-3. resolve the subject ({{subjects}}) and the scope of the effect from the event type ({{relationship}}); and
+3. resolve the subject ({{subjects}}) and the scope of the effect ({{relationship}}); and
 4. apply the effect the event type defines, recording it as {{withdrawal-records}} requires.
 
 A receiver MUST treat an event it has already applied as successfully delivered and acknowledge it as {{RFC8935}} or {{RFC8936}} requires, rather than reporting a delivery error; duplicate delivery is ordinary retry behavior and rejecting it can stall or disable a stream carrying later withdrawals. Duplicate detection is per transmitting issuer, since SET `jti` values are unique only within an issuer, and a receiver MAY bound the identifiers it retains for that purpose by the maximum statement lifetime it honors for the issuer.
 
 Two constraints bound every event:
 
-* An event MUST NOT create standing, extend a statement's lifetime, restore a statement previously revoked, or otherwise increase what a client may do. A receiver MUST ignore any payload member that would have such an effect. Restoring standing requires a statement, presented or delivered as {{STATEMENT}} defines.
+* An event MUST NOT create standing, extend a statement's lifetime, restore a statement previously withdrawn, or otherwise increase what a client may do. A receiver MUST ignore any payload member that would have such an effect. Restoring standing requires a statement, presented or delivered as {{STATEMENT}} defines.
 * A receiver MUST continue to enforce statement expiry independently of this mechanism. Stream loss, transmitter unavailability, or delivery failure leaves standing to end at expiry, which remains the floor.
 
-Events may arrive out of order or be duplicated. A receiver MUST apply every withdrawal event it accepts, whatever its `event_timestamp` relative to events already applied, since withdrawals accumulate and an older one may name a statement a newer one does not. The ordering rule constrains reversal only: a receiver MUST NOT discard or narrow a Withdrawal Record, or discard standing-bearing state whose `iat` is after the effective time of the event in hand, on the basis of an event whose `event_timestamp` precedes the event that created it. A delayed or replayed withdrawal therefore cannot destroy an approval the tenant recorded after making it. Records are kept per subject and issuer, and per `jti` for `statement-revoked`, so that a later event never silently supersedes an earlier one of a different kind.
+Events may arrive out of order or be duplicated. A receiver MUST apply every withdrawal event it accepts, whatever its `event_timestamp` relative to events already applied, since withdrawals accumulate and an older one may name a statement a newer one does not. The ordering rule constrains reversal only: a receiver MUST NOT discard or narrow a Withdrawal Record, or discard standing-bearing state whose `iat` is after the effective time of the event in hand, on the basis of an event whose `event_timestamp` precedes the event that created it. A delayed or replayed withdrawal therefore cannot destroy an approval the tenant recorded after making it. Records are kept per subject and issuer, and per `jti` where an event named one, so that a later event never silently supersedes an earlier one of narrower scope.
 
 An effect applied by an event does not revoke access tokens already issued. A receiver applies its own grant and token lifetime policy, as it does when a statement expires.
 
@@ -173,7 +173,7 @@ A statement issuer supporting this specification publishes Transmitter configura
 
 A consuming authorization server SHOULD create one stream per configured issuer, and that stream MUST cover every subject the issuer attests rather than an enumerated subject set. A receiver cannot enumerate subjects: in the runtime profile it holds no state for software until first presentation, which is exactly when an unenumerated withdrawal would already have been missed. A transmitter that supports this specification MUST accept a stream request that names no subjects and MUST NOT require subject enumeration as a condition of delivery.
 
-A receiver SHOULD request every event type this specification defines that the transmitting issuer's roles can produce, and SHOULD use the stream verification facility of {{SSF}} on a schedule, since a stream delivering nothing because it was misconfigured is otherwise indistinguishable from an issuer with nothing to report.
+A receiver SHOULD request the withdrawal event this specification defines, and SHOULD use the stream verification facility of {{SSF}} on a schedule, since a stream delivering nothing because it was misconfigured is otherwise indistinguishable from an issuer with nothing to report.
 
 # Security Considerations
 
@@ -203,7 +203,7 @@ Withdrawal Records ({{withdrawal-records}}) persist an issuer's negative decisio
 
 ## Event Type Assignment
 
-The event types defined in {{events}} require URI identifiers under a namespace this specification does not yet control. This version uses the placeholder base `https://schemas.openid.net/secevent/sw-stmt/event-type/` with the terminal segment `withdrawn`. Assignment of the final base URI, and registration where the publishing body maintains a registry of security event types, is to be resolved before publication.
+The event defined in {{events}} requires a URI identifier under a namespace this specification does not yet control. This version uses the placeholder base `https://schemas.openid.net/secevent/sw-stmt/event-type/` with the terminal segment `withdrawn`. Assignment of the final base URI, and registration where the publishing body maintains a registry of security event types, is to be resolved before publication.
 
 ## SET Payload Claims
 
