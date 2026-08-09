@@ -110,7 +110,8 @@ Table of Contents
      16.3.  JSON Web Token Claims Registry
      16.4.  OAuth Extensions Error Registry
      16.5.  OAuth Dynamic Client Registration Metadata Registry
-     16.6.  OAuth Authorization Server Metadata Registry
+     16.6.  OAuth Parameters Registry
+     16.7.  OAuth Authorization Server Metadata Registry
    17. References
      17.1.  Normative References
      17.2.  Informative References
@@ -273,7 +274,7 @@ Table of Contents
    Trusting Authorization Server:  An authorization server that consumes
       a software statement, at registration or at runtime.
 
-   This specification additionally defines the following terms:
+   This specification additionally defines the following terms.
 
    Runtime Presentation:  The consumption of a validated software
       statement inside an authorization or token request, applying the
@@ -537,7 +538,15 @@ Table of Contents
       NOT take any client metadata value from the registration request,
       whether or not the document carries that member.  A request MAY
       carry metadata, as [RFC7591] clients do; it does not contribute to
-      the registration.
+      the registration;
+
+   *  MUST ignore a software_statement member of the reviewed document,
+      which [CIMD] permits the document to carry.  A statement consumed
+      under this specification is the one the client presented, whose
+      digest binds the document; treating a statement inside the
+      document as a second review would make acceptance depend on bytes
+      the presented statement covers but no issuer separately vouched
+      for.
 
    Taking only the document closes the substitution the statement exists
    to prevent.  A rule that constrained only the members the document
@@ -572,13 +581,18 @@ Table of Contents
 
    An authorization server that advertises
    software_statement_registration_validity_supported as true MUST apply
-   this model to every registration it creates from a statement of an
-   issuer it has configured for the model:
+   this model to every registration it creates from a validated software
+   statement, whichever issuer signed it, so that a client can rely on
+   the signal before it registers:
 
-   *  It MUST record the governing statement's iss, jti, sub, iat, and
-      exp with the registration.
+   *  It MUST record the governing statement's iss, jti, sub, and iat
+      with the registration, and the registration's effective expiry:
+      the earlier of the statement's exp and its iat plus the maximum
+      statement lifetime the server records for that issuer (Section 4).
+      The effective expiry is what bounds the registration, what a
+      renewal extends, and what registration_expires_at reports.
 
-   *  The registration is valid until that exp.
+   *  The registration is valid until that effective expiry.
 
    *  Once that time passes without a replacement (Section 5.2), it MUST
       reject requests under the registration: invalid_client at the
@@ -630,10 +644,12 @@ Table of Contents
 
    *  in the software_statement member of an authenticated [RFC7592]
       update request, where the deployment offers registration
-      management.  Such a request replaces the registration's metadata
-      in full, so the client sends its complete current metadata
-      alongside the statement; a renewal-only request omitting other
-      members would reset them.
+      management.  [RFC7592] requires such a request to carry the
+      client's complete metadata, and the client sends it, but under
+      this specification that metadata is syntactically required and not
+      authoritative: the renewed record is derived from the reviewed
+      document as everywhere else.  Rejections at that endpoint use the
+      registration column of Section 10.
 
    The replacement MUST:
 
@@ -645,12 +661,20 @@ Table of Contents
 
    *  have an iat later than the recorded statement's iat.
 
+   A replacement names a document as any statement does, so the
+   authorization server MUST resolve the Client ID Metadata Document at
+   the replacement's sub, MUST verify that the digest of the retrieved
+   representation equals the replacement's cimd_digest, and MUST re-
+   derive the registration's metadata from those same octets, under the
+   rules of Section 5.  Renewing on the statement alone would leave a
+   registration carrying metadata the new review never covered, which is
+   how a removed key, redirect URI, or scope would survive its own
+   withdrawal.
+
    On success the authorization server MUST replace the recorded
-   statement identity, iat, and exp in a single atomic update, and
-   concurrent deliveries resolve to the most recently issued statement.
-   Whether a replacement over a changed document updates the
-   registration record is local registration policy, and a server that
-   relies on narrowing to take effect applies it.
+   statement identity, iat, exp, and derived metadata in a single atomic
+   update, and concurrent deliveries resolve to the most recently issued
+   statement.
 
    When an expired registration sends a request containing a
    replacement, the authorization server MUST authenticate the retained
@@ -666,12 +690,15 @@ Table of Contents
    [RFC9700]; a client recovers by delivering a valid replacement.
 
    A request that carries a replacement which fails the rules above is
-   rejected with statement_required, whether or not the registration has
-   already expired, so that a client learns immediately rather than by a
-   later outage and can tell a bad replacement from a missing one.  A
-   rejected delivery leaves the recorded statement unchanged.  A
-   registration request without an [RFC7592] registration access token
-   creates a new registration and never renews an existing one.
+   rejected with statement_required at the token and pushed
+   authorization request endpoints, and with the registration column of
+   Section 10 at the registration management endpoint, whether or not
+   the registration has already expired, so that a client learns
+   immediately rather than by a later outage and can tell a bad
+   replacement from a missing one.  A rejected delivery leaves the
+   recorded statement unchanged.  A registration request without an
+   [RFC7592] registration access token creates a new registration and
+   never renews an existing one.
 
 5.3.  Change After Review
 
@@ -1291,9 +1318,8 @@ Table of Contents
       that the server accepts replacement delivery through an
       authenticated token request or pushed authorization request and,
       if the server supports [RFC7592], a registration update request.
-      The model is configured per issuer, so a client learns whether its
-      own registration is governed from the registration_expires_at
-      member the response carries.
+      The response carries registration_expires_at, so a client also
+      learns the boundary that applies to its own registration.
 
 13.  Extension Points
 
@@ -1608,7 +1634,22 @@ Table of Contents
 
    Specification Document(s):  This specification, Section 5.1
 
-16.6.  OAuth Authorization Server Metadata Registry
+16.6.  OAuth Parameters Registry
+
+   This specification requests registration of the following parameter
+   in the IANA "OAuth Parameters" registry established by [RFC6749], for
+   the responses that renew a statement-governed registration:
+
+   Parameter Name:  registration_expires_at
+
+   Parameter Usage Location:  token response, pushed authorization
+      request response
+
+   Change Controller:  IESG
+
+   Specification Document(s):  This specification, Section 5.1
+
+16.7.  OAuth Authorization Server Metadata Registry
 
    This specification requests registration of the following values in
    the IANA "OAuth Authorization Server Metadata" registry established
