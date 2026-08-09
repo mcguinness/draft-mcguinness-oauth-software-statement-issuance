@@ -39,7 +39,7 @@ A provider can therefore adopt this in two rungs, and needs no counterparty for 
 | Presenter proof | Which instance is making this request? | The statement, which fixes the accepted proof; the provider, which configures any attester it trusts | Client authentication, DPoP proof, client attestation, instance assertion | Per request |
 | User grant | What may it access, for whom? | Resource owner and local policy | Access grant, or a cross-domain identity assertion | Grant and token lifetime |
 
-The drafts in this repository define the establishment layer only. Tenant permission is answered by whether the customer's identity provider issues an assertion for the software, presenter proof by the key the statement attests, and the grant by ordinary OAuth.
+The drafts in this repository define the establishment layer only. Tenant permission is answered by whether the customer's identity provider issues an assertion for the software, presenter proof by the key the reviewed document carries, and the grant by ordinary OAuth.
 
 ## Actors
 
@@ -60,11 +60,11 @@ The identity is a Client ID Metadata Document at an HTTPS URL: domain-anchored, 
 
 ### 2. The marketplace reviews and issues an establishment statement
 
-The marketplace evaluates the software once and signs a statement naming the software as `sub`, the provider's authorization servers as `aud`, the reviewed metadata as claims, and an expiry that reflects how often it re-checks. The issuance draft defines the format, the flows for obtaining one, and the digest that binds the review to the exact metadata evaluated.
+The marketplace evaluates the software once and signs a statement naming the software as `sub`, the provider's authorization servers as `aud`, the digest of the document it reviewed, and an expiry that reflects how often it re-checks. The consumption draft defines the format and the digest; the issuance draft defines the flows for obtaining one.
 
 ### 3. The application registers once
 
-The application registers at the provider, carrying the establishment statement. Where the provider implements the registration-validity model and advertises it, which the consumption draft makes optional, it records the governing statement's identity and expiry with the registration, so the registration is valid for as long as the listing is current. A provider that does not implement it consumes the statement as ordinary registration input and its registrations remain permanent. That single registration serves every tenant on the platform, so onboarding a customer requires no new registration. Platforms already do this today without a signed artifact; what the statement adds is a listing decision the provider can verify and expire, which matters most when the listing authority is not the provider itself.
+The application registers at the provider, carrying the establishment statement. Where the provider implements the registration-validity model and advertises it, which the consumption draft makes optional, it records the governing statement's identity and expiry with the registration, so the registration is valid for as long as the listing is current. A provider that does not implement it still consumes the statement as the consumption draft requires, taking the registration's metadata from the reviewed document; what it does not do is bound the registration by the statement's expiry, so those registrations remain permanent. That single registration serves every tenant on the platform, so onboarding a customer requires no new registration. Platforms already do this today without a signed artifact; what the statement adds is a listing decision the provider can verify and expire, which matters most when the listing authority is not the provider itself.
 
 Where the application has no registration and is identified by its metadata URL, it can instead be established at request time by presenting its statement, with no persistent record created.
 
@@ -150,7 +150,7 @@ Because an ID-JAG assertion is validated at every grant, ceasing assertion issua
 
 ## Composition with Shared Signals
 
-Approvals that a provider retrieves end by absence, so nothing more is needed for them. Establishment statements are different: a client carries one and has no reason to stop, so withdrawing a listing before its expiry is enforced on a clock. An approval or a listing ends when its statement expires unrenewed, so how fast a decision takes effect is set by how short the issuer made the lifetime, and short lifetimes buy responsiveness with renewal traffic. That trade is avoidable: the parties are already in a configured pairwise relationship, since a trusting authorization server holds each issuer's identifier, keys, scope, and role, and that same relationship can carry an event stream.
+Approvals that a provider retrieves end by absence, so nothing more is needed for them. Establishment statements are different: a client carries one and has no reason to stop, so withdrawing a listing before its expiry is enforced on a clock. An approval or a listing ends when its statement expires unrenewed, so how fast a decision takes effect is set by how short the issuer made the lifetime, and short lifetimes buy responsiveness with renewal traffic. That trade is avoidable: the parties are already in a configured pairwise relationship, since a trusting authorization server holds each issuer's identifier, keys, scope, and lifetime policy, and that same relationship can carry an event stream.
 
 [Shared Signals Events for CIMD Software Statements](draft-mcguinness-oauth-cimd-sw-stmt-signals.md), the third draft in this repository, defines those events over the [Shared Signals Framework](https://openid.net/specs/openid-sharedsignals-framework-1_0.html). The statement issuer is the transmitter, the trusting authorization server is the receiver, events travel as [Security Event Tokens](https://www.rfc-editor.org/rfc/rfc8417.html) over the framework's push or poll delivery, and subjects use the [identifier formats of RFC 9493](https://www.rfc-editor.org/rfc/rfc9493.html): the `uri` format for a Client ID Metadata Document URL. Nothing new is invented at the transport or trust layer; the profile's work is naming events and their effects.
 
@@ -169,9 +169,9 @@ Missed signals fail closed against the clock. A receiver that loses its stream, 
 
 The consequence is that lifetime and responsiveness stop being the same dial. An issuer can choose a lifetime that suits its renewal capacity, days rather than minutes, and still revoke in seconds. Offboarding becomes a signal, with the absence of renewal as the durable backstop for receivers that never got it.
 
-A stream in the other direction, by which a provider reports where an issuer's statements are consumed, would give an enterprise an inventory it cannot get today. It reverses the transmitter and receiver roles and needs its own profile, and the signals draft names it as future work rather than defining it.
+A stream in the other direction, by which a provider reports where an issuer's statements are consumed, would give an enterprise an inventory it cannot get today. It reverses the transmitter and receiver roles and needs its own profile, and the signals draft does not define it.
 
-The profile is a separate document rather than part of either draft, since it composes with both and neither requires it.
+The profile is a separate document rather than part of the other two, since it composes with both and neither requires it.
 
 ## What each draft supplies
 
@@ -180,12 +180,12 @@ The profile is a separate document rather than part of either draft, since it co
 | Statement format, claims, digest binding | Statement | The Software Statement |
 | How a client obtains a statement | Issuance | Authorization Request, Token Exchange Profile, Deferred Processing |
 | Issuer trust and scoping | Statement | Issuer Trust Establishment |
-| Per-tenant trust configuration and tenant resolution | Issuance | Issuer Roles |
+| Per-tenant trust configuration and tenant resolution | Statement | Issuer Trust Establishment |
 | Validation a consumer performs | Statement | Validating a Statement |
-| Registration validity and renewal | Consumption | Presentation at Registration |
-| Runtime establishment without registration | Consumption | Runtime Presentation |
-| Presenter binding | Consumption | Sender Constraint |
-| Discovery signals | Consumption | Authorization Server Metadata |
+| Registration validity and renewal | Statement | Consumption at Registration |
+| Runtime establishment without registration | Statement | Runtime Presentation |
+| Presenter binding | Statement | Sender Constraint |
+| Discovery signals | Statement | Authorization Server Metadata |
 | Early withdrawal of a decision | Signals | Event Types, Receiver Processing |
 
 ## What changes, concretely

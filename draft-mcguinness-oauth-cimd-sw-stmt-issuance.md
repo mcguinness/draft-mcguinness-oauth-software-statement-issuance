@@ -176,11 +176,7 @@ This specification additionally defines the following terms:
 Software Statement Request:
 : A request in which a client asks an authorization server to issue a software statement, sent as an authorization request with `response_type=software_statement_code`.
 
-Issuing Authorization Server:
-: The authorization server that makes the issuance decision and signs the software statement.
-
-Trusting Authorization Server:
-: An authorization server that consumes the issued software statement, in a dynamic client registration request ({{STATEMENT}}), a runtime presentation, or a replacement delivery ({{STATEMENT}}).
+Issuing Authorization Server and Trusting Authorization Server are defined by {{STATEMENT}}.
 
 Software Statement Code:
 : The short-lived, single-use artifact returned by the software statement code response ({{software-statement-code-response}}) and redeemed at the token endpoint ({{software-statement-code-redemption}}).
@@ -302,7 +298,7 @@ The metadata digest is defined in {{STATEMENT}} and computed over the retrieved 
 
 Equal digests identify the same document for this specification. A changed digest marks a new trust state for the same client identifier and is the signal used by the re-evaluation rule above. The digest also supplies the `cimd_digest` claim ({{STATEMENT}}) and audit guidance ({{security-considerations}}).
 
-Byte identity deliberately detects serialization-only changes. A digest mismatch is an input to policy, not a validation failure. A publisher SHOULD serve a stable byte artifact whose octets change only with its metadata; a document rendered dynamically or served through content negotiation produces digest changes unrelated to its metadata. The authorization server MUST reject duplicate object member names, because parsers can interpret them differently despite an identical digest.
+Byte identity deliberately detects serialization-only changes. A digest mismatch is fatal at registration and an input to policy at runtime, as {{STATEMENT}} defines. A publisher SHOULD serve a stable byte artifact whose octets change only with its metadata; a document rendered dynamically or served through content negotiation produces digest changes unrelated to its metadata. The authorization server MUST reject duplicate object member names, because parsers can interpret them differently despite an identical digest.
 
 An issuance source SHOULD publish keys by reference through `jwks_uri` rather than inline through `jwks`. Rotation behind a stable URI leaves the document and digest unchanged; inline rotation changes both, so the attested keys no longer match the current document and a new statement is needed. The document carries either the key location or the inline keys, and the digest binds whichever it is. The convenience cuts both ways: rotation invisible to the digest means key-host compromise is also invisible to it, and where that key is the runtime proof under {{STATEMENT}} the compromise substitutes the presenter as well; {{STATEMENT}} weighs the trade, and an issuer serving theft-sensitive deployments attests `jwks` inline instead.
 
@@ -336,7 +332,7 @@ The client sends an authorization request as described in Section 4.1.1 of {{RFC
 `audience`:
 : OPTIONAL. A target service at which the client intends to use the statement, with the semantics defined in Section 2.1 of {{RFC8693}}, and repeatable to request several. Each value MUST be an authorization server issuer identifier as defined by {{RFC8414}}; values MUST NOT be repeated, and order is insignificant.
 
-The authorization server selects the final audience according to policy. The claim constraint that follows from a present parameter is stated in {{STATEMENT}}. Where no requested audience is acceptable the authorization server MUST reject the request with `invalid_target` {{RFC8693}}, following the authorization-request precedent of {{RFC8707}}. These semantics apply only to software statement requests and do not affect proprietary uses of `audience` for access-token targeting.
+The authorization server selects the final audience according to policy, and MUST NOT place in the statement's `aud` claim any value the request did not carry: an issuer narrows a requested audience and never widens it. Where no requested audience is acceptable the authorization server MUST reject the request with `invalid_target` {{RFC8693}}, following the authorization-request precedent of {{RFC8707}}. These semantics apply only to software statement requests and do not affect proprietary uses of `audience` for access-token targeting.
 
 `completion_mode`:
 : OPTIONAL. A value that includes `deferred`, sent as the advance hint {{DTR}} defines for an endpoint preceding a token request. It lets the authorization server choose a review path suited to out-of-band completion before it begins work, and does not replace the opt-in required at redemption ({{deferred-processing}}).
@@ -559,7 +555,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adeferred
 A successful response has HTTP status code 200, a media type of `application/json`, and the following members:
 
 `access_token`:
-: REQUIRED. The software statement issued by the authorization server. It MUST conform to {{STATEMENT}}: `sub` is the client identifier URL of the request, `cimd_digest` is the digest of the bound metadata snapshot, `aud` is the selected audience where one is restricted, and the statement carries no client metadata claims.
+: REQUIRED. The software statement issued by the authorization server. It MUST conform to {{STATEMENT}}: `sub` is the client identifier URL of the request, `cimd_digest` is the digest of the bound metadata snapshot, `aud` is the selected audience where one is restricted, and the statement carries no claim registered as client metadata ({{STATEMENT}}).
 
 `issued_token_type`:
 : REQUIRED. The value MUST be `urn:ietf:params:oauth:token-type:software-statement`.

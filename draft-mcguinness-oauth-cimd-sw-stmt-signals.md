@@ -61,7 +61,7 @@ A software statement carries a reviewer's decision about client software, bounde
 
 That leaves responsiveness coupled to lifetime. An issuer that wants a withdrawal to take effect within minutes must issue statements that live for minutes, and pay the renewal traffic for every client at every audience. An issuer that wants a manageable renewal cadence accepts that a withdrawal takes as long as the remaining lifetime.
 
-The coupling is unnecessary, because the parties are already in a configured relationship. A trusting authorization server records each issuer's identifier, key source, scope, and role in order to accept its statements at all ({{STATEMENT}}). This specification uses that relationship to carry lifecycle events over the Shared Signals Framework {{SSF}}: the statement issuer transmits, the trusting authorization server receives, and events are Security Event Tokens {{RFC8417}} delivered by the framework's push {{RFC8935}} or poll {{RFC8936}} bindings.
+The coupling is unnecessary, because the parties are already in a configured relationship. A trusting authorization server records each issuer's identifier, key source, scope, and lifetime policy in order to accept its statements at all ({{STATEMENT}}). This specification uses that relationship to carry lifecycle events over the Shared Signals Framework {{SSF}}: the statement issuer transmits, the trusting authorization server receives, and events are Security Event Tokens {{RFC8417}} delivered by the framework's push {{RFC8935}} or poll {{RFC8936}} bindings.
 
 This specification defines the subject identification, the event, its payload claims, the durable records a receiver keeps, and its processing rules. It defines no new endpoint, transport, subject identifier format, or trust establishment mechanism.
 
@@ -78,16 +78,16 @@ Transmitter, Receiver, Stream, and the delivery and configuration mechanisms are
 This specification additionally defines the following terms:
 
 Statement Issuer:
-: The party that signed a software statement, acting as a Transmitter of the events defined here.
+: The Issuing Authorization Server ({{STATEMENT}}) that signed a software statement, acting as a Transmitter of the events defined here.
 
 Consuming Authorization Server:
-: An authorization server that has configured the statement issuer under {{STATEMENT}}, acting as a Receiver of the events defined here.
+: A Trusting Authorization Server ({{STATEMENT}}) that has configured the statement issuer, acting as a Receiver of the events defined here.
 
 Standing:
 : What a client may do at a consuming authorization server by virtue of a software statement: its registration and that registration's validity, and its establishment at request time ({{STATEMENT}}). Standing is created and extended only by statements, never by the events defined here.
 
 Withdrawal Record:
-: The state a receiver retains when it applies a withdrawal event, defined in {{withdrawal-records}}.
+: The state a receiver retains when it applies a withdrawal event, defined in {{withdrawal-records}}. It is a refusal record in the sense {{STATEMENT}} uses.
 
 # Relationship to the Statement Family {#relationship}
 

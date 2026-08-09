@@ -2,7 +2,7 @@
 
 This is the working area for the individual Internet-Draft, "CIMD Software Statement Issuance".
 
-RFC 7591 standardizes how a client presents a software statement and how a registration endpoint consumes it, but not how the client obtains one. This specification defines the missing issuance protocol: a redirect flow returning a `software_statement_code` redeemed at the token endpoint, a token exchange profile for pre-authorized issuance and renewal, and deferred processing under Deferred Token Response so approval can complete out of band over hours or days. Clients are identified by a Client ID Metadata Document, and every statement is bound by canonical digest to the exact metadata reviewed.
+RFC 7591 standardizes how a client presents a software statement and how a registration endpoint consumes it, but not how the client obtains one. This specification defines the missing issuance protocol: a redirect flow returning a `software_statement_code` redeemed at the token endpoint, a token exchange profile for pre-authorized issuance and renewal, and deferred processing under Deferred Token Response so approval can complete out of band over hours or days. Clients are identified by a Client ID Metadata Document, and every statement is bound by a byte-exact digest to the document reviewed.
 
 * [Editor's Copy (HTML)](https://mcguinness.github.io/draft-mcguinness-oauth-cimd-sw-stmt-issuance/draft-mcguinness-oauth-cimd-sw-stmt-issuance.html)
 * [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-cimd-sw-stmt-issuance/draft-mcguinness-oauth-cimd-sw-stmt-issuance.txt)
@@ -10,7 +10,7 @@ RFC 7591 standardizes how a client presents a software statement and how a regis
 
 ## CIMD Software Statement
 
-This repository also hosts the companion Internet-Draft, "CIMD Software Statement", which defines the second consumption path for the issued statement: a client presents it at runtime in an authorization or token request, sender-constrained by a proof that chains to the statement, and the authorization server applies the attested metadata to that request without creating a persistent registration.
+This repository also hosts the companion Internet-Draft, "CIMD Software Statement", which defines the artifact, its validation, the issuer trust a consumer configures, and the two points at which a statement is consumed: in a registration request, where its expiry can bound the registration, and at runtime, where it establishes a client for one request without creating a registration.
 
 * [Editor's Copy (HTML)](https://mcguinness.github.io/draft-mcguinness-oauth-cimd-sw-stmt-issuance/draft-mcguinness-oauth-cimd-sw-stmt.html)
 * [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-cimd-sw-stmt-issuance/draft-mcguinness-oauth-cimd-sw-stmt.txt)
@@ -26,7 +26,7 @@ The repository also hosts "Shared Signals Events for CIMD Software Statements", 
 
 ## Deployment Model
 
-[Marketplace Listing and Enterprise Approval](deployment-model.md) sketches the end-to-end scenario the two drafts are built for: a provider marketplace deciding which software may exist as a client, an enterprise deciding which of it may operate in its tenant, and the four layers that keep those decisions separate. Non-normative.
+[Marketplace Listing and Enterprise Approval](deployment-model.md) sketches the end-to-end scenario the drafts are built for: a provider marketplace deciding which software may exist as a client, an enterprise deciding which of it may operate in its tenant, and the four layers that keep those decisions separate. Non-normative.
 
 ## Related Drafts
 
