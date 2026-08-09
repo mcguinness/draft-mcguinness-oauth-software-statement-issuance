@@ -1218,7 +1218,7 @@ svg {
       </h2>
 <p id="section-1-1"><span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> defines a software statement, in which an issuer vouches for a reviewed Client ID Metadata Document, and how a trusting authorization server consumes one: at registration, where the statement's expiry can bound the registration's validity, and at runtime, where it establishes a client for a request. In both cases the decision ends when the statement expires unrenewed.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">That leaves responsiveness coupled to lifetime. An issuer that wants a withdrawal to take effect within minutes must issue statements that live for minutes, and pay the renewal traffic for every client at every audience. An issuer that wants a manageable renewal cadence accepts that a withdrawal takes as long as the remaining lifetime.<a href="#section-1-2" class="pilcrow">¶</a></p>
-<p id="section-1-3">The coupling is unnecessary, because the parties are already in a configured relationship. A trusting authorization server records each issuer's identifier, key source, scope, and role in order to accept its statements at all (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>). This specification uses that relationship to carry lifecycle events over the Shared Signals Framework <span>[<a href="#SSF" class="cite xref">SSF</a>]</span>: the statement issuer transmits, the trusting authorization server receives, and events are Security Event Tokens <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span> delivered by the framework's push <span>[<a href="#RFC8935" class="cite xref">RFC8935</a>]</span> or poll <span>[<a href="#RFC8936" class="cite xref">RFC8936</a>]</span> bindings.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-3">The coupling is unnecessary, because the parties are already in a configured relationship. A trusting authorization server records each issuer's identifier, key source, scope, and lifetime policy in order to accept its statements at all (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>). This specification uses that relationship to carry lifecycle events over the Shared Signals Framework <span>[<a href="#SSF" class="cite xref">SSF</a>]</span>: the statement issuer transmits, the trusting authorization server receives, and events are Security Event Tokens <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span> delivered by the framework's push <span>[<a href="#RFC8935" class="cite xref">RFC8935</a>]</span> or poll <span>[<a href="#RFC8936" class="cite xref">RFC8936</a>]</span> bindings.<a href="#section-1-3" class="pilcrow">¶</a></p>
 <p id="section-1-4">This specification defines the subject identification, the event, its payload claims, the durable records a receiver keeps, and its processing rules. It defines no new endpoint, transport, subject identifier format, or trust establishment mechanism.<a href="#section-1-4" class="pilcrow">¶</a></p>
 <p id="section-1-5">Two properties bound what the mechanism can do, and are normative in <a href="#processing" class="auto internal xref">Section 7</a>: an event can only reduce standing, and a receiver that misses events enforces expiry exactly as it does today. A withdrawal is durable rather than momentary, which <a href="#withdrawal-records" class="auto internal xref">Section 5</a> specifies, so a client holding an unexpired statement cannot restore what an event ended. Deployments therefore keep bounded statement lifetimes, and <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> does not depend on this specification.<a href="#section-1-5" class="pilcrow">¶</a></p>
 <p id="section-1-6">This mechanism buys latency, not correctness. A statement is carried by the client it admits, and a client has no reason to stop presenting one, so withdrawing a review before its expiry is what these events are for. A decision a consuming server evaluates afresh on every request, such as one carried by an identity assertion, needs no event at all.<a href="#section-1-6" class="pilcrow">¶</a></p>
@@ -1238,12 +1238,12 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <span class="break"></span><dl class="dlParallel" id="section-2-4">
         <dt id="section-2-4.1">Statement Issuer:</dt>
         <dd style="margin-left: 1.5em" id="section-2-4.2">
-          <p id="section-2-4.2.1">The party that signed a software statement, acting as a Transmitter of the events defined here.<a href="#section-2-4.2.1" class="pilcrow">¶</a></p>
+          <p id="section-2-4.2.1">The Issuing Authorization Server (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>) that signed a software statement, acting as a Transmitter of the events defined here.<a href="#section-2-4.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-2-4.3">Consuming Authorization Server:</dt>
         <dd style="margin-left: 1.5em" id="section-2-4.4">
-          <p id="section-2-4.4.1">An authorization server that has configured the statement issuer under <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>, acting as a Receiver of the events defined here.<a href="#section-2-4.4.1" class="pilcrow">¶</a></p>
+          <p id="section-2-4.4.1">A Trusting Authorization Server (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>) that has configured the statement issuer, acting as a Receiver of the events defined here.<a href="#section-2-4.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-2-4.5">Standing:</dt>
@@ -1253,7 +1253,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
         <dd class="break"></dd>
 <dt id="section-2-4.7">Withdrawal Record:</dt>
         <dd style="margin-left: 1.5em" id="section-2-4.8">
-          <p id="section-2-4.8.1">The state a receiver retains when it applies a withdrawal event, defined in <a href="#withdrawal-records" class="auto internal xref">Section 5</a>.<a href="#section-2-4.8.1" class="pilcrow">¶</a></p>
+          <p id="section-2-4.8.1">The state a receiver retains when it applies a withdrawal event, defined in <a href="#withdrawal-records" class="auto internal xref">Section 5</a>. It is a refusal record in the sense <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> uses.<a href="#section-2-4.8.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>

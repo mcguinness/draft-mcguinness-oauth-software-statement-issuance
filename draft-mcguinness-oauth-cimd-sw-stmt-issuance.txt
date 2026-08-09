@@ -297,13 +297,8 @@ Table of Contents
       authorization server to issue a software statement, sent as an
       authorization request with response_type=software_statement_code.
 
-   Issuing Authorization Server:  The authorization server that makes
-      the issuance decision and signs the software statement.
-
-   Trusting Authorization Server:  An authorization server that consumes
-      the issued software statement, in a dynamic client registration
-      request ([STATEMENT]), a runtime presentation, or a replacement
-      delivery ([STATEMENT]).
+   Issuing Authorization Server and Trusting Authorization Server are
+   defined by [STATEMENT].
 
    Software Statement Code:  The short-lived, single-use artifact
       returned by the software statement code response (Section 6.1) and
@@ -503,13 +498,13 @@ Table of Contents
    (Section 12).
 
    Byte identity deliberately detects serialization-only changes.  A
-   digest mismatch is an input to policy, not a validation failure.  A
-   publisher SHOULD serve a stable byte artifact whose octets change
-   only with its metadata; a document rendered dynamically or served
-   through content negotiation produces digest changes unrelated to its
-   metadata.  The authorization server MUST reject duplicate object
-   member names, because parsers can interpret them differently despite
-   an identical digest.
+   digest mismatch is fatal at registration and an input to policy at
+   runtime, as [STATEMENT] defines.  A publisher SHOULD serve a stable
+   byte artifact whose octets change only with its metadata; a document
+   rendered dynamically or served through content negotiation produces
+   digest changes unrelated to its metadata.  The authorization server
+   MUST reject duplicate object member names, because parsers can
+   interpret them differently despite an identical digest.
 
    An issuance source SHOULD publish keys by reference through jwks_uri
    rather than inline through jwks.  Rotation behind a stable URI leaves
@@ -565,9 +560,10 @@ Table of Contents
       values MUST NOT be repeated, and order is insignificant.
 
    The authorization server selects the final audience according to
-   policy.  The claim constraint that follows from a present parameter
-   is stated in [STATEMENT].  Where no requested audience is acceptable
-   the authorization server MUST reject the request with invalid_target
+   policy, and MUST NOT place in the statement's aud claim any value the
+   request did not carry: an issuer narrows a requested audience and
+   never widens it.  Where no requested audience is acceptable the
+   authorization server MUST reject the request with invalid_target
    [RFC8693], following the authorization-request precedent of
    [RFC8707].  These semantics apply only to software statement requests
    and do not affect proprietary uses of audience for access-token
@@ -974,8 +970,8 @@ Table of Contents
       authorization server.  It MUST conform to [STATEMENT]: sub is the
       client identifier URL of the request, cimd_digest is the digest of
       the bound metadata snapshot, aud is the selected audience where
-      one is restricted, and the statement carries no client metadata
-      claims.
+      one is restricted, and the statement carries no claim registered
+      as client metadata ([STATEMENT]).
 
    issued_token_type:  REQUIRED.  The value MUST be
       urn:ietf:params:oauth:token-type:software-statement.

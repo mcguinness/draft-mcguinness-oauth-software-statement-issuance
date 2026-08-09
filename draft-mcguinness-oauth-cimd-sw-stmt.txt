@@ -162,9 +162,9 @@ Table of Contents
    This separation lets one issuer curate approved software across many
    authorization servers without making the issuer the final policy
    authority.  Each server independently configures issuer trust,
-   subject scope, authoritative metadata, grant policy, and token
-   lifetime.  An enterprise operating a statement issuer is the
-   motivating deployment (Section 8).
+   subject scope, grant policy, and token lifetime.  An enterprise
+   operating a statement issuer is the motivating deployment
+   (Section 8).
 
    This document defines the statement, its validation, and its
    consumption; [ISSUANCE] defines how a client obtains one, and how a
@@ -266,11 +266,9 @@ Table of Contents
 
    OAuth terminology is defined by [RFC6749].  Client metadata and
    software statement terminology is defined by [RFC7591].  Client ID
-   Metadata Document terminology is defined by [CIMD].  This
-   specification additionally defines the following terms:
-
-   Issuing Authorization Server:  The authorization server that makes
-      the issuance decision and signs the software statement.
+   Metadata Document terminology is defined by [CIMD].  Issuing
+   Authorization Server:  The authorization server that makes the
+      issuance decision and signs the software statement.
 
    Trusting Authorization Server:  An authorization server that consumes
       a software statement, at registration or at runtime.
@@ -633,9 +631,9 @@ Table of Contents
    *  in the software_statement member of an authenticated [RFC7592]
       update request, where the deployment offers registration
       management.  Such a request replaces the registration's metadata
-      in full, as [RFC7592] requires, so the client sends its complete
-      current metadata alongside the statement; a renewal-only request
-      omitting other members would reset them.
+      in full, so the client sends its complete current metadata
+      alongside the statement; a renewal-only request omitting other
+      members would reset them.
 
    The replacement MUST:
 
@@ -678,11 +676,15 @@ Table of Contents
 5.3.  Change After Review
 
    A review covers the document the issuer evaluated, and cimd_digest is
-   what says which one.  A mismatch against the currently published
-   document is a policy input rather than an automatic failure, and re-
-   issuance against the new document is the remedy.  The statement's
-   bounded lifetime caps how stale a review can get: drift the digest
-   comparison never observes still expires with the statement.
+   what says which one.  At registration a mismatch is fatal
+   (Section 5), because the registration would otherwise record metadata
+   no issuer reviewed.  At runtime it is a policy input rather than an
+   automatic failure, since the statement still names a document the
+   issuer reviewed and the server decides what a change to it is worth.
+   Re-issuance against the current document is the remedy in both cases.
+   The statement's bounded lifetime caps how stale a review can get:
+   drift the digest comparison never observes still expires with the
+   statement.
 
 6.  Runtime Presentation
 
@@ -725,11 +727,12 @@ Table of Contents
    software_statement_presentation_grant_types_supported (Section 12).
    Authorization-code redemption and refresh-token use continue an
    existing grant and follow Section 6.5 and Section 6.5.1 instead.  A
-   request that initiates issuance under [ISSUANCE], recognized by
-   response_type=software_statement_code or the software statement
-   requested_token_type, MUST NOT carry the software_statement
-   parameter.  A request that carries software_statement and is none of
-   a runtime presentation, a refresh replacement (Section 6.5.1), or a
+   request that asks an authorization server to issue a software
+   statement, rather than to consume one, MUST NOT carry the
+   software_statement parameter; [ISSUANCE] defines the response type
+   and requested token type that identify such a request.  A request
+   that carries software_statement and is none of a runtime
+   presentation, a refresh replacement (Section 6.5.1), or a
    revalidation delivery (Section 5.2) is rejected with invalid_request.
 
    An authorization server advertises support through
@@ -892,10 +895,11 @@ Table of Contents
 
    An authorization server holds a refusal record when it has learned
    that a statement is no longer good before its expiry, whether from
-   its own operator or from a withdrawal mechanism such as [SIGNALS].
-   Where it holds one for a statement, it MUST treat that statement as
-   not current wherever this section requires currency, so that a
-   withdrawal ends grant continuation on the same terms as an expiry.
+   its own operator or from a withdrawal mechanism such as [SIGNALS],
+   whose Withdrawal Record is one.  Where it holds one for a statement,
+   it MUST treat that statement as not current wherever this section
+   requires currency, so that a withdrawal ends grant continuation on
+   the same terms as an expiry.
 
    When policy requires one, the client presents the replacement in the
    software_statement parameter of the refresh request.  The
@@ -1024,23 +1028,22 @@ Table of Contents
 
    The controls follow from the lifetime machinery, and the two
    lifecycles never have to be synchronized.  Onboarding a provider is
-   one trust configuration covering the issuer, its role, identifier
-   scope, accepted metadata authority, and lifetime policy.  Approved
-   applications then carry that review to the provider instead of being
-   copied into a separate per-application allowlist.  Ceasing renewal at
-   the customer's issuer lapses the application in that customer's
-   tenant at every provider, and leaves the vendor's listing and every
-   other customer untouched; ceasing renewal at the marketplace expires
-   the listing itself.  Either prevents new runtime presentations after
-   exp, and the second expires statement-governed registrations at their
-   recorded boundary.  It also ends refresh-based continuation where the
-   provider requires a current statement under Section 6.5.1.  Already-
-   issued access tokens remain governed by their own lifetime, and
-   providers retain local control over grants and emergency
-   deprovisioning.  Narrowing an approval takes effect when the narrower
-   replacement is next consumed.  The result is one issuance policy
-   enforced by multiple trusting authorization servers, subject to their
-   explicit local policy.
+   one trust configuration covering the issuer, its identifier scope,
+   and its lifetime policy.  Approved applications then carry that
+   review to the provider instead of being copied into a separate per-
+   application allowlist.  Ceasing renewal at the customer's issuer
+   lapses the application in that customer's tenant at every provider,
+   and leaves the vendor's listing and every other customer untouched;
+   ceasing renewal at the marketplace expires the listing itself.
+   Either prevents new runtime presentations after exp, and the second
+   expires statement-governed registrations at their recorded boundary.
+   It also ends refresh-based continuation where the provider requires a
+   current statement under Section 6.5.1.  Already-issued access tokens
+   remain governed by their own lifetime, and providers retain local
+   control over grants and emergency deprovisioning.  Narrowing an
+   approval takes effect when the narrower replacement is next consumed.
+   The result is one issuance policy enforced by multiple trusting
+   authorization servers, subject to their explicit local policy.
 
 9.  Relationship to Identity Assertions
 
@@ -1140,7 +1143,7 @@ Table of Contents
    |of         |                             |                       |                       |
    |Section 7  |                             |                       |                       |
    +-----------+-----------------------------+-----------------------+-----------------------+
-   |Required   |invalid_software_statement   |statement_required     |statement_required     |
+   |Required   |unapproved_software_statement|statement_required     |statement_required     |
    |statement  |                             |                       |                       |
    |absent     |                             |                       |                       |
    +-----------+-----------------------------+-----------------------+-----------------------+
@@ -1165,7 +1168,9 @@ Table of Contents
 
                                   Table 1
 
-   An authorization server SHOULD use HTTP status code 503 with
+   A registration management request ([RFC7592]) carrying a failing
+   replacement uses the same codes as the registration column.  An
+   authorization server SHOULD use HTTP status code 503 with
    temporarily_unavailable and 400 with the others, so that a client can
    distinguish a condition worth retrying from one that needs a new
    statement.
@@ -1292,17 +1297,18 @@ Table of Contents
 
 13.  Extension Points
 
-   Three extensions of this path are left to separate specifications.
+   Four extensions of this path are left to separate specifications.
    Endorsed keys: a client attestation [ABCA], or an assertion from an
    issuer named by an instance_issuers delegation in the reviewed
    document [CLIENT-INSTANCE], vouching for a key that document does not
    carry, which would admit software whose instances hold their own
    keys.  Statement conveyance within a client attestation, rather than
-   as a request parameter.  And a Client ID Metadata Document that
+   as a request parameter.  A Client ID Metadata Document that
    references where the client publishes its current statements, so a
    resolving server fetches the review out of band, which differs from
    embedding a statement in the document as the digest rule of
-   Section 3.1 forbids.
+   Section 3.1 forbids.  And partial review, by which an issuer vouches
+   for particular members rather than a whole document (Section 3).
 
 14.  Security Considerations
 
@@ -1562,7 +1568,8 @@ Table of Contents
    Error Name:  statement_required
 
    Error Usage Location:  token error response, pushed authorization
-      request error response
+      request error response, client registration management error
+      response
 
    Related Protocol Extension:  CIMD Software Statement
 
@@ -1592,7 +1599,10 @@ Table of Contents
    Client Metadata Name:  registration_expires_at
 
    Client Metadata Description:  Time at which a statement-governed
-      registration ceases to be valid, as a NumericDate.
+      registration ceases to be valid, as a NumericDate.  Returned in a
+      client registration response, in a registration management
+      response, and in the token or pushed authorization request
+      response to a request that renews the registration.
 
    Change Controller:  IESG
 

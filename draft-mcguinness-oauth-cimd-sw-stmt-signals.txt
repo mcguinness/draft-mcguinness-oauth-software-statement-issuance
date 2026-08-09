@@ -101,13 +101,13 @@ Table of Contents
 
    The coupling is unnecessary, because the parties are already in a
    configured relationship.  A trusting authorization server records
-   each issuer's identifier, key source, scope, and role in order to
-   accept its statements at all ([STATEMENT]).  This specification uses
-   that relationship to carry lifecycle events over the Shared Signals
-   Framework [SSF]: the statement issuer transmits, the trusting
-   authorization server receives, and events are Security Event Tokens
-   [RFC8417] delivered by the framework's push [RFC8935] or poll
-   [RFC8936] bindings.
+   each issuer's identifier, key source, scope, and lifetime policy in
+   order to accept its statements at all ([STATEMENT]).  This
+   specification uses that relationship to carry lifecycle events over
+   the Shared Signals Framework [SSF]: the statement issuer transmits,
+   the trusting authorization server receives, and events are Security
+   Event Tokens [RFC8417] delivered by the framework's push [RFC8935] or
+   poll [RFC8936] bindings.
 
    This specification defines the subject identification, the event, its
    payload claims, the durable records a receiver keeps, and its
@@ -147,12 +147,13 @@ Table of Contents
 
    This specification additionally defines the following terms:
 
-   Statement Issuer:  The party that signed a software statement, acting
-      as a Transmitter of the events defined here.
+   Statement Issuer:  The Issuing Authorization Server ([STATEMENT])
+      that signed a software statement, acting as a Transmitter of the
+      events defined here.
 
-   Consuming Authorization Server:  An authorization server that has
-      configured the statement issuer under [STATEMENT], acting as a
-      Receiver of the events defined here.
+   Consuming Authorization Server:  A Trusting Authorization Server
+      ([STATEMENT]) that has configured the statement issuer, acting as
+      a Receiver of the events defined here.
 
    Standing:  What a client may do at a consuming authorization server
       by virtue of a software statement: its registration and that
@@ -161,7 +162,8 @@ Table of Contents
       statements, never by the events defined here.
 
    Withdrawal Record:  The state a receiver retains when it applies a
-      withdrawal event, defined in Section 5.
+      withdrawal event, defined in Section 5.  It is a refusal record in
+      the sense [STATEMENT] uses.
 
 3.  Relationship to the Statement Family
 
