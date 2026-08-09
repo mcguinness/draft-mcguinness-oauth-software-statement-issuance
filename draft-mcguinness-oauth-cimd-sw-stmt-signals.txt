@@ -23,9 +23,9 @@ Abstract
    statements that a review, or a single statement carrying it, is
    withdrawn before it expires.  Events can only reduce a client's
    standing, never create or extend it, and a receiver that misses an
-   event falls back to expiry, so the mechanism shortens the interval
-   between a decision and its effect without becoming load-bearing for
-   security.
+   event falls back to the expiry and lifecycle controls it would have
+   applied anyway, so the mechanism shortens the interval between a
+   decision and its effect without becoming load-bearing for security.
 
 Status of This Memo
 
@@ -226,13 +226,18 @@ Table of Contents
    The effective time is the event's event_timestamp, so every receiver
    applies the same cutoff whatever its delivery latency; deriving it
    from arrival time would make a legitimate reissued statement
-   acceptable at a prompt receiver and refused at a delayed one.  The
-   issuer is responsible for the cutoff being meaningful: it MUST NOT
-   issue a statement for a subject with an iat at or before the
-   event_timestamp of a withdrawal it has transmitted for that subject,
-   and SHOULD suspend automated renewal for the subject before
-   transmitting, so that a scheduled statement cannot land inside the
-   window the withdrawal covers.
+   acceptable at a prompt receiver and refused at a delayed one.
+
+   Two rules keep that cutoff honest.  An issuer MUST set
+   event_timestamp at or after the iat of the most recent statement it
+   has issued for the subject, so the cutoff covers everything already
+   minted, and MUST NOT afterwards issue a statement for that subject
+   with an iat at or before it; it SHOULD suspend automated renewal for
+   the subject before transmitting.  A receiver MUST reject an event
+   whose event_timestamp lies in the future beyond its clock-skew
+   allowance, since a future-dated cutoff would refuse every statement
+   the issuer could later mint and leave the subject unrecoverable at
+   some receivers while others discarded the record and reopened it.
 
    While a Withdrawal Record is retained, the receiver MUST refuse a
    statement matching it:
@@ -346,8 +351,11 @@ Table of Contents
 
    *  A receiver MUST continue to enforce statement expiry independently
       of this mechanism.  Stream loss, transmitter unavailability, or
-      delivery failure leaves standing to end at expiry, which remains
-      the floor.
+      delivery failure leaves standing to end at expiry where the
+      registration-validity model of [STATEMENT] is in force, and
+      otherwise at whatever the receiver's own client lifecycle
+      provides; in both cases a missed event refuses later statements
+      but does not reach standing already granted.
 
    Events may arrive out of order or be duplicated.  A receiver MUST
    apply every withdrawal event it accepts, whatever its event_timestamp
