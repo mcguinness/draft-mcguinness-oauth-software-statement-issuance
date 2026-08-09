@@ -8,9 +8,9 @@ RFC 7591 standardizes how a client presents a software statement and how a regis
 * [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-cimd-sw-stmt-issuance/draft-mcguinness-oauth-cimd-sw-stmt-issuance.txt)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-issuance/) (after first submission)
 
-## OAuth 2.0 Software Statement Runtime Presentation
+## CIMD Software Statement
 
-This repository also hosts the companion Internet-Draft, "OAuth 2.0 Software Statement Runtime Presentation", which defines the second consumption path for the issued statement: a client presents it at runtime in an authorization or token request, sender-constrained by a proof that chains to the statement, and the authorization server applies the attested metadata to that request without creating a persistent registration.
+This repository also hosts the companion Internet-Draft, "CIMD Software Statement", which defines the second consumption path for the issued statement: a client presents it at runtime in an authorization or token request, sender-constrained by a proof that chains to the statement, and the authorization server applies the attested metadata to that request without creating a persistent registration.
 
 * [Editor's Copy (HTML)](https://mcguinness.github.io/draft-mcguinness-oauth-cimd-sw-stmt-issuance/draft-mcguinness-oauth-cimd-sw-stmt.html)
 * [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-cimd-sw-stmt-issuance/draft-mcguinness-oauth-cimd-sw-stmt.txt)
@@ -18,7 +18,7 @@ This repository also hosts the companion Internet-Draft, "OAuth 2.0 Software Sta
 
 ## Shared Signals Events for CIMD Software Statements
 
-The repository also hosts "Shared Signals Events for CIMD Software Statements", an optional profile that lets a statement issuer withdraw a decision before the statement expires. The issuer transmits lifecycle events over the Shared Signals Framework to the authorization servers that already trust it: statement revoked, approval withdrawn, establishment withdrawn, metadata changed, plus an optional reverse-direction event by which a consuming server reports where a statement is in force. Events can only reduce standing, and a receiver that misses one falls back to expiry, so neither of the other drafts depends on this one.
+The repository also hosts "Shared Signals Events for CIMD Software Statements", an optional profile that lets a statement issuer withdraw a review before the statement expires. The issuer transmits one withdrawal event over the Shared Signals Framework to the authorization servers that already trust it, naming a single statement or the decision behind all of them. Events can only reduce standing, and a receiver that misses one falls back to expiry, so neither of the other drafts depends on this one.
 
 * [Editor's Copy (HTML)](https://mcguinness.github.io/draft-mcguinness-oauth-cimd-sw-stmt-issuance/draft-mcguinness-oauth-cimd-sw-stmt-signals.html)
 * [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-cimd-sw-stmt-issuance/draft-mcguinness-oauth-cimd-sw-stmt-signals.txt)

@@ -45,7 +45,7 @@ The drafts in this repository define the establishment layer only. Tenant permis
 
 | Actor | Holds | Issues or presents |
 | --- | --- | --- |
-| Software publisher | The software's identity, a Client ID Metadata Document URL or an `software_id` | Publishes metadata; obtains statements |
+| Software publisher | The software's identity, a Client ID Metadata Document URL | Publishes metadata; obtains statements |
 | Marketplace | The provider's listing process | Establishment statements, audience naming the provider's authorization servers |
 | Provider authorization server | Registrations, tenants, trust configuration | Consumes statements; enforces all four layers |
 | Enterprise customer | Its own permission decision, and optionally its own review process | Assertions for permitted applications; statements where it wants a portable review record |
@@ -56,7 +56,7 @@ The drafts in this repository define the establishment layer only. Tenant permis
 
 ### 1. The publisher gives the software an identity
 
-Hosted metadata at an HTTPS URL is the stronger option: the identity is domain-anchored, the metadata is retrievable, and a statement can bind to its exact bytes through `cimd_digest`. Software without hostable metadata uses the issuance draft's registration-only shape, whose subject is an `software_id`.
+The identity is a Client ID Metadata Document at an HTTPS URL: domain-anchored, retrievable, and bindable to its exact bytes through `cimd_digest`. Software that cannot host one is outside this family and registers as it does today.
 
 ### 2. The marketplace reviews and issues an establishment statement
 
@@ -152,7 +152,7 @@ Because an ID-JAG assertion is validated at every grant, ceasing assertion issua
 
 Approvals that a provider retrieves end by absence, so nothing more is needed for them. Establishment statements are different: a client carries one and has no reason to stop, so withdrawing a listing before its expiry is enforced on a clock. An approval or a listing ends when its statement expires unrenewed, so how fast a decision takes effect is set by how short the issuer made the lifetime, and short lifetimes buy responsiveness with renewal traffic. That trade is avoidable: the parties are already in a configured pairwise relationship, since a trusting authorization server holds each issuer's identifier, keys, scope, and role, and that same relationship can carry an event stream.
 
-[Shared Signals Events for CIMD Software Statements](draft-mcguinness-oauth-cimd-sw-stmt-signals.md), the third draft in this repository, defines those events over the [Shared Signals Framework](https://openid.net/specs/openid-sharedsignals-framework-1_0.html). The statement issuer is the transmitter, the trusting authorization server is the receiver, events travel as [Security Event Tokens](https://www.rfc-editor.org/rfc/rfc8417.html) over the framework's push or poll delivery, and subjects use the [identifier formats of RFC 9493](https://www.rfc-editor.org/rfc/rfc9493.html): the `uri` format for a Client ID Metadata Document URL, and `iss_sub` for an `software_id` under the issuer that names it. Nothing new is invented at the transport or trust layer; the profile's work is naming events and their effects.
+[Shared Signals Events for CIMD Software Statements](draft-mcguinness-oauth-cimd-sw-stmt-signals.md), the third draft in this repository, defines those events over the [Shared Signals Framework](https://openid.net/specs/openid-sharedsignals-framework-1_0.html). The statement issuer is the transmitter, the trusting authorization server is the receiver, events travel as [Security Event Tokens](https://www.rfc-editor.org/rfc/rfc8417.html) over the framework's push or poll delivery, and subjects use the [identifier formats of RFC 9493](https://www.rfc-editor.org/rfc/rfc9493.html): the `uri` format for a Client ID Metadata Document URL. Nothing new is invented at the transport or trust layer; the profile's work is naming events and their effects.
 
 One event carries the semantics this deployment needs, in two forms:
 
@@ -177,11 +177,11 @@ The profile is a separate document rather than part of either draft, since it co
 
 | Capability | Draft | Where |
 | --- | --- | --- |
-| Statement format, two shapes, digest binding | Issuance | Software Statement Format, Statements for Non-CIMD Clients |
+| Statement format, claims, digest binding | Statement | The Software Statement |
 | How a client obtains a statement | Issuance | Authorization Request, Token Exchange Profile, Deferred Processing |
-| Issuer trust, scoping, and roles | Issuance | Issuer Trust Establishment, Issuer Roles |
+| Issuer trust and scoping | Statement | Issuer Trust Establishment |
 | Per-tenant trust configuration and tenant resolution | Issuance | Issuer Roles |
-| Which elements each consumption model needs | Consumption | Statement Profiles |
+| Validation a consumer performs | Statement | Validating a Statement |
 | Registration validity and renewal | Consumption | Presentation at Registration |
 | Runtime establishment without registration | Consumption | Runtime Presentation |
 | Presenter binding | Consumption | Sender Constraint |
@@ -210,7 +210,7 @@ The profile is a separate document rather than part of either draft, since it co
 ## What these drafts do not solve
 
 * **Immediate revocation.** As specified, enforcement is bounded by statement lifetime plus the provider's own controls, and shorter lifetimes tighten the loop at the cost of renewal traffic. [Composition with Shared Signals](#composition-with-shared-signals) sketches the profile that would remove that trade; an acceptance-time status claim is the pull-based alternative named in the issuance draft.
-* **Identifier trustworthiness for non-hosted software.** A metadata URL is domain-anchored; an `software_id` is a vendor-asserted string. Approvals keyed on the latter are meaningful only within an issuer's enumerated scope.
+* **Software that cannot host metadata.** The family requires a Client ID Metadata Document, so software without one registers as it does today and gets none of this. That is a deliberate boundary, not an oversight.
 * **Discovery of policy.** There is no in-band way to learn which issuers a provider accepts, or that a tenant requires an approval. Trust configuration is deliberately out of band, and error responses guide the client.
 * **Delegation.** These drafts establish what the client is and whether it is approved. Which user or organization it acts for, and with what authority, is separate work; see [Composition with ID-JAG](#composition-with-id-jag) for the cross-domain case.
 * **Device posture.** Not addressed by any of the drafts, and placed at the presenter-proof layer here only as guidance.

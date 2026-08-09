@@ -42,11 +42,11 @@ normative:
   CIMD:
     target: https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document
     title: "OAuth Client ID Metadata Document"
+
+informative:
   ISSUANCE:
     target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-issuance
     title: "CIMD Software Statement Issuance"
-
-informative:
   RFC7592:
   ABCA:
     target: https://datatracker.ietf.org/doc/draft-ietf-oauth-attestation-based-client-auth
@@ -119,13 +119,19 @@ Effect:
 
 The two therefore compose. A deployment holding only a client attestation knows what is running but not whether anyone approved it; a deployment holding only a software statement knows the software was reviewed but not that this sender is running it. Runtime presentation always requires both halves: the statement carries the review, and possession of a key the statement attests carries the presenter ({{sender-constraint}}).
 
-This specification defines no new attestation format and no new attester role. It defines how a review attestation is consumed, and how a presenter attestation defined elsewhere is bound to it.
+This specification defines no new attestation format and no new attester role. The presenter proves a key the reviewed document carries, using ordinary client authentication or DPoP; binding a presenter attestation defined elsewhere is an extension ({{extensions}}).
 
 # Conventions and Definitions
 
 {::boilerplate bcp14-tagged}
 
-OAuth terminology is defined by {{RFC6749}}. Client metadata and software statement terminology is defined by {{RFC7591}}. Client ID Metadata Document terminology is defined by {{CIMD}}. Issuing Authorization Server and Trusting Authorization Server are defined by {{ISSUANCE}}; this document defines the statement, its validation, and its consumption.
+OAuth terminology is defined by {{RFC6749}}. Client metadata and software statement terminology is defined by {{RFC7591}}. Client ID Metadata Document terminology is defined by {{CIMD}}. This specification additionally defines the following terms:
+
+Issuing Authorization Server:
+: The authorization server that makes the issuance decision and signs the software statement.
+
+Trusting Authorization Server:
+: An authorization server that consumes a software statement, at registration or at runtime.
 
 This specification additionally defines the following terms:
 
@@ -158,10 +164,10 @@ A statement says that its issuer evaluated the Client ID Metadata Document whose
 : REQUIRED. The exact client identifier URL presented in the request that produced the statement.
 
 `aud`:
-: OPTIONAL. One or more audience identifiers restricting which authorization servers may accept the statement, each an authorization server issuer identifier as defined by {{RFC8414}}. Where the claim is present, a trusting authorization server MUST reject the statement unless one of its locally configured audience identifiers exactly matches a value in it, and where the request carried `audience` values every value in the claim MUST have appeared among them. Where the claim is absent, the statement is unrestricted and acceptance rests on the consumer's configured trust in the issuer and its identifier scope ({{issuer-trust}}). An issuer SHOULD omit the claim, so that one review serves every server that trusts it, and include it only where it means to limit reach: a statement attesting no key material is usable by whoever holds it, and naming an audience is what bounds that (this specification).
+: OPTIONAL. One or more audience identifiers restricting which authorization servers may accept the statement, each an authorization server issuer identifier as defined by {{RFC8414}}. Where the claim is present, a trusting authorization server MUST reject the statement unless one of its locally configured audience identifiers exactly matches a value in it, and where the request carried `audience` values every value in the claim MUST have appeared among them. Where the claim is absent, the statement is unrestricted and acceptance rests on the consumer's configured trust in the issuer and its identifier scope ({{issuer-trust}}). Omitting the claim lets one review serve every server that trusts the issuer, which is the portability the artifact exists for; it also lets whoever holds a copy use it at any of them. At a registration endpoint that is the whole exposure, since registration requires no key, so an issuer SHOULD name an audience wherever it expects consumption at registration, and MAY omit it where consumption is by runtime presentation, which requires a key the reviewed document carries ({{statement-validation}}).
 
 `iat`:
-: REQUIRED. A NumericDate value representing the time at which the software statement was issued. An issuer MUST NOT issue a statement for a given `iss` and `sub` pair with an `iat` earlier than one it has already issued for that pair, and SHOULD ensure the value is strictly increasing across its signing nodes, so that the order in which it made its decisions is recoverable from the statements themselves. Consumers rely on that order when one statement replaces another ({{revalidation}}, {{refresh}}) and when a withdrawal separates statements issued before it from those issued after ({{SIGNALS}}). Back-dating a statement to allow for clock skew makes it unusable as a replacement.
+: REQUIRED. A NumericDate value representing the time at which the software statement was issued. An issuer MUST NOT issue two statements for a given `iss` and `sub` pair with the same `iat`, and MUST ensure the value increases strictly across its signing nodes, so that the order in which it made its decisions is recoverable from the statements themselves. Consumers rely on that order when one statement replaces another ({{revalidation}}, {{refresh}}) and when a withdrawal separates statements issued before it from those issued after ({{SIGNALS}}). Back-dating a statement to allow for clock skew makes it unusable as a replacement.
 
 `exp`:
 : REQUIRED. A NumericDate value representing the expiration time. A trusting authorization server MUST reject an expired statement.
@@ -233,9 +239,13 @@ Where an issuer attests software across many publishers, as an enterprise issuer
 
 The statement is consumed in the `software_statement` member of an {{RFC7591}} registration request. The authorization server validates it as {{validation}} requires, and registers the client under its ordinary registration policy. This section defines what the statement's lifetime does to the resulting registration.
 
+Because a statement carries no client metadata ({{profiles}}), the binding that {{RFC7591}} obtained from attested claims taking precedence over the request comes from the document instead. The authorization server MUST resolve the Client ID Metadata Document at the statement's `sub`, MUST verify that its digest equals `cimd_digest`, and MUST register the client with the metadata that document carries. It MUST NOT take a value from another member of the registration request where the document carries that member, and MUST reject with `invalid_client_metadata` a request whose members contradict the document. Without this, a client could present a statement over one document and register the redirect URIs, keys, or branding of another, which at a registration endpoint is a bearer-artifact substitution.
+
+Where the digest does not match, the document has changed since review and {{version-changes}} governs; the authorization server MUST NOT register the changed document as reviewed.
+
 ## Registration Validity {#registration-validity}
 
-An authorization server that advertises `software_statement_registration_validity_supported` as `true` MUST apply this model to every registration it creates from a validated software statement:
+An authorization server that advertises `software_statement_registration_validity_supported` as `true` MUST apply this model to every registration it creates from a statement of an issuer it has configured for the model:
 
 * It MUST record the governing statement's `iss`, `jti`, `sub`, `iat`, and `exp` with the registration.
 * The registration is valid until that `exp`.
@@ -244,7 +254,7 @@ An authorization server that advertises `software_statement_registration_validit
 
 The disposition of outstanding grants is local policy ({{enforcement-bounds}}).
 
-The metadata signal in {{authorization-server-metadata}} lets a client determine before registration whether this model applies. Because an authorization server may honor less than a statement's full lifetime ({{issuer-trust}}), a client cannot compute the boundary from the statement alone: a server applying this model MUST return a `registration_expires_at` member, a NumericDate giving the time the registration ceases to be valid, in the {{RFC7591}} registration response and in any {{RFC7592}} read or update response. A server that omits the signal or advertises `false` can still consume a statement as ordinary {{RFC7591}} registration input, but it MUST NOT claim conformance to this registration-validity model.
+The metadata signal in {{authorization-server-metadata}} lets a client determine before registration whether this model applies. Because an authorization server may honor less than a statement's full lifetime ({{issuer-trust}}), a client cannot compute the boundary from the statement alone: a server applying this model MUST return a `registration_expires_at` member, a NumericDate giving the time the registration ceases to be valid, in the {{RFC7591}} registration response, and SHOULD return it in any {{RFC7592}} read or update response it supports. A server that omits the signal or advertises `false` can still consume a statement as ordinary {{RFC7591}} registration input, but it MUST NOT claim conformance to this registration-validity model.
 
 ## Revalidation {#revalidation}
 
@@ -363,7 +373,7 @@ When policy requires one, the client presents the replacement in the `software_s
 
 * MUST validate under {{validation}}, including its audience where it carries one;
 * MUST have the establishment's `iss` and `sub`;
-* MUST have an `iat` no earlier than the recorded statement's `iat`; and
+* MUST have an `iat` later than the recorded statement's `iat`; and
 * MUST authorize the establishment's Proven Key ({{sender-constraint}}).
 
 The refreshed access MUST fall within the metadata of the document the replacement names.
@@ -428,7 +438,15 @@ A statement consumed at registration is rejected with the {{RFC7591}} error code
 `invalid_request`:
 : any other rejection, including a redemption or issuance request carrying the `software_statement` parameter, and a request repeating the parameter ({{runtime-presentation}}, {{grant-lifecycle}}).
 
-At the pushed authorization request endpoint, the corresponding {{RFC9126}} error responses apply. On refresh-token use, {{refresh}} takes precedence: a missing or failing replacement statement is `statement_required`. Registration validity is reported differently, as `invalid_client` under {{revalidation}}, because the registration rather than the grant is what lapsed; neither rejection indicates refresh-token replay ({{RFC9700}}).
+Which code applies where:
+
+| Endpoint | Statement invalid or untrusted | Required statement missing, expired, or refused | Retrieval failed |
+| --- | --- | --- | --- |
+| Registration ({{RFC7591}}) | `invalid_software_statement` or `unapproved_software_statement` ({{validation}}) | `unapproved_software_statement` | `invalid_software_statement` |
+| Pushed authorization request | `invalid_client` | `statement_required` | `temporarily_unavailable` |
+| Token, including refresh | `invalid_client` | `statement_required` | `temporarily_unavailable` |
+
+At the pushed authorization request endpoint these are carried in the error response {{RFC9126}} defines. On refresh-token use, {{refresh}} takes precedence: a missing or failing replacement statement is `statement_required`. Registration validity is reported differently, as `invalid_client` under {{revalidation}}, because the registration rather than the grant is what lapsed; neither rejection indicates refresh-token replay ({{RFC9700}}).
 
 Where the proof mechanism defines a recoverable error of its own, such as a DPoP nonce challenge {{RFC9449}}, that error takes precedence over the generic errors above.
 
@@ -486,7 +504,7 @@ This specification defines the following authorization server metadata {{RFC8414
 : OPTIONAL. A JSON array of grant type identifiers on which the authorization server accepts a runtime presentation, in addition to those {{runtime-presentation}} names. Omission means only those.
 
 `software_statement_registration_validity_supported`:
-: OPTIONAL. Boolean value indicating whether every registration the authorization server creates from a validated software statement is governed by the validity and revalidation rules of {{registration-validity}} and {{revalidation}}. If omitted, the default value is `false`. A value of `true` does not imply runtime-presentation support. It tells a client that the statement's `exp` will bound the registration and that the server accepts replacement delivery through an authenticated token request or pushed authorization request and, if the server supports {{RFC7592}}, a registration update request. A server MAY apply the model to registrations created from statements of some configured issuers and not others, since a client learns the boundary that applies to its own registration from the `exp` of the statement it delivered; advertising `true` claims conformance for the registrations the model governs, not that every registration at the server is statement-governed.
+: OPTIONAL. Boolean value indicating whether every registration the authorization server creates from a validated software statement is governed by the validity and revalidation rules of {{registration-validity}} and {{revalidation}}. If omitted, the default value is `false`. A value of `true` does not imply runtime-presentation support. It tells a client that the statement's `exp` will bound the registration and that the server accepts replacement delivery through an authenticated token request or pushed authorization request and, if the server supports {{RFC7592}}, a registration update request. The model is configured per issuer, so a client learns whether its own registration is governed from the `registration_expires_at` member the response carries.
 
 # Extension Points {#extensions}
 
@@ -667,7 +685,7 @@ Existing Registration:
 : {{RFC6749}}
 
 Error Usage Location:
-: token error response, in addition to the locations already registered
+: token error response and pushed authorization request error response, in addition to the locations already registered
 
 Change Controller:
 : IESG
