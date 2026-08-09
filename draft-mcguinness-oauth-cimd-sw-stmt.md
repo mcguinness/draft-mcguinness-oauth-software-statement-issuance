@@ -131,7 +131,7 @@ OAuth terminology is defined by {{RFC6749}}. Client metadata and software statem
 Trusting Authorization Server:
 : An authorization server that consumes a software statement, at registration or at runtime.
 
-This specification additionally defines the following terms:
+This specification additionally defines the following terms.
 
 Runtime Presentation:
 : The consumption of a validated software statement inside an authorization or token request, applying the metadata of the document it vouches for without creating a persistent client registration.
@@ -241,7 +241,8 @@ Because a statement carries no client metadata ({{profiles}}), the binding that 
 
 * MUST resolve the Client ID Metadata Document at the statement's `sub`;
 * MUST verify that the digest of the retrieved representation equals `cimd_digest`, and MUST derive the registered metadata by parsing the same octets it digested, not a second retrieval or a cached copy it has not digested;
-* MUST take every client metadata value from that document, and MUST NOT take any client metadata value from the registration request, whether or not the document carries that member. A request MAY carry metadata, as {{RFC7591}} clients do; it does not contribute to the registration.
+* MUST take every client metadata value from that document, and MUST NOT take any client metadata value from the registration request, whether or not the document carries that member. A request MAY carry metadata, as {{RFC7591}} clients do; it does not contribute to the registration;
+* MUST ignore a `software_statement` member of the reviewed document, which {{CIMD}} permits the document to carry. A statement consumed under this specification is the one the client presented, whose digest binds the document; treating a statement inside the document as a second review would make acceptance depend on bytes the presented statement covers but no issuer separately vouched for.
 
 Taking only the document closes the substitution the statement exists to prevent. A rule that constrained only the members the document carries would leave every member it omits attacker-supplied: a document naming `jwks_uri` and no `jwks` would admit a request-supplied `jwks`, giving a holder of someone else's statement a registration with reviewed branding and its own key, at an endpoint that requires no key at all.
 
@@ -255,10 +256,10 @@ The retrieval is client-controlled and reachable before any client is registered
 
 ## Registration Validity {#registration-validity}
 
-An authorization server that advertises `software_statement_registration_validity_supported` as `true` MUST apply this model to every registration it creates from a statement of an issuer it has configured for the model:
+An authorization server that advertises `software_statement_registration_validity_supported` as `true` MUST apply this model to every registration it creates from a validated software statement, whichever issuer signed it, so that a client can rely on the signal before it registers:
 
-* It MUST record the governing statement's `iss`, `jti`, `sub`, `iat`, and `exp` with the registration.
-* The registration is valid until that `exp`.
+* It MUST record the governing statement's `iss`, `jti`, `sub`, and `iat` with the registration, and the registration's effective expiry: the earlier of the statement's `exp` and its `iat` plus the maximum statement lifetime the server records for that issuer ({{issuer-trust}}). The effective expiry is what bounds the registration, what a renewal extends, and what `registration_expires_at` reports.
+* The registration is valid until that effective expiry.
 * Once that time passes without a replacement ({{revalidation}}), it MUST reject requests under the registration: `invalid_client` at the token endpoint, and at the authorization or pushed authorization request endpoint the error {{RFC6749}} defines for an unauthorized client. The revalidation requests {{revalidation}} permits are the exception.
 * It SHOULD retain the expired record so that it can process a later authenticated revalidation ({{oracle-considerations}}), and MAY allow a grace period during which it accepts a replacement without treating the registration as expired.
 
@@ -272,7 +273,7 @@ The client renews a statement-governed registration by delivering a replacement 
 
 * in the `software_statement` parameter of a token request under the registration, authenticated as the registered client under the registration's own method;
 * in the `software_statement` parameter of an authenticated pushed authorization request {{RFC9126}} under the registration, which is the renewal path available to a client that holds no refresh token and whose only grant type is the authorization code; or
-* in the `software_statement` member of an authenticated {{RFC7592}} update request, where the deployment offers registration management. Such a request replaces the registration's metadata in full, so the client sends its complete current metadata alongside the statement; a renewal-only request omitting other members would reset them.
+* in the `software_statement` member of an authenticated {{RFC7592}} update request, where the deployment offers registration management. {{RFC7592}} requires such a request to carry the client's complete metadata, and the client sends it, but under this specification that metadata is syntactically required and not authoritative: the renewed record is derived from the reviewed document as everywhere else. Rejections at that endpoint use the registration column of {{errors}}.
 
 The replacement MUST:
 
@@ -281,13 +282,15 @@ The replacement MUST:
 * be unexpired; and
 * have an `iat` later than the recorded statement's `iat`.
 
-On success the authorization server MUST replace the recorded statement identity, `iat`, and `exp` in a single atomic update, and concurrent deliveries resolve to the most recently issued statement. Whether a replacement over a changed document updates the registration record is local registration policy, and a server that relies on narrowing to take effect applies it.
+A replacement names a document as any statement does, so the authorization server MUST resolve the Client ID Metadata Document at the replacement's `sub`, MUST verify that the digest of the retrieved representation equals the replacement's `cimd_digest`, and MUST re-derive the registration's metadata from those same octets, under the rules of {{dcr-presentation}}. Renewing on the statement alone would leave a registration carrying metadata the new review never covered, which is how a removed key, redirect URI, or scope would survive its own withdrawal.
+
+On success the authorization server MUST replace the recorded statement identity, `iat`, `exp`, and derived metadata in a single atomic update, and concurrent deliveries resolve to the most recently issued statement.
 
 When an expired registration sends a request containing a replacement, the authorization server MUST authenticate the retained registration and evaluate the replacement before applying the expiry rejection. A valid replacement therefore restores the registration; an omitted or invalid replacement does not.
 
 A request under an expired registration that carries no replacement is rejected with `invalid_client` at the token endpoint, and at the authorization or pushed authorization request endpoint with the error {{RFC6749}} defines for an unauthorized client. Such a rejection MUST NOT by itself trigger the refresh-token family revocation of {{RFC9700}}; a client recovers by delivering a valid replacement.
 
-A request that carries a replacement which fails the rules above is rejected with `statement_required`, whether or not the registration has already expired, so that a client learns immediately rather than by a later outage and can tell a bad replacement from a missing one. A rejected delivery leaves the recorded statement unchanged. A registration request without an {{RFC7592}} registration access token creates a new registration and never renews an existing one.
+A request that carries a replacement which fails the rules above is rejected with `statement_required` at the token and pushed authorization request endpoints, and with the registration column of {{errors}} at the registration management endpoint, whether or not the registration has already expired, so that a client learns immediately rather than by a later outage and can tell a bad replacement from a missing one. A rejected delivery leaves the recorded statement unchanged. A registration request without an {{RFC7592}} registration access token creates a new registration and never renews an existing one.
 
 ## Change After Review {#version-changes}
 
@@ -524,7 +527,7 @@ This specification defines the following authorization server metadata {{RFC8414
 : OPTIONAL. A JSON array of grant type identifiers on which the authorization server accepts a runtime presentation, in addition to those {{runtime-presentation}} names. Omission means only those.
 
 `software_statement_registration_validity_supported`:
-: OPTIONAL. Boolean value indicating whether every registration the authorization server creates from a validated software statement is governed by the validity and revalidation rules of {{registration-validity}} and {{revalidation}}. If omitted, the default value is `false`. A value of `true` does not imply runtime-presentation support. It tells a client that the statement's `exp` will bound the registration and that the server accepts replacement delivery through an authenticated token request or pushed authorization request and, if the server supports {{RFC7592}}, a registration update request. The model is configured per issuer, so a client learns whether its own registration is governed from the `registration_expires_at` member the response carries.
+: OPTIONAL. Boolean value indicating whether every registration the authorization server creates from a validated software statement is governed by the validity and revalidation rules of {{registration-validity}} and {{revalidation}}. If omitted, the default value is `false`. A value of `true` does not imply runtime-presentation support. It tells a client that the statement's `exp` will bound the registration and that the server accepts replacement delivery through an authenticated token request or pushed authorization request and, if the server supports {{RFC7592}}, a registration update request. The response carries `registration_expires_at`, so a client also learns the boundary that applies to its own registration.
 
 # Extension Points {#extensions}
 
@@ -722,6 +725,22 @@ Client Metadata Name:
 
 Client Metadata Description:
 : Time at which a statement-governed registration ceases to be valid, as a NumericDate. Returned in a client registration response, in a registration management response, and in the token or pushed authorization request response to a request that renews the registration.
+
+Change Controller:
+: IESG
+
+Specification Document(s):
+: This specification, {{registration-validity}}
+
+## OAuth Parameters Registry
+
+This specification requests registration of the following parameter in the IANA "OAuth Parameters" registry established by {{RFC6749}}, for the responses that renew a statement-governed registration:
+
+Parameter Name:
+: `registration_expires_at`
+
+Parameter Usage Location:
+: token response, pushed authorization request response
 
 Change Controller:
 : IESG

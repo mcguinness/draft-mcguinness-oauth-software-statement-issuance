@@ -90,7 +90,7 @@ In the redirect flow, the authorization endpoint returns a short-lived `software
 
 A client that holds an initial access token authorizing issuance instead uses OAuth 2.0 Token Exchange (RFC 8693), without a redirect.
 
-The issued statement is consumed through RFC 7591 dynamic client registration; the companion {{STATEMENT}} defines the artifact, its validation, and its consumption.
+The issued statement is consumed through RFC 7591 dynamic client registration; the companion the companion specification defines the artifact, its validation, and its consumption.
 
 --- middle
 
@@ -515,7 +515,7 @@ The request MUST NOT contain `actor_token` or `actor_token_type`, nor the `scope
 
 The client authenticates according to {{client-identity}}, using an assertion-based method such as `private_key_jwt` {{RFC7521}} {{RFC7523}} where its document specifies one, and the sender-constraint rules there apply to the exchange; the polling rules of {{deferred-processing}} govern any resulting deferral.
 
-The authorization server MUST validate the subject token before retrieving client-controlled metadata or enqueueing any processing. An invalid, expired, or revoked subject token, or one that does not authorize issuance for the presented `client_id`, MUST result in `invalid_request`, as Section 2.2.2 of {{RFC8693}} requires for a subject token that is invalid or unacceptable under policy. An unacceptable requested audience results in `invalid_target` {{RFC8693}}.
+The authorization server MUST validate the subject token before retrieving client-controlled metadata or enqueueing any processing. An invalid or revoked subject token, one that has expired other than a prior software statement accepted under {{renewal}}, or one that does not authorize issuance for the presented `client_id`, MUST result in `invalid_request`, as Section 2.2.2 of {{RFC8693}} requires for a subject token that is invalid or unacceptable under policy. An unacceptable requested audience results in `invalid_target` {{RFC8693}}.
 
 ## Renewal {#renewal}
 

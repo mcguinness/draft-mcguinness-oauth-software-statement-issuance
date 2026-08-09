@@ -42,6 +42,7 @@ normative:
     title: "OpenID Shared Signals Framework Specification 1.0"
 
 informative:
+  RFC5646:
   CAEP:
     target: https://openid.net/specs/openid-caep-1_0.html
     title: "OpenID Continuous Access Evaluation Profile 1.0"
@@ -57,7 +58,7 @@ A software statement carries a reviewer's decision about client software, bounde
 
 # Introduction
 
-{{STATEMENT}} defines a software statement, in which an issuer vouches for a reviewed Client ID Metadata Document, and how a trusting authorization server consumes one: at registration, where the statement's expiry can bound the registration's validity, and at runtime, where it establishes a client for a request. In both cases the decision ends when the statement expires unrenewed.
+{{STATEMENT}} defines a software statement, in which an issuer vouches for a reviewed Client ID Metadata Document, and how a trusting authorization server consumes one: at registration, where the statement's expiry can bound the registration's validity, and at runtime, where it establishes a client for a request. Where those controls are in force the decision ends when the statement expires unrenewed; where they are not, a registration outlives the review and only later statements are refused.
 
 That leaves responsiveness coupled to lifetime. An issuer that wants a withdrawal to take effect within minutes must issue statements that live for minutes, and pay the renewal traffic for every client at every audience. An issuer that wants a manageable renewal cadence accepts that a withdrawal takes as long as the remaining lifetime.
 
@@ -139,7 +140,7 @@ Each event is a member of the SET `events` claim, whose value is the event paylo
 : OPTIONAL. Present when the event withdraws one artifact rather than the decision behind it. Omitting it is the safe default: a withdrawal scoped to a single `jti` leaves a client's other unexpired statements untouched, which is the outcome {{withdrawal-records}} exists to prevent.
 
 `reason_admin`:
-: OPTIONAL. A human-readable explanation intended for an administrator, following the convention of {{CAEP}}.
+: OPTIONAL. A JSON object whose members are language tags {{RFC5646}} and whose values are human-readable explanations intended for an administrator, as {{CAEP}} defines the member.
 
 ## Withdrawn {#withdrawn}
 
@@ -173,7 +174,7 @@ An effect applied by an event does not revoke access tokens already issued. A re
 
 A statement issuer supporting this specification publishes Transmitter configuration metadata as {{SSF}} defines, discoverable from the issuer identifier the consuming authorization server has already configured. Stream creation, subject management, verification, and delivery follow {{SSF}}; this specification adds no configuration mechanism.
 
-A consuming authorization server SHOULD create one stream per configured issuer, and that stream MUST cover every subject the issuer attests rather than an enumerated subject set. A receiver cannot enumerate subjects: in the runtime profile it holds no state for software until first presentation, which is exactly when an unenumerated withdrawal would already have been missed. A transmitter that supports this specification MUST accept a stream request that names no subjects and MUST NOT require subject enumeration as a condition of delivery.
+A consuming authorization server SHOULD create one stream per configured issuer, covering every subject that issuer attests rather than an enumerated set. A receiver cannot enumerate subjects: in the runtime profile it holds no state for software until first presentation, which is exactly when an unenumerated withdrawal would already have been missed. A transmitter supporting this specification MUST therefore advertise `default_subjects` as `ALL` in its transmitter configuration {{SSF}}, so that a stream carries every subject appropriate to it without the receiver adding any. The subjects appropriate to a stream are those within the identifier scope for which the receiver accepts that issuer ({{STATEMENT}}).
 
 A receiver SHOULD request the withdrawal event this specification defines, and SHOULD use the stream verification facility of {{SSF}} on a schedule, since a stream delivering nothing because it was misconfigured is otherwise indistinguishable from an issuer with nothing to report.
 
@@ -185,7 +186,7 @@ The constraints of {{processing}} are the security argument for this mechanism. 
 
 ## Expiry Remains the Floor
 
-Because a receiver enforces expiry independently, an attacker who suppresses events, by disrupting delivery or the transmitter, delays a withdrawal at most until the affected statements expire. Deployments therefore choose lifetimes they would accept without this mechanism, and treat event delivery as an accelerator. A receiver SHOULD alert on stream loss rather than assume quiescence, since a healthy stream and a suppressed one are indistinguishable from the absence of events. Periodic stream verification ({{configuration}}) is what makes the difference observable.
+Because a receiver enforces expiry independently, an attacker who suppresses events, by disrupting delivery or the transmitter, delays a withdrawal at most until the affected statements expire. Suppression therefore delays a withdrawal until expiry only where the registration-validity model of {{STATEMENT}} is in force, or where refresh requires a current statement; elsewhere it delays it until the receiver's own client lifecycle acts, and the refusal record still stops later statements. Deployments choose lifetimes and refresh policy they would accept without this mechanism, and treat event delivery as an accelerator. A receiver SHOULD alert on stream loss rather than assume quiescence, since a healthy stream and a suppressed one are indistinguishable from the absence of events. Periodic stream verification ({{configuration}}) is what makes the difference observable.
 
 ## Key Separation and Compromise
 
@@ -209,7 +210,7 @@ The event defined in {{events}} requires a URI identifier under a namespace this
 
 ## SET Payload Claims
 
-The payload claim `software_statement_jti` is defined by this specification for use in the event payload of {{events}}. Registration in a registry of SET payload claims, where the publishing body maintains one, is to be resolved before publication. The `event_timestamp` and `reason_admin` members follow the conventions of {{CAEP}}.
+The payload claim `software_statement_jti` is defined by this specification for use in the event payload of {{events}}. Registration in a registry of SET payload claims, where the publishing body maintains one, is to be resolved before publication. The `event_timestamp` and `reason_admin` members are used as {{CAEP}} defines them.
 
 --- back
 

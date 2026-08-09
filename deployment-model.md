@@ -91,7 +91,7 @@ sequenceDiagram
     AS->>AS: Establishment: registration valid, listing current?
     AS->>AS: Tenant permission: did this tenant's IdP issue an assertion?
     AS->>AS: Presenter proof: key the statement or registration authorizes
-    AS->>AS: Effective policy = the attested metadata
+    AS->>AS: Policy = metadata of the digest-matched document
     AS->>AS: Grant: what the resource owner authorized
     AS-->>App: Access token, or an error naming the layer that failed
 ```
