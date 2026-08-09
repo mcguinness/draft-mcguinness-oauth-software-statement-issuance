@@ -7,14 +7,14 @@
 <title>Shared Signals Events for CIMD Software Statements</title>
 <meta content="Karl McGuinness" name="author">
 <meta content="
-       A software statement carries a reviewer's decision about client software, bounded by an expiry the issuer chose. Ending that decision early has no standard mechanism, so how quickly a withdrawal takes effect is determined by how short the issuer made the statement's lifetime. This specification profiles the Shared Signals Framework for software statement lifecycle events, so that a statement issuer can tell the authorization servers that rely on its statements that a review, or a single statement carrying it, is withdrawn before it expires. Events can only reduce a client's standing, never create or extend it, and a receiver that misses an event falls back to the expiry and lifecycle controls it would have applied anyway, so the mechanism shortens the interval between a decision and its effect without becoming load-bearing for security. 
+       A software statement carries a reviewer's decision about client software. An issuer ends that decision before the statement expires by publishing status through Token Status List, which a trusting authorization server resolves on the list's own schedule. That schedule sets how long a withdrawal takes to reach a consumer. This specification profiles the Shared Signals Framework so that an issuer can tell the servers relying on its statements that a status has changed, and they resolve it at once rather than at their next scheduled fetch. The status list remains the authority on whether a statement stands; an event only says when to look. A receiver that misses every event still learns the same answer on its ordinary schedule, so the mechanism reduces latency without becoming load-bearing for correctness. 
     " name="description">
 <meta content="xml2rfc 3.34.0" name="generator">
 <meta content="OAuth" name="keyword">
 <meta content="Software Statement" name="keyword">
 <meta content="Shared Signals" name="keyword">
 <meta content="Security Event Token" name="keyword">
-<meta content="Revocation" name="keyword">
+<meta content="Status List" name="keyword">
 <meta content="draft-mcguinness-oauth-cimd-sw-stmt-signals-latest" name="ietf.draft">
 <!-- Generator version information:
   xml2rfc 3.34.0
@@ -1080,7 +1080,7 @@ svg {
 <h1 id="title">Shared Signals Events for CIMD Software Statements</h1>
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
-<p id="section-abstract-1">A software statement carries a reviewer's decision about client software, bounded by an expiry the issuer chose. Ending that decision early has no standard mechanism, so how quickly a withdrawal takes effect is determined by how short the issuer made the statement's lifetime. This specification profiles the Shared Signals Framework for software statement lifecycle events, so that a statement issuer can tell the authorization servers that rely on its statements that a review, or a single statement carrying it, is withdrawn before it expires. Events can only reduce a client's standing, never create or extend it, and a receiver that misses an event falls back to the expiry and lifecycle controls it would have applied anyway, so the mechanism shortens the interval between a decision and its effect without becoming load-bearing for security.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+<p id="section-abstract-1">A software statement carries a reviewer's decision about client software. An issuer ends that decision before the statement expires by publishing status through Token Status List, which a trusting authorization server resolves on the list's own schedule. That schedule sets how long a withdrawal takes to reach a consumer. This specification profiles the Shared Signals Framework so that an issuer can tell the servers relying on its statements that a status has changed, and they resolve it at once rather than at their next scheduled fetch. The status list remains the authority on whether a statement stands; an event only says when to look. A receiver that misses every event still learns the same answer on its ordinary schedule, so the mechanism reduces latency without becoming load-bearing for correctness.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <div id="status-of-memo">
 <section id="section-boilerplate.1">
@@ -1143,69 +1143,66 @@ svg {
             <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-subject-identification" class="internal xref">Subject Identification</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
-            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-withdrawal-records" class="internal xref">Withdrawal Records</a></p>
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-event-types" class="internal xref">Event Types</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-status-changed" class="internal xref">Status Changed</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
-            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-event-types" class="internal xref">Event Types</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
-                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-withdrawn" class="internal xref">Withdrawn</a></p>
-</li>
-            </ul>
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-receiver-processing" class="internal xref">Receiver Processing</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
-            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-receiver-processing" class="internal xref">Receiver Processing</a></p>
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-stream-configuration" class="internal xref">Stream Configuration</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
-            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-stream-configuration" class="internal xref">Stream Configuration</a></p>
-</li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
-            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
-                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-what-an-event-cannot-do" class="internal xref">What an Event Cannot Do</a></p>
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-what-an-event-cannot-do" class="internal xref">What an Event Cannot Do</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
-                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-expiry-remains-the-floor" class="internal xref">Expiry Remains the Floor</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-status-remains-the-authorit" class="internal xref">Status Remains the Authority</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3">
-                <p id="section-toc.1-1.9.2.3.1"><a href="#section-9.3" class="auto internal xref">9.3</a>.  <a href="#name-key-separation-and-compromi" class="internal xref">Key Separation and Compromise</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.3">
+                <p id="section-toc.1-1.8.2.3.1"><a href="#section-8.3" class="auto internal xref">8.3</a>.  <a href="#name-key-separation-and-compromi" class="internal xref">Key Separation and Compromise</a></p>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.4">
-                <p id="section-toc.1-1.9.2.4.1"><a href="#section-9.4" class="auto internal xref">9.4</a>.  <a href="#name-comparison-with-acceptance-" class="internal xref">Comparison with Acceptance-Time Status</a></p>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.4">
+                <p id="section-toc.1-1.8.2.4.1"><a href="#section-8.4" class="auto internal xref">8.4</a>.  <a href="#name-relationship-to-scheduled-r" class="internal xref">Relationship to Scheduled Resolution</a></p>
 </li>
             </ul>
 </li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+</li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
-            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="auto internal xref">10.1</a>.  <a href="#name-event-type-assignment" class="internal xref">Event Type Assignment</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.2">
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="auto internal xref">10.2</a>.  <a href="#name-set-payload-claims" class="internal xref">SET Payload Claims</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
-            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+            <p id="section-toc.1-1.11.1"><a href="#section-11" class="auto internal xref">11</a>. <a href="#name-references" class="internal xref">References</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.1">
-                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-event-type-assignment" class="internal xref">Event Type Assignment</a></p>
+                <p id="section-toc.1-1.11.2.1.1"><a href="#section-11.1" class="auto internal xref">11.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11.2.2">
-                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-set-payload-claims" class="internal xref">SET Payload Claims</a></p>
+                <p id="section-toc.1-1.11.2.2.1"><a href="#section-11.2" class="auto internal xref">11.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
 </li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
-            <p id="section-toc.1-1.12.1"><a href="#section-12" class="auto internal xref">12</a>. <a href="#name-references" class="internal xref">References</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.1">
-                <p id="section-toc.1-1.12.2.1.1"><a href="#section-12.1" class="auto internal xref">12.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12.2.2">
-                <p id="section-toc.1-1.12.2.2.1"><a href="#section-12.2" class="auto internal xref">12.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
-</li>
-            </ul>
+            <p id="section-toc.1-1.12.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.13">
-            <p id="section-toc.1-1.13.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
-</li>
-          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.14">
-            <p id="section-toc.1-1.14.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.13.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1216,12 +1213,12 @@ svg {
       <h2 id="name-introduction">
 <a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
       </h2>
-<p id="section-1-1"><span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> defines a software statement, in which an issuer vouches for a reviewed Client ID Metadata Document, and how a trusting authorization server consumes one: at registration, where the statement's expiry can bound the registration's validity, and at runtime, where it establishes a client for a request. Where those controls are in force the decision ends when the statement expires unrenewed; where they are not, a registration outlives the review and only later statements are refused.<a href="#section-1-1" class="pilcrow">¶</a></p>
-<p id="section-1-2">That leaves responsiveness coupled to lifetime. An issuer that wants a withdrawal to take effect within minutes must issue statements that live for minutes, and pay the renewal traffic for every client at every audience. An issuer that wants a manageable renewal cadence accepts that a withdrawal takes as long as the remaining lifetime.<a href="#section-1-2" class="pilcrow">¶</a></p>
-<p id="section-1-3">The coupling is unnecessary, because the parties are already in a configured relationship. A trusting authorization server records each issuer's identifier, key source, scope, and lifetime policy in order to accept its statements at all (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>). This specification uses that relationship to carry lifecycle events over the Shared Signals Framework <span>[<a href="#SSF" class="cite xref">SSF</a>]</span>: the statement issuer transmits, the trusting authorization server receives, and events are Security Event Tokens <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span> delivered by the framework's push <span>[<a href="#RFC8935" class="cite xref">RFC8935</a>]</span> or poll <span>[<a href="#RFC8936" class="cite xref">RFC8936</a>]</span> bindings.<a href="#section-1-3" class="pilcrow">¶</a></p>
-<p id="section-1-4">This specification defines the subject identification, the event, its payload claims, the durable records a receiver keeps, and its processing rules. It defines no new endpoint, transport, subject identifier format, or trust establishment mechanism.<a href="#section-1-4" class="pilcrow">¶</a></p>
-<p id="section-1-5">Two properties bound what the mechanism can do, and are normative in <a href="#processing" class="auto internal xref">Section 7</a>: an event can only reduce standing, and a receiver that misses events enforces expiry exactly as it does today. A withdrawal is durable rather than momentary, which <a href="#withdrawal-records" class="auto internal xref">Section 5</a> specifies, so a client holding an unexpired statement cannot restore what an event ended. Deployments therefore keep bounded statement lifetimes, and <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> does not depend on this specification.<a href="#section-1-5" class="pilcrow">¶</a></p>
-<p id="section-1-6">This mechanism buys latency, not correctness. A statement is carried by the client it admits, and a client has no reason to stop presenting one, so withdrawing a review before its expiry is what these events are for. A decision a consuming server evaluates afresh on every request, such as one carried by an identity assertion, needs no event at all.<a href="#section-1-6" class="pilcrow">¶</a></p>
+<p id="section-1-1"><span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> defines a software statement, in which an issuer vouches for a reviewed Client ID Metadata Document, and the <code>status</code> claim by which a statement locates itself in the issuer's Status List Token <span>[<a href="#STATUSLIST" class="cite xref">STATUSLIST</a>]</span>. Withdrawing a decision before its expiry is a matter of setting that status; a trusting authorization server learns of the change when it next resolves the list.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">That leaves responsiveness coupled to a fetch interval. An issuer that wants a withdrawal to take effect within minutes needs every consumer polling at that interval, and pays for it in requests that report no change.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">The coupling is unnecessary, because the parties are already in a configured relationship. A trusting authorization server records each issuer's identifier, key source, scope, and lifetime policy in order to accept its statements at all (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>). This specification uses that relationship to carry a notification over the Shared Signals Framework <span>[<a href="#SSF" class="cite xref">SSF</a>]</span>: the statement issuer transmits, the trusting authorization server receives, and events are Security Event Tokens <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span> delivered by the framework's push <span>[<a href="#RFC8935" class="cite xref">RFC8935</a>]</span> or poll <span>[<a href="#RFC8936" class="cite xref">RFC8936</a>]</span> bindings.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">An event carries no decision. It reports that the issuer changed a status, and the receiver resolves that status as it would have done later anyway. The status list is what says whether a statement stands, at the moment of the event and at every consumption afterwards. This separation is what keeps the mechanism from becoming load-bearing: a receiver that never receives an event, or that cannot verify one, resolves status on its ordinary schedule and reaches the same answer later.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-5">Two properties bound what the mechanism can do, and are normative in <a href="#processing" class="auto internal xref">Section 6</a>: an event can only prompt a resolution, never itself increase what a client may do, and a receiver that misses events enforces status and expiry exactly as it does without them.<a href="#section-1-5" class="pilcrow">¶</a></p>
+<p id="section-1-6">This specification defines the subject identification, the event, its payload claims, and the receiver's processing rules. It defines no new endpoint, transport, subject identifier format, durable receiver record, or trust establishment mechanism. <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> does not depend on it.<a href="#section-1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conventions-and-definitions">
@@ -1233,27 +1230,17 @@ svg {
 "<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
 described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
 appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
-<p id="section-2-2">Transmitter, Receiver, Stream, and the delivery and configuration mechanisms are defined by <span>[<a href="#SSF" class="cite xref">SSF</a>]</span>. Security Event Token, or SET, is defined by <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span>. Subject identifier formats are defined by <span>[<a href="#RFC9493" class="cite xref">RFC9493</a>]</span>. The software statement, its claims, its validation, issuer trust configuration, registration validity, runtime presentation, and the per-grant establishment state are defined by <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<p id="section-2-2">Transmitter, Receiver, Stream, and the delivery and configuration mechanisms are defined by <span>[<a href="#SSF" class="cite xref">SSF</a>]</span>. Security Event Token, or SET, is defined by <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span>. Subject identifier formats are defined by <span>[<a href="#RFC9493" class="cite xref">RFC9493</a>]</span>. Status List Token, status reference, and status resolution are defined by <span>[<a href="#STATUSLIST" class="cite xref">STATUSLIST</a>]</span>. The software statement, its claims, its validation, its <code>status</code> claim, issuer trust configuration, registration validity, and runtime presentation are defined by <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>.<a href="#section-2-2" class="pilcrow">¶</a></p>
 <p id="section-2-3">This specification additionally defines the following terms:<a href="#section-2-3" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-2-4">
         <dt id="section-2-4.1">Statement Issuer:</dt>
         <dd style="margin-left: 1.5em" id="section-2-4.2">
-          <p id="section-2-4.2.1">The Issuing Authorization Server (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>) that signed a software statement, acting as a Transmitter of the events defined here.<a href="#section-2-4.2.1" class="pilcrow">¶</a></p>
+          <p id="section-2-4.2.1">The Issuing Authorization Server (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>) that signed a software statement and publishes its status (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>), acting as a Transmitter of the events defined here.<a href="#section-2-4.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-2-4.3">Consuming Authorization Server:</dt>
         <dd style="margin-left: 1.5em" id="section-2-4.4">
           <p id="section-2-4.4.1">A Trusting Authorization Server (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>) that has configured the statement issuer, acting as a Receiver of the events defined here.<a href="#section-2-4.4.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-2-4.5">Standing:</dt>
-        <dd style="margin-left: 1.5em" id="section-2-4.6">
-          <p id="section-2-4.6.1">What a client may do at a consuming authorization server by virtue of a software statement: its registration and that registration's validity, and its establishment at request time (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>). Standing is created and extended only by statements, never by the events defined here.<a href="#section-2-4.6.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-2-4.7">Withdrawal Record:</dt>
-        <dd style="margin-left: 1.5em" id="section-2-4.8">
-          <p id="section-2-4.8.1">The state a receiver retains when it applies a withdrawal event, defined in <a href="#withdrawal-records" class="auto internal xref">Section 5</a>. It is a refusal record in the sense <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> uses.<a href="#section-2-4.8.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1264,10 +1251,10 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
       <h2 id="name-relationship-to-the-stateme">
 <a href="#section-3" class="section-number selfRef">3. </a><a href="#name-relationship-to-the-stateme" class="section-name selfRef">Relationship to the Statement Family</a>
       </h2>
-<p id="section-3-1">The events defined here carry no authority of their own. They report that a decision the issuer already had the authority to make has ended earlier than its expiry announced.<a href="#section-3-1" class="pilcrow">¶</a></p>
-<p id="section-3-2">An event bears on the statements the transmitting issuer has made about the named subject, and on nothing else. A withdrawal by one issuer never reaches statements another issuer made about the same software, whatever those two issuers each vouched for.<a href="#section-3-2" class="pilcrow">¶</a></p>
+<p id="section-3-1">The events defined here carry no authority of their own. They report that the issuer has changed a status the receiver can resolve for itself, and the resolved status governs.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">An event bears on the statements the transmitting issuer has made about the named subject, and on nothing else. An event from one issuer never bears on statements another issuer made about the same software.<a href="#section-3-2" class="pilcrow">¶</a></p>
 <p id="section-3-3">A consuming authorization server <span class="bcp14">MUST NOT</span> accept an event from an issuer it has not configured, and <span class="bcp14">MUST</span> verify the SET using keys obtained as it obtains that issuer's statement verification keys, from the issuer's authorization server metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>. It <span class="bcp14">MUST NOT</span> derive event trust from any key-location value carried in the event.<a href="#section-3-3" class="pilcrow">¶</a></p>
-<p id="section-3-4">A SET carrying an event defined here <span class="bcp14">MUST</span> use the explicit <code>typ</code> header value <code>secevent+jwt</code> (<span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span>), so that a receiver validating JWTs from a configured issuer distinguishes an event from a software statement, whose own typing <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> fixes. Its <code>aud</code> <span class="bcp14">MUST</span> contain the receiving authorization server's issuer identifier as defined by <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>, which is the value that appears in a statement's <code>aud</code>; a stream audience negotiated under <span>[<a href="#SSF" class="cite xref">SSF</a>]</span> does not replace it.<a href="#section-3-4" class="pilcrow">¶</a></p>
+<p id="section-3-4">A SET carrying an event defined here <span class="bcp14">MUST</span> use the explicit <code>typ</code> header value <code>secevent+jwt</code> (<span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span>), so that a receiver validating JWTs from a configured issuer distinguishes an event from a software statement, whose own typing <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> fixes, and from a Status List Token. Its <code>aud</code> <span class="bcp14">MUST</span> contain the receiving authorization server's issuer identifier as defined by <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>, which is the value that appears in a statement's <code>aud</code>; a stream audience negotiated under <span>[<a href="#SSF" class="cite xref">SSF</a>]</span> does not replace it.<a href="#section-3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="subjects">
@@ -1275,196 +1262,178 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
       <h2 id="name-subject-identification">
 <a href="#section-4" class="section-number selfRef">4. </a><a href="#name-subject-identification" class="section-name selfRef">Subject Identification</a>
       </h2>
-<p id="section-4-1">The subject of every event defined here is client software, identified as the <code>sub</code> of the statements the event concerns. Events use the <code>sub_id</code> claim of <span>[<a href="#SSF" class="cite xref">SSF</a>]</span> with the formats of <span>[<a href="#RFC9493" class="cite xref">RFC9493</a>]</span>:<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-1">The subject of every event defined here is client software, identified as the <code>sub</code> of the statements the event concerns. Events use the <code>sub_id</code> claim of <span>[<a href="#SSF" class="cite xref">SSF</a>]</span> with the formats of <span>[<a href="#RFC9493" class="cite xref">RFC9493</a>]</span>.<a href="#section-4-1" class="pilcrow">¶</a></p>
 <p id="section-4-2">Software is identified by its Client ID Metadata Document URL <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span> using the <code>uri</code> format, whose <code>uri</code> member carries that URL exactly as it appears in the statement's <code>sub</code>.<a href="#section-4-2" class="pilcrow">¶</a></p>
-<p id="section-4-3">A consuming authorization server <span class="bcp14">MUST</span> match the subject by exact comparison of the <code>uri</code> member against a statement's <code>sub</code>, and against the subjects of its Withdrawal Records. The transmitting issuer is part of every record, so a withdrawal by one issuer never reaches statements another issuer made about the same software. A receiver <span class="bcp14">MUST</span> record a withdrawal for a subject it does not currently recognize (<a href="#withdrawal-records" class="auto internal xref">Section 5</a>) rather than discarding the event. A subject unknown at the time of an event is the ordinary case in the runtime profile, where a receiver holds no state for software until it is first presented.<a href="#section-4-3" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="withdrawal-records">
-<section id="section-5">
-      <h2 id="name-withdrawal-records">
-<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-withdrawal-records" class="section-name selfRef">Withdrawal Records</a>
-      </h2>
-<p id="section-5-1">A withdrawal event names a decision that ended. Its effect is durable, and a receiver that only ceases some current activity has not applied it: in the runtime profile there is no current activity to cease, and in the registration profile the client holds a statement that would otherwise restore what the event withdrew.<a href="#section-5-1" class="pilcrow">¶</a></p>
-<p id="section-5-2">On applying a withdrawal, a consuming authorization server <span class="bcp14">MUST</span> create or update a Withdrawal Record holding the transmitting issuer, the subject, an effective time, and the withdrawn <code>jti</code> where the event named one.<a href="#section-5-2" class="pilcrow">¶</a></p>
-<p id="section-5-3">The effective time is the event's <code>event_timestamp</code>, so every receiver applies the same cutoff whatever its delivery latency; deriving it from arrival time would make a legitimate reissued statement acceptable at a prompt receiver and refused at a delayed one.<a href="#section-5-3" class="pilcrow">¶</a></p>
-<p id="section-5-4">Two rules keep that cutoff honest. An issuer <span class="bcp14">MUST</span> set <code>event_timestamp</code> at or after the <code>iat</code> of the most recent statement it has issued for the subject, so the cutoff covers everything already minted, and <span class="bcp14">MUST NOT</span> afterwards issue a statement for that subject with an <code>iat</code> at or before it; it <span class="bcp14">SHOULD</span> suspend automated renewal for the subject before transmitting. A receiver <span class="bcp14">MUST</span> reject an event whose <code>event_timestamp</code> lies in the future beyond its clock-skew allowance, since a future-dated cutoff would refuse every statement the issuer could later mint and leave the subject unrecoverable at some receivers while others discarded the record and reopened it.<a href="#section-5-4" class="pilcrow">¶</a></p>
-<p id="section-5-5">While a Withdrawal Record is retained, the receiver <span class="bcp14">MUST</span> refuse a statement matching it:<a href="#section-5-5" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-5-6.1">
-          <p id="section-5-6.1.1">a record naming a <code>jti</code> refuses that statement, whatever its <code>iat</code>;<a href="#section-5-6.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-5-6.2">
-          <p id="section-5-6.2.1">a record naming none refuses every statement from that issuer for that subject whose <code>iat</code> is at or before the record's effective time.<a href="#section-5-6.2.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
-<p id="section-5-7">A statement from that issuer for that subject with an <code>iat</code> after the record's effective time is a later decision by the same authority. It is accepted under the ordinary rules of <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>, and restores what the withdrawal ended. This is the only recovery path, and it requires the issuer to act.<a href="#section-5-7" class="pilcrow">¶</a></p>
-<p id="section-5-8">A refusal under this section takes effect wherever the statement would otherwise be consumed: a registration governed by a refused statement is expired as <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> defines for a lapsed registration, and a runtime presentation carrying one fails as it does for a statement that is not current. A grant already open under a refused statement continues only as far as its next currency check: a receiver <span class="bcp14">MUST</span> treat a refused statement as not current when <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> requires currency at refresh, so that a withdrawal reaches running grants on the same terms as an expiry rather than waiting for the statement's own.<a href="#section-5-8" class="pilcrow">¶</a></p>
-<p id="section-5-9">A receiver <span class="bcp14">MAY</span> discard a record naming a <code>jti</code> once that statement's <code>exp</code> has passed, and <span class="bcp14">MAY</span> discard any Withdrawal Record once every statement it could refuse has expired, which a receiver that does not retain statement lifetimes bounds by the maximum lifetime it honors for that issuer (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>). Discarding a record earlier reopens the withdrawal.<a href="#section-5-9" class="pilcrow">¶</a></p>
+<p id="section-4-3">A consuming authorization server <span class="bcp14">MUST</span> match the subject by exact comparison of the <code>uri</code> member against a statement's <code>sub</code>. A receiver <span class="bcp14">MAY</span> receive an event for a subject it holds no state for, which is the ordinary case where it has never seen a presentation for that software, and such an event requires nothing of it.<a href="#section-4-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="events">
-<section id="section-6">
+<section id="section-5">
       <h2 id="name-event-types">
-<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-event-types" class="section-name selfRef">Event Types</a>
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-event-types" class="section-name selfRef">Event Types</a>
       </h2>
-<p id="section-6-1">Each event is a member of the SET <code>events</code> claim, whose value is the event payload object. All payloads share these claims:<a href="#section-6-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-6-2">
-        <dt id="section-6-2.1">
+<p id="section-5-1">Each event is a member of the SET <code>events</code> claim, whose value is the event payload object. All payloads share these claims:<a href="#section-5-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5-2">
+        <dt id="section-5-2.1">
 <code>event_timestamp</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.2">
-          <p id="section-6-2.2.1"><span class="bcp14">REQUIRED</span>. A NumericDate value giving the time the issuer made the decision the event reports. Receivers use it to order events (<a href="#processing" class="auto internal xref">Section 7</a>).<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-5-2.2">
+          <p id="section-5-2.2.1"><span class="bcp14">REQUIRED</span>. A NumericDate value giving the time the issuer changed the status the event reports. It is informational, for logging and audit. A receiver does not use it to order, bound, or scope anything, since the event carries no decision and the resolved status is what governs (<a href="#processing" class="auto internal xref">Section 6</a>).<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.3">
+<dt id="section-5-2.3">
 <code>software_statement_jti</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.4">
-          <p id="section-6-2.4.1"><span class="bcp14">OPTIONAL</span>. Present when the event withdraws one artifact rather than the decision behind it. Omitting it is the safe default: a withdrawal scoped to a single <code>jti</code> leaves a client's other unexpired statements untouched, which is the outcome <a href="#withdrawal-records" class="auto internal xref">Section 5</a> exists to prevent.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-5-2.4">
+          <p id="section-5-2.4.1"><span class="bcp14">OPTIONAL</span>. The <code>jti</code> of a single statement whose status changed. Where absent, the event reports that the status of one or more statements for the subject changed without naming them, and the receiver resolves the subject's statements it holds.<a href="#section-5-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-6-2.5">
+<dt id="section-5-2.5">
 <code>reason_admin</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-6-2.6">
-          <p id="section-6-2.6.1"><span class="bcp14">OPTIONAL</span>. A JSON object whose members are language tags <span>[<a href="#RFC5646" class="cite xref">RFC5646</a>]</span> and whose values are human-readable explanations intended for an administrator, as <span>[<a href="#CAEP" class="cite xref">CAEP</a>]</span> defines the member.<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-5-2.6">
+          <p id="section-5-2.6.1"><span class="bcp14">OPTIONAL</span>. A JSON object whose members are language tags <span>[<a href="#RFC5646" class="cite xref">RFC5646</a>]</span> and whose values are human-readable explanations intended for an administrator, as <span>[<a href="#CAEP" class="cite xref">CAEP</a>]</span> defines the member.<a href="#section-5-2.6.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<div id="withdrawn">
-<section id="section-6.1">
-        <h3 id="name-withdrawn">
-<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-withdrawn" class="section-name selfRef">Withdrawn</a>
+<div id="status-changed">
+<section id="section-5.1">
+        <h3 id="name-status-changed">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-status-changed" class="section-name selfRef">Status Changed</a>
         </h3>
-<p id="section-6.1-1">The issuer ends a review before the statements carrying it expire, for example on delisting software, on discovering that a statement was mis-issued, or on a compromise of the client's key.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
-<p id="section-6.1-2">Without <code>software_statement_jti</code> the event withdraws the decision: the receiver refuses every statement from that issuer for that subject issued at or before the record's effective time. With it, the event withdraws one artifact and the receiver refuses that <code>jti</code> alone, which suits a mis-issued statement where the underlying review still stands.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
-<p id="section-6.1-3">A receiver <span class="bcp14">MUST</span> record the withdrawal (<a href="#withdrawal-records" class="auto internal xref">Section 5</a>) and stop treating the affected statements as current. At a server implementing the registration-validity model of <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>, a registration governed by a refused statement is expired as that specification defines for a lapsed registration; at a server that does not, the registration remains subject to that server's own client lifecycle, and the record still refuses further statements. A runtime presentation carrying a refused statement fails as <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> defines for a statement that is not current, and a grant already open under one continues only as far as its next currency check.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+<p id="section-5.1-1">The issuer reports that it has changed the published status of one or more statements for the subject, for example on delisting software, on discovering that a statement was mis-issued, or on a compromise of the client's key.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<p id="section-5.1-2">The event reports a change. It does not say what the new status is, and a receiver <span class="bcp14">MUST NOT</span> infer one from it. What the status now says is what <span>[<a href="#STATUSLIST" class="cite xref">STATUSLIST</a>]</span> resolution returns, and a receiver that resolves a status of <code>VALID</code> after an event has correctly applied the event.<a href="#section-5.1-2" class="pilcrow">¶</a></p>
+<p id="section-5.1-3">Carrying the new status in the event would create a second source for it, which the receiver would then have to reconcile against the list on every disagreement, with a forged or replayed event able to assert a status the issuer never published. Naming only the change leaves one authority.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
 </div>
 <div id="processing">
-<section id="section-7">
+<section id="section-6">
       <h2 id="name-receiver-processing">
-<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-receiver-processing" class="section-name selfRef">Receiver Processing</a>
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-receiver-processing" class="section-name selfRef">Receiver Processing</a>
       </h2>
-<p id="section-7-1">A consuming authorization server that receives an event defined here <span class="bcp14">MUST</span>:<a href="#section-7-1" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-7-2">
-<li id="section-7-2.1">
-          <p id="section-7-2.1.1">verify the SET as <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span> requires, including its <code>typ</code>, and verify that its issuer is configured and its keys were obtained as <a href="#relationship" class="auto internal xref">Section 3</a> requires;<a href="#section-7-2.1.1" class="pilcrow">¶</a></p>
+<p id="section-6-1">A consuming authorization server that receives an event defined here <span class="bcp14">MUST</span>:<a href="#section-6-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-6-2">
+<li id="section-6-2.1">
+          <p id="section-6-2.1.1">verify the SET as <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span> requires, including its <code>typ</code>, and verify that its issuer is configured and its keys were obtained as <a href="#relationship" class="auto internal xref">Section 3</a> requires;<a href="#section-6-2.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-7-2.2">
-          <p id="section-7-2.2.1">reject an event whose <code>aud</code> does not contain its issuer identifier (<a href="#relationship" class="auto internal xref">Section 3</a>), and an event whose type it does not recognize;<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
+        <li id="section-6-2.2">
+          <p id="section-6-2.2.1">reject an event whose <code>aud</code> does not contain its issuer identifier (<a href="#relationship" class="auto internal xref">Section 3</a>), and an event whose type it does not recognize;<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-7-2.3">
-          <p id="section-7-2.3.1">resolve the subject (<a href="#subjects" class="auto internal xref">Section 4</a>) and the scope of the effect (<a href="#relationship" class="auto internal xref">Section 3</a>); and<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
+        <li id="section-6-2.3">
+          <p id="section-6-2.3.1">resolve the subject (<a href="#subjects" class="auto internal xref">Section 4</a>); and<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li id="section-7-2.4">
-          <p id="section-7-2.4.1">apply the effect the event type defines, recording it as <a href="#withdrawal-records" class="auto internal xref">Section 5</a> requires.<a href="#section-7-2.4.1" class="pilcrow">¶</a></p>
+        <li id="section-6-2.4">
+          <p id="section-6-2.4.1">resolve the status of the affected statements from the issuer's Status List Token as <span>[<a href="#STATUSLIST" class="cite xref">STATUSLIST</a>]</span> defines, without waiting for the schedule it would otherwise have used, and apply the resolved status under the rules of <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-7-3">A receiver <span class="bcp14">MUST</span> treat an event it has already applied as successfully delivered and acknowledge it as <span>[<a href="#RFC8935" class="cite xref">RFC8935</a>]</span> or <span>[<a href="#RFC8936" class="cite xref">RFC8936</a>]</span> requires, rather than reporting a delivery error; duplicate delivery is ordinary retry behavior and rejecting it can stall or disable a stream carrying later withdrawals. Duplicate detection is per transmitting issuer, since SET <code>jti</code> values are unique only within an issuer, and a receiver <span class="bcp14">MAY</span> bound the identifiers it retains for that purpose by the maximum statement lifetime it honors for the issuer.<a href="#section-7-3" class="pilcrow">¶</a></p>
-<p id="section-7-4">Two constraints bound every event:<a href="#section-7-4" class="pilcrow">¶</a></p>
+<p id="section-6-3">Where the event names a <code>software_statement_jti</code>, the affected statements are that statement. Where it does not, they are the statements for that subject and issuer the receiver holds or has cached a status for.<a href="#section-6-3" class="pilcrow">¶</a></p>
+<p id="section-6-4">A receiver <span class="bcp14">MUST</span> invalidate any cached Status List Token for the affected statements before resolving, since a cached copy is what the event exists to correct.<a href="#section-6-4" class="pilcrow">¶</a></p>
+<p id="section-6-5">Pending resolution, a receiver <span class="bcp14">MAY</span> refuse the affected statements. A receiver that does so <span class="bcp14">MUST</span> apply the result of its next successful resolution, including where that result is <code>VALID</code>, and where resolution does not complete <span class="bcp14">MUST</span> fall back to the rules of <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> rather than hold the refusal indefinitely. Refusal pending resolution is a provisional measure, never a durable record: this specification defines no receiver-side state that outlives a resolution, and a receiver <span class="bcp14">MUST NOT</span> retain a refusal that a later resolution does not support.<a href="#section-6-5" class="pilcrow">¶</a></p>
+<p id="section-6-6">A receiver <span class="bcp14">MUST</span> treat an event it has already applied as successfully delivered and acknowledge it as <span>[<a href="#RFC8935" class="cite xref">RFC8935</a>]</span> or <span>[<a href="#RFC8936" class="cite xref">RFC8936</a>]</span> requires, rather than reporting a delivery error; duplicate delivery is ordinary retry behavior and rejecting it can stall or disable a stream carrying later events. Duplicate detection is per transmitting issuer, since SET <code>jti</code> values are unique only within an issuer.<a href="#section-6-6" class="pilcrow">¶</a></p>
+<p id="section-6-7">Events may arrive out of order or be duplicated, and neither matters. An event carries no decision to order, so a receiver applies each accepted event by resolving status, and a resolution performed later returns the later state. A replayed or delayed event costs a resolution and changes nothing else.<a href="#section-6-7" class="pilcrow">¶</a></p>
+<p id="section-6-8">Two constraints bound every event:<a href="#section-6-8" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-7-5.1">
-          <p id="section-7-5.1.1">An event <span class="bcp14">MUST NOT</span> create standing, extend a statement's lifetime, restore a statement previously withdrawn, or otherwise increase what a client may do. A receiver <span class="bcp14">MUST</span> ignore any payload member that would have such an effect. Restoring standing requires a statement, presented or delivered as <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> defines.<a href="#section-7-5.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-6-9.1">
+          <p id="section-6-9.1.1">An event <span class="bcp14">MUST NOT</span> by itself create standing, extend a statement's lifetime, or otherwise increase what a client may do. A receiver <span class="bcp14">MUST</span> ignore any payload member that would have such an effect. What a client may do follows from a valid statement and its resolved status, as <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> defines.<a href="#section-6-9.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-7-5.2">
-          <p id="section-7-5.2.1">A receiver <span class="bcp14">MUST</span> continue to enforce statement expiry independently of this mechanism. Stream loss, transmitter unavailability, or delivery failure leaves standing to end at expiry where the registration-validity model of <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> is in force, and otherwise at whatever the receiver's own client lifecycle provides; in both cases a missed event refuses later statements but does not reach standing already granted.<a href="#section-7-5.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="section-6-9.2">
+          <p id="section-6-9.2.1">A receiver <span class="bcp14">MUST</span> continue to resolve status on its own schedule, and to enforce statement expiry, independently of this mechanism. Stream loss, transmitter unavailability, or delivery failure leaves both controls in force.<a href="#section-6-9.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-7-6">Events may arrive out of order or be duplicated. A receiver <span class="bcp14">MUST</span> apply every withdrawal event it accepts, whatever its <code>event_timestamp</code> relative to events already applied, since withdrawals accumulate and an older one may name a statement a newer one does not. The ordering rule constrains reversal only: a receiver <span class="bcp14">MUST NOT</span> discard or narrow a Withdrawal Record, or discard standing-bearing state whose <code>iat</code> is after the effective time of the event in hand, on the basis of an event whose <code>event_timestamp</code> precedes the event that created it. A delayed or replayed withdrawal therefore cannot destroy an approval the tenant recorded after making it. Records are kept per subject and issuer, and per <code>jti</code> where an event named one, so that a later event never silently supersedes an earlier one of narrower scope.<a href="#section-7-6" class="pilcrow">¶</a></p>
-<p id="section-7-7">An effect applied by an event does not revoke access tokens already issued. A receiver applies its own grant and token lifetime policy, as it does when a statement expires.<a href="#section-7-7" class="pilcrow">¶</a></p>
+<p id="section-6-10">Applying an event does not revoke access tokens already issued. A receiver applies its own grant and token lifetime policy, as it does when a statement expires or its status changes.<a href="#section-6-10" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="configuration">
-<section id="section-8">
+<section id="section-7">
       <h2 id="name-stream-configuration">
-<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-stream-configuration" class="section-name selfRef">Stream Configuration</a>
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-stream-configuration" class="section-name selfRef">Stream Configuration</a>
       </h2>
-<p id="section-8-1">A statement issuer supporting this specification publishes Transmitter configuration metadata as <span>[<a href="#SSF" class="cite xref">SSF</a>]</span> defines, discoverable from the issuer identifier the consuming authorization server has already configured. Stream creation, subject management, verification, and delivery follow <span>[<a href="#SSF" class="cite xref">SSF</a>]</span>; this specification adds no configuration mechanism.<a href="#section-8-1" class="pilcrow">¶</a></p>
-<p id="section-8-2">A consuming authorization server <span class="bcp14">SHOULD</span> create one stream per configured issuer, covering every subject that issuer attests rather than an enumerated set. A receiver cannot enumerate subjects: in the runtime profile it holds no state for software until first presentation, which is exactly when an unenumerated withdrawal would already have been missed. A transmitter supporting this specification <span class="bcp14">MUST</span> therefore advertise <code>default_subjects</code> as <code>ALL</code> in its transmitter configuration <span>[<a href="#SSF" class="cite xref">SSF</a>]</span>, so that a stream carries every subject appropriate to it without the receiver adding any. The subjects appropriate to a stream are those within the identifier scope for which the receiver accepts that issuer (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>).<a href="#section-8-2" class="pilcrow">¶</a></p>
-<p id="section-8-3">A receiver <span class="bcp14">SHOULD</span> request the withdrawal event this specification defines, and <span class="bcp14">SHOULD</span> use the stream verification facility of <span>[<a href="#SSF" class="cite xref">SSF</a>]</span> on a schedule, since a stream delivering nothing because it was misconfigured is otherwise indistinguishable from an issuer with nothing to report.<a href="#section-8-3" class="pilcrow">¶</a></p>
+<p id="section-7-1">A statement issuer supporting this specification publishes Transmitter configuration metadata as <span>[<a href="#SSF" class="cite xref">SSF</a>]</span> defines, discoverable from the issuer identifier the consuming authorization server has already configured. Stream creation, subject management, verification, and delivery follow <span>[<a href="#SSF" class="cite xref">SSF</a>]</span>; this specification adds no configuration mechanism.<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-2">A consuming authorization server <span class="bcp14">SHOULD</span> create one stream per configured issuer, covering every subject that issuer attests rather than an enumerated set. A receiver cannot enumerate subjects: in the runtime profile it holds no state for software until first presentation, which is exactly when an unenumerated event would already have been missed. A transmitter supporting this specification <span class="bcp14">MUST</span> therefore advertise <code>default_subjects</code> as <code>ALL</code> in its transmitter configuration <span>[<a href="#SSF" class="cite xref">SSF</a>]</span>, so that a stream carries every subject appropriate to it without the receiver adding any. The subjects appropriate to a stream are those within the identifier scope for which the receiver accepts that issuer (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>).<a href="#section-7-2" class="pilcrow">¶</a></p>
+<p id="section-7-3">A receiver <span class="bcp14">SHOULD</span> request the event this specification defines, and <span class="bcp14">SHOULD</span> use the stream verification facility of <span>[<a href="#SSF" class="cite xref">SSF</a>]</span> on a schedule, since a stream delivering nothing because it was misconfigured is otherwise indistinguishable from an issuer with nothing to report.<a href="#section-7-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">
-<section id="section-9">
+<section id="section-8">
       <h2 id="name-security-considerations">
-<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
       </h2>
 <div id="what-an-event-cannot-do">
-<section id="section-9.1">
+<section id="section-8.1">
         <h3 id="name-what-an-event-cannot-do">
-<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-what-an-event-cannot-do" class="section-name selfRef">What an Event Cannot Do</a>
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-what-an-event-cannot-do" class="section-name selfRef">What an Event Cannot Do</a>
         </h3>
-<p id="section-9.1-1">The constraints of <a href="#processing" class="auto internal xref">Section 7</a> are the security argument for this mechanism. A forged, replayed, or reordered event cannot grant a client anything, because no event increases standing, and <a href="#withdrawal-records" class="auto internal xref">Section 5</a> makes the reduction durable rather than momentary. Its worst outcome is the premature loss of a legitimate client's standing, which the issuer corrects by issuing a statement with a later <code>iat</code>. Forging an event requires the issuer's key, against which rate limiting is not a control; a receiver bounds the resource cost of event processing instead, and <span class="bcp14">MUST NOT</span> discard events it has accepted in order to shed load, since discarding a withdrawal is the suppression this mechanism exists to avoid.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+<p id="section-8.1-1">An event names no status, so a forged, replayed, or reordered event cannot change what any statement is worth. Its effect is confined to causing a resolution the receiver was going to perform anyway, against a Status List Token signed by the issuer. That is the security argument for this mechanism, and it is why the mechanism holds no durable receiver-side state.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<p id="section-8.1-2">The residual exposure is resource cost. An attacker holding the issuer's key, or a transmitter behaving badly, can drive resolutions. A receiver <span class="bcp14">SHOULD</span> bound the rate at which it resolves in response to events, coalescing events for the same issuer, and <span class="bcp14">MUST NOT</span> let event-driven resolution displace its scheduled resolution.<a href="#section-8.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="expiry-remains-the-floor">
-<section id="section-9.2">
-        <h3 id="name-expiry-remains-the-floor">
-<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-expiry-remains-the-floor" class="section-name selfRef">Expiry Remains the Floor</a>
+<div id="status-remains-the-authority">
+<section id="section-8.2">
+        <h3 id="name-status-remains-the-authorit">
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-status-remains-the-authorit" class="section-name selfRef">Status Remains the Authority</a>
         </h3>
-<p id="section-9.2-1">Because a receiver enforces expiry independently, an attacker who suppresses events, by disrupting delivery or the transmitter, delays a withdrawal at most until the affected statements expire. Suppression therefore delays a withdrawal until expiry only where the registration-validity model of <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> is in force, or where refresh requires a current statement; elsewhere it delays it until the receiver's own client lifecycle acts, and the refusal record still stops later statements. Deployments choose lifetimes and refresh policy they would accept without this mechanism, and treat event delivery as an accelerator. A receiver <span class="bcp14">SHOULD</span> alert on stream loss rather than assume quiescence, since a healthy stream and a suppressed one are indistinguishable from the absence of events. Periodic stream verification (<a href="#configuration" class="auto internal xref">Section 8</a>) is what makes the difference observable.<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+<p id="section-8.2-1">Because a receiver resolves status independently, an attacker who suppresses events, by disrupting delivery or the transmitter, delays a withdrawal at most until the receiver's next scheduled resolution, and in no case beyond the affected statements' expiry. Deployments therefore choose a resolution schedule and statement lifetimes they would accept with no event stream at all, and treat delivery as an accelerator.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+<p id="section-8.2-2">A receiver <span class="bcp14">SHOULD</span> alert on stream loss rather than assume quiescence, since a healthy stream and a suppressed one are indistinguishable from the absence of events. Periodic stream verification (<a href="#configuration" class="auto internal xref">Section 7</a>) is what makes the difference observable.<a href="#section-8.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="key-separation-and-compromise">
-<section id="section-9.3">
+<section id="section-8.3">
         <h3 id="name-key-separation-and-compromi">
-<a href="#section-9.3" class="section-number selfRef">9.3. </a><a href="#name-key-separation-and-compromi" class="section-name selfRef">Key Separation and Compromise</a>
+<a href="#section-8.3" class="section-number selfRef">8.3. </a><a href="#name-key-separation-and-compromi" class="section-name selfRef">Key Separation and Compromise</a>
         </h3>
-<p id="section-9.3-1">A transmitter <span class="bcp14">MAY</span> sign SETs with a key distinct from its statement signing key, published in the same metadata. Compromise of a statement signing key is the more serious event, because statements grant standing and events cannot; a receiver responding to such a compromise removes trust in the issuer or its scope as <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> describes, which also ends event acceptance.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
+<p id="section-8.3-1">A transmitter <span class="bcp14">MAY</span> sign SETs with a key distinct from its statement signing and status list signing keys, published in the same metadata. Compromise of a statement signing key is the more serious event, because statements grant standing and events cannot; a receiver responding to such a compromise removes trust in the issuer or its scope as <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> describes, which also ends event acceptance.<a href="#section-8.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="comparison-with-acceptance-time-status">
-<section id="section-9.4">
-        <h3 id="name-comparison-with-acceptance-">
-<a href="#section-9.4" class="section-number selfRef">9.4. </a><a href="#name-comparison-with-acceptance-" class="section-name selfRef">Comparison with Acceptance-Time Status</a>
+<div id="relationship-to-scheduled-resolution">
+<section id="section-8.4">
+        <h3 id="name-relationship-to-scheduled-r">
+<a href="#section-8.4" class="section-number selfRef">8.4. </a><a href="#name-relationship-to-scheduled-r" class="section-name selfRef">Relationship to Scheduled Resolution</a>
         </h3>
-<p id="section-9.4-1">A status mechanism such as <span>[<a href="#STATUS-LIST" class="cite xref">STATUS-LIST</a>]</span> lets a receiver pull a statement's state at the moment it is consumed, at the cost of a retrieval on the consumption path and an availability dependence on the status endpoint. The events defined here push state changes ahead of consumption, at the cost of stream state and the suppression exposure above. The two are complementary, and a deployment can use both.<a href="#section-9.4-1" class="pilcrow">¶</a></p>
+<p id="section-8.4-1"><span>[<a href="#STATUSLIST" class="cite xref">STATUSLIST</a>]</span> lets a receiver pull a statement's state at consumption or on a schedule, at the cost of a fetch and an availability dependence on the status endpoint. This specification does not replace that fetch and adds no second source for the answer. It reduces the interval between an issuer's change and a receiver's next fetch, for deployments where that interval matters more than the stream state it costs. A deployment that finds its scheduled interval acceptable needs nothing here.<a href="#section-8.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
 </div>
 <div id="privacy-considerations">
-<section id="section-10">
+<section id="section-9">
       <h2 id="name-privacy-considerations">
-<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
-<p id="section-10-1">Subject identifiers in these events name software an issuer has reviewed and, in aggregate, describe an organization's approved software estate. A transmitter <span class="bcp14">SHOULD</span> scope each stream to the subjects the receiving authorization server can act on, and a receiver <span class="bcp14">SHOULD</span> apply to event logs the handling it applies to statements (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>).<a href="#section-10-1" class="pilcrow">¶</a></p>
-<p id="section-10-2">Withdrawal Records (<a href="#withdrawal-records" class="auto internal xref">Section 5</a>) persist an issuer's negative decisions at every receiver, in some cases beyond the lifetime of the statements they concern. A receiver <span class="bcp14">SHOULD</span> retain them no longer than the refusal rules require and <span class="bcp14">SHOULD</span> apply to them the handling it applies to statements.<a href="#section-10-2" class="pilcrow">¶</a></p>
+<p id="section-9-1">Subject identifiers in these events name software an issuer has reviewed and, in aggregate, describe an organization's approved software estate. A transmitter <span class="bcp14">SHOULD</span> scope each stream to the subjects the receiving authorization server can act on, and a receiver <span class="bcp14">SHOULD</span> apply to event logs the handling it applies to statements (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>).<a href="#section-9-1" class="pilcrow">¶</a></p>
+<p id="section-9-2">Because this specification defines no durable receiver-side record, it adds no negative state about a client identifier that outlives the issuer's own published status. A receiver that logs events retains that record instead, and <span class="bcp14">SHOULD</span> bound its retention accordingly.<a href="#section-9-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="iana-considerations">
-<section id="section-11">
+<section id="section-10">
       <h2 id="name-iana-considerations">
-<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
 <div id="event-type-assignment">
-<section id="section-11.1">
+<section id="section-10.1">
         <h3 id="name-event-type-assignment">
-<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-event-type-assignment" class="section-name selfRef">Event Type Assignment</a>
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-event-type-assignment" class="section-name selfRef">Event Type Assignment</a>
         </h3>
-<p id="section-11.1-1">The event defined in <a href="#events" class="auto internal xref">Section 6</a> requires a URI identifier under a namespace this specification does not yet control. This version uses the placeholder base <code>https://schemas.openid.net/secevent/sw-stmt/event-type/</code> with the terminal segment <code>withdrawn</code>. Assignment of the final base URI, and registration where the publishing body maintains a registry of security event types, is to be resolved before publication.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+<p id="section-10.1-1">The event defined in <a href="#events" class="auto internal xref">Section 5</a> requires a URI identifier under a namespace this specification does not yet control. This version uses the placeholder base <code>https://schemas.openid.net/secevent/sw-stmt/event-type/</code> with the terminal segment <code>status-changed</code>. The final assignment depends on the venue in which this profile is published, since the Shared Signals Framework it profiles is maintained by the OpenID Foundation while the artifact and its status mechanism are IETF work. Assignment of the final base URI, and registration where the publishing body maintains a registry of security event types, is to be resolved before publication.<a href="#section-10.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="set-payload-claims">
-<section id="section-11.2">
+<section id="section-10.2">
         <h3 id="name-set-payload-claims">
-<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-set-payload-claims" class="section-name selfRef">SET Payload Claims</a>
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-set-payload-claims" class="section-name selfRef">SET Payload Claims</a>
         </h3>
-<p id="section-11.2-1">The payload claim <code>software_statement_jti</code> is defined by this specification for use in the event payload of <a href="#events" class="auto internal xref">Section 6</a>. Registration in a registry of SET payload claims, where the publishing body maintains one, is to be resolved before publication. The <code>event_timestamp</code> and <code>reason_admin</code> members are used as <span>[<a href="#CAEP" class="cite xref">CAEP</a>]</span> defines them.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
+<p id="section-10.2-1">The payload claim <code>software_statement_jti</code> is defined by this specification for use in the event payload of <a href="#events" class="auto internal xref">Section 5</a>. Registration in a registry of SET payload claims, where the publishing body maintains one, is to be resolved before publication. The <code>event_timestamp</code> and <code>reason_admin</code> members are used as <span>[<a href="#CAEP" class="cite xref">CAEP</a>]</span> defines them.<a href="#section-10.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
 </div>
 <div id="sec-combined-references">
-<section id="section-12">
+<section id="section-11">
       <h2 id="name-references">
-<a href="#section-12" class="section-number selfRef">12. </a><a href="#name-references" class="section-name selfRef">References</a>
+<a href="#section-11" class="section-number selfRef">11. </a><a href="#name-references" class="section-name selfRef">References</a>
       </h2>
 <div id="sec-normative-references">
-<section id="section-12.1">
+<section id="section-11.1">
         <h3 id="name-normative-references">
-<a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+<a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
 <dt id="CIMD">[CIMD]</dt>
@@ -1504,29 +1473,33 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <span class="refTitle">"OpenID Shared Signals Framework Specification 1.0"</span>, <span>n.d.</span>, <span>&lt;<a href="https://openid.net/specs/openid-sharedsignals-framework-1_0.html">https://openid.net/specs/openid-sharedsignals-framework-1_0.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="STATEMENT">[STATEMENT]</dt>
-      <dd>
+        <dd>
 <span class="refTitle">"CIMD Software Statement"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="STATUSLIST">[STATUSLIST]</dt>
+      <dd>
+<span class="refTitle">"Token Status List"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list">https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
 </div>
 <div id="sec-informative-references">
-<section id="section-12.2">
+<section id="section-11.2">
         <h3 id="name-informative-references">
-<a href="#section-12.2" class="section-number selfRef">12.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+<a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
 <dt id="CAEP">[CAEP]</dt>
         <dd>
 <span class="refTitle">"OpenID Continuous Access Evaluation Profile 1.0"</span>, <span>n.d.</span>, <span>&lt;<a href="https://openid.net/specs/openid-caep-1_0.html">https://openid.net/specs/openid-caep-1_0.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="RFC5646">[RFC5646]</dt>
+<dt id="ISSUANCE">[ISSUANCE]</dt>
         <dd>
-<span class="refTitle">"*** BROKEN REFERENCE ***"</span>. </dd>
+<span class="refTitle">"CIMD Software Statement Issuance"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-issuance">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-issuance</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="STATUS-LIST">[STATUS-LIST]</dt>
+<dt id="RFC5646">[RFC5646]</dt>
       <dd>
-<span class="refTitle">"Token Status List"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list">https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list</a>&gt;</span>. </dd>
+<span class="refAuthor">Phillips, A., Ed.</span> and <span class="refAuthor">M. Davis, Ed.</span>, <span class="refTitle">"Tags for Identifying Languages"</span>, <span class="seriesInfo">BCP 47</span>, <span class="seriesInfo">RFC 5646</span>, <span class="seriesInfo">DOI 10.17487/RFC5646</span>, <time datetime="2009-09" class="refDate">September 2009</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc5646">https://www.rfc-editor.org/rfc/rfc5646</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
@@ -1538,7 +1511,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-A-1">This profile exists because bounding a review's lifetime and withdrawing it promptly are different requirements that a single expiry cannot serve. It draws on the Shared Signals Framework and the Continuous Access Evaluation Profile for its transport and payload conventions.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<p id="appendix-A-1">This profile exists because a status a receiver polls and a status a receiver is told about differ only in latency, and latency is sometimes the requirement. It draws on the Shared Signals Framework and the Continuous Access Evaluation Profile for its transport and payload conventions, and it deliberately holds no state that Token Status List already holds.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
