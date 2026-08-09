@@ -69,6 +69,7 @@ Table of Contents
    2.  Conventions and Definitions
    3.  The Software Statement
      3.1.  Metadata Digest
+     3.2.  Validating a Statement
    4.  Issuer Trust Establishment
    5.  Consumption at Registration
      5.1.  Registration Validity
@@ -107,12 +108,12 @@ Table of Contents
      16.1.  OAuth Parameters Registry
      16.2.  Media Type Registration
      16.3.  JSON Web Token Claims Registry
+     16.4.  OAuth Extensions Error Registry
+     16.5.  OAuth Dynamic Client Registration Metadata Registry
+     16.6.  OAuth Authorization Server Metadata Registry
    17. References
      17.1.  Normative References
      17.2.  Informative References
-   Appendix A.  OAuth Extensions Error Registry
-     A.1.  OAuth Dynamic Client Registration Metadata Registry
-     A.2.  OAuth Authorization Server Metadata Registry
    Acknowledgments
    Author's Address
 
@@ -127,8 +128,7 @@ Table of Contents
    authorization servers that relied on it.
 
    This specification defines the trust configuration a consuming server
-   keeps (Section 4) and two points at which it consumes the artifact
-   [ISSUANCE] defines:
+   keeps (Section 4) and two points at which it consumes it:
 
    *  *At registration* (Section 5): the statement is consumed in an
       [RFC7591] registration request and at renewal, and its exp bounds
@@ -166,13 +166,13 @@ Table of Contents
    lifetime.  An enterprise operating a statement issuer is the
    motivating deployment (Section 8).
 
-   Statement format, issuance, and validation are defined by [ISSUANCE]
-   and are not modified here; this document states which elements each
-   consumption model requires, and how the client acquired its statement
-   is out of scope.  A statement authorizes metadata, not its presenter.
-   Runtime proof of the presenter is what the sender-constraint rules of
-   Section 6.3 supply, and nothing in this specification attests
-   software instances or binaries.
+   This document defines the statement, its validation, and its
+   consumption; [ISSUANCE] defines how a client obtains one, and how a
+   client acquired its statement is out of scope here.  A statement
+   authorizes metadata, not its presenter.  Runtime proof of the
+   presenter is what the sender-constraint rules of Section 6.3 supply,
+   and nothing in this specification attests software instances or
+   binaries.
 
 1.1.  Protocol Overview
 
@@ -181,8 +181,7 @@ Table of Contents
    Registration governed by a statement:
 
    1.  The client registers through [RFC7591], carrying a statement in
-       the software_statement member, which binds to the registration by
-       its iss and sub ([ISSUANCE]).
+       the software_statement member.
 
    2.  The authorization server records the statement's identity and exp
        with the registration; the registration is valid until that
@@ -219,10 +218,9 @@ Table of Contents
    a third party about a client, accepted by an authorization server
    that has configured trust in the signer, and it is no more than that:
    an attributable claim bounded by the signer's process, not proof that
-   what it says is true ([ISSUANCE]).  It differs from the client
-   attestation of [ABCA] and the client instance assertion of
-   [CLIENT-INSTANCE] in subject, authority, lifetime, and effect, not in
-   kind.
+   what it says is true.  It differs from the client attestation of
+   [ABCA] and the client instance assertion of [CLIENT-INSTANCE] in
+   subject, authority, lifetime, and effect, not in kind.
 
    Subject:  A software statement attests client software and the
       metadata a reviewer evaluated.  A client attestation attests a
@@ -267,10 +265,10 @@ Table of Contents
 
    OAuth terminology is defined by [RFC6749].  Client metadata and
    software statement terminology is defined by [RFC7591].  Client ID
-   Metadata Document terminology is defined by [CIMD].  Statement
-   issuance terminology, including Issuing Authorization Server,
-   Trusting Authorization Server, and the statement format and
-   validation rules, is defined by [ISSUANCE].
+   Metadata Document terminology is defined by [CIMD].  Issuing
+   Authorization Server and Trusting Authorization Server are defined by
+   [ISSUANCE]; this document defines the statement, its validation, and
+   its consumption.
 
    This specification additionally defines the following terms:
 
@@ -311,8 +309,8 @@ Table of Contents
    the same issuer.
 
    Extensions can add claims; an incompatible revision would use a new
-   type value.  Supported algorithms appear in
-   software_statement_signing_alg_values_supported (Section 12).
+   type value.  An issuer advertises the algorithms it signs with in its
+   own authorization server metadata ([ISSUANCE]).
 
    A statement says that its issuer evaluated the Client ID Metadata
    Document whose content the digest names, and vouches for it to
@@ -335,8 +333,8 @@ Table of Contents
       carried audience values every value in the claim MUST have
       appeared among them.  Where the claim is absent, the statement is
       unrestricted and acceptance rests on the consumer's configured
-      trust in the issuer and its identifier scope (this specification).
-      An issuer SHOULD omit the claim, so that one review serves every
+      trust in the issuer and its identifier scope (Section 4).  An
+      issuer SHOULD omit the claim, so that one review serves every
       server that trusts it, and include it only where it means to limit
       reach: a statement attesting no key material is usable by whoever
       holds it, and naming an audience is what bounds that (this
@@ -349,7 +347,7 @@ Table of Contents
       value is strictly increasing across its signing nodes, so that the
       order in which it made its decisions is recoverable from the
       statements themselves.  Consumers rely on that order when one
-      statement replaces another (this specification) and when a
+      statement replaces another (Section 5.2, Section 6.5.1) and when a
       withdrawal separates statements issued before it from those issued
       after ([SIGNALS]).  Back-dating a statement to allow for clock
       skew makes it unusable as a replacement.
@@ -361,11 +359,11 @@ Table of Contents
    jti:  REQUIRED.  A unique identifier for the statement within the
       issuer's namespace.
 
-   cimd_digest:  REQUIRED.  The metadata digest of the Client ID
-      Metadata Document the issuer evaluated.  This claim binds the
-      statement to the exact document content evaluated during issuance
-      and lets any party determine whether the client's currently
-      published metadata still matches what was attested.
+   cimd_digest:  REQUIRED.  The metadata digest (Section 3.1) of the
+      Client ID Metadata Document the issuer evaluated.  This claim
+      binds the statement to the exact document content evaluated during
+      issuance and lets any party determine whether the client's
+      currently published metadata still matches what was attested.
 
    A statement carries no client metadata.  The reviewed metadata is the
    document the digest names, which a consuming authorization server
@@ -377,22 +375,19 @@ Table of Contents
 
    An issuer that means to vouch for particular members without binding
    the whole document needs an extension defining what a partial review
-   asserts and how a consumer applies it ([ISSUANCE]).
+   asserts and how a consumer applies it (Section 13).
 
    The issuer determines the lifetime, and any audience restriction,
    according to policy.  Lifetime pulls in two directions: a short one
    bounds exposure and keeps the review fresh, while at a server
    implementing the registration-validity model of this specification
    the same value is the registration's validity, and so the renewal
-   cadence both parties must sustain.  An issuer SHOULD choose a
-   lifetime it can renew reliably, and SHOULD stagger expiries or renew
-   ahead of the boundary so that a fleet issued together does not lapse
-   together.
+   cadence both parties must sustain.
 
    The sub claim is the client identifier URL, not the local client_id
    assigned through [RFC7591] registration.  A trusting authorization
    server MAY use sub to correlate registrations and apply per-client
-   policy (this specification).
+   policy (Section 7).
 
 3.1.  Metadata Digest
 
@@ -407,6 +402,52 @@ Table of Contents
    An issuer computes the digest over the document it evaluated; a
    consumer computes it over the document it retrieves, and equality is
    what says the two are the same bytes (Section 6.4).
+
+3.2.  Validating a Statement
+
+   Before accepting a statement, a trusting authorization server MUST:
+
+   *  verify that the typ header carries the value software-
+      statement+jwt;
+
+   *  verify the signature under a key trusted for the exact iss value,
+      obtained as Section 4 requires;
+
+   *  verify that every required claim of Section 3 is present and of
+      the correct type, rejecting a statement that omits one;
+
+   *  validate iat and exp, rejecting an expired statement and one whose
+      iat is unreasonably far in the future according to its clock-skew
+      policy;
+
+   *  where the statement carries aud, verify that one of its own
+      audience identifiers appears in it;
+
+   *  verify that sub is a client identifier URL conforming to [CIMD],
+      and that it falls within the identifier scope for which this
+      server accepts the issuer (Section 4);
+
+   *  reject a statement carrying client metadata claims, which
+      Section 3 forbids; and
+
+   *  apply the JWT validation guidance in [RFC8725].
+
+   An issuer URL or JWK Set does not establish trust.  A trusting
+   authorization server accepts only configured issuers (Section 4) and
+   obtains their keys from that issuer's authorization server metadata
+   [RFC8414], never from the statement.
+
+   Rejections at a registration endpoint use the error codes of
+   Section 3.2.2 of [RFC7591]: invalid_software_statement where the
+   statement is malformed, expired, or fails signature or claim
+   validation, and unapproved_software_statement where it validates but
+   is not acceptable here, because its issuer is not configured, its aud
+   excludes this server, or its sub falls outside the issuer's scope.
+   Rejections elsewhere use Section 10.
+
+   A trusting authorization server resolving the reviewed document MUST
+   reject a document containing duplicate object member names, since
+   parsers interpret them differently despite an identical digest.
 
 4.  Issuer Trust Establishment
 
@@ -442,22 +483,22 @@ Table of Contents
 
    These inputs, not the signature alone, define acceptance.  Because
    the issuer is an authorization server role, key retrieval reuses
-   [RFC8414] discovery (Section 12).
+   [RFC8414] discovery.
 
    A trusting authorization server MUST derive trust from this local
    configuration and MUST NOT derive it from an iss, jku, x5u, or other
    key-location value carried in a presented statement.  Having
-   established trust, it validates each statement as described in
-   [ISSUANCE].
+   established trust, it validates each statement as Section 3.2
+   describes.
 
    Issuer trust SHOULD be scoped as well as explicit.  Trust
    configuration SHOULD constrain each issuer to the client identifier
    namespaces it is expected to attest, for example URLs under the
    domains of the software publishers it serves, and a statement whose
    sub falls outside that scope MUST be rejected even when its signature
-   verifies ([ISSUANCE]).  An issuer accepted for all values of sub can,
-   if compromised or over-broad, mint acceptable statements about any
-   client software.
+   verifies (Section 3.2).  An issuer accepted for all values of sub
+   can, if compromised or over-broad, mint acceptable statements about
+   any client software.
 
    Where an issuer attests software across many publishers, as an
    enterprise issuer does, the scope is the set of identifiers it is
@@ -468,10 +509,9 @@ Table of Contents
 
    The statement is consumed in the software_statement member of an
    [RFC7591] registration request.  The authorization server validates
-   it as [ISSUANCE] requires, with rejections using the [RFC7591] error
-   codes defined there, and registers the client under its ordinary
-   registration policy.  This section defines what the statement's
-   lifetime does to the resulting registration.
+   it as Section 3.2 requires, and registers the client under its
+   ordinary registration policy.  This section defines what the
+   statement's lifetime does to the resulting registration.
 
 5.1.  Registration Validity
 
@@ -534,7 +574,7 @@ Table of Contents
 
    The replacement MUST:
 
-   *  validate under [ISSUANCE] with this server in its audience;
+   *  validate under Section 3.2 with this server in its audience;
 
    *  carry the governing statement's iss and sub;
 
@@ -572,11 +612,10 @@ Table of Contents
 
    A review covers the document the issuer evaluated, and cimd_digest is
    what says which one.  A mismatch against the currently published
-   document is a policy input under [ISSUANCE] rather than an automatic
-   failure, and re-issuance against the new document is the remedy.  The
-   statement's bounded lifetime caps how stale a review can get: drift
-   the digest comparison never observes still expires with the
-   statement.
+   document is a policy input rather than an automatic failure, and re-
+   issuance against the new document is the remedy.  The statement's
+   bounded lifetime caps how stale a review can get: drift the digest
+   comparison never observes still expires with the statement.
 
 6.  Runtime Presentation
 
@@ -650,11 +689,10 @@ Table of Contents
    On receiving a presentation, the authorization server proceeds as
    follows, rejecting as Section 10 defines at the first failure:
 
-   1.  Validate the statement under [ISSUANCE]: format, issuer trust,
-       audience, lifetime, and namespace, with digest comparison as the
-       policy input defined there.  Complete all validation that does
-       not require a client-controlled network retrieval before
-       performing such a retrieval.
+   1.  Validate the statement (Section 3.2), completing every check that
+       needs no client-controlled retrieval.  Complete all validation
+       that does not require a client-controlled network retrieval
+       before performing such a retrieval.
 
    2.  Verify the statement requirements of Section 3 and the client_id
        rule of Section 6.1.
@@ -700,8 +738,8 @@ Table of Contents
 6.4.  Reviewed Metadata
 
    A statement vouches for a document, not for a set of claims
-   ([ISSUANCE]), so the client's metadata for the request is the
-   document the statement names.
+   (Section 3), so the client's metadata for the request is the document
+   the statement names.
 
    Having validated the statement and its proof, the authorization
    server MUST retrieve the Client ID Metadata Document at the
@@ -709,7 +747,7 @@ Table of Contents
    means the served document is the reviewed one, and its members are
    the client's metadata for the request.  A mismatch means the document
    changed after review; the authorization server applies the change
-   policy of [ISSUANCE], which MAY accept the current document, reject
+   policy of Section 5.3, which MAY accept the current document, reject
    the presentation, or apply a narrower policy to it, and MUST NOT
    treat the changed document as reviewed.
 
@@ -790,7 +828,7 @@ Table of Contents
    software_statement parameter of the refresh request.  The
    replacement:
 
-   *  MUST validate under [ISSUANCE], including its audience where it
+   *  MUST validate under Section 3.2, including its audience where it
       carries one;
 
    *  MUST have the establishment's iss and sub;
@@ -949,9 +987,9 @@ Table of Contents
 10.  Error Responses
 
    A statement consumed at registration is rejected with the [RFC7591]
-   error codes as [ISSUANCE] defines.  A rejected presentation or
-   delivery uses the error responses of [RFC6749] for the endpoint at
-   which it was presented.  At the token endpoint:
+   error codes Section 3.2 names.  A rejected presentation or delivery
+   uses the error responses of [RFC6749] for the endpoint at which it
+   was presented.  At the token endpoint:
 
    invalid_client:  the statement or its proof fails to establish the
       client, including failed statement requirements (Section 3) or
@@ -984,13 +1022,12 @@ Table of Contents
       request repeating the parameter (Section 6.1, Section 6.5).
 
    At the pushed authorization request endpoint, the corresponding
-   [RFC9126] error responses apply.  On refresh-token use of a runtime-
-   established grant, Section 6.5.1 takes precedence: a missing or
-   failing replacement statement is invalid_grant, the grant's
-   continuation failing rather than client establishment.  Registration
-   validity is reported differently, as invalid_client under
-   Section 5.2, because the registration rather than the grant is what
-   lapsed; neither rejection indicates refresh-token replay ([RFC9700]).
+   [RFC9126] error responses apply.  On refresh-token use, Section 6.5.1
+   takes precedence: a missing or failing replacement statement is
+   statement_required.  Registration validity is reported differently,
+   as invalid_client under Section 5.2, because the registration rather
+   than the grant is what lapsed; neither rejection indicates refresh-
+   token replay ([RFC9700]).
 
    Where the proof mechanism defines a recoverable error of its own,
    such as a DPoP nonce challenge [RFC9449], that error takes precedence
@@ -1119,7 +1156,7 @@ Table of Contents
    references where the client publishes its current statements, so a
    resolving server fetches the review out of band, which differs from
    embedding a statement in the document as the digest rule of
-   [ISSUANCE] forbids.
+   Section 3.1 forbids.
 
 14.  Security Considerations
 
@@ -1134,7 +1171,7 @@ Table of Contents
    reopens that question and needs to answer it in its own terms.
 
    A statement consumed at registration is a reusable bearer artifact
-   until it expires, so [ISSUANCE] relies on narrow audience and
+   until it expires, so an issuer relies on narrow audience and
    lifetime, and the bounds of Section 7 limit what a stolen statement
    can create.
 
@@ -1145,9 +1182,9 @@ Table of Contents
    cached key set under Section 6.3 additionally accepts that a just-
    removed key can briefly continue to verify.
 
-   Nothing in this specification relaxes the validation rules of
-   [ISSUANCE]; it adds the sender constraint, the grant bindings of
-   Section 6.5, and the registration-validity model on top of them.
+   Nothing elsewhere relaxes these validation rules; it adds the sender
+   constraint, the grant bindings of Section 6.5, and the registration-
+   validity model on top of them.
 
 14.2.  Renewal Authenticates the Credential
 
@@ -1370,6 +1407,86 @@ Table of Contents
 
    Specification Document(s):  This specification, Section 3
 
+16.4.  OAuth Extensions Error Registry
+
+   This specification requests registration of the following error codes
+   in the IANA "OAuth Extensions Error Registry" established by
+   [RFC6749]:
+
+   Error Name:  statement_required
+
+   Error Usage Location:  token error response, pushed authorization
+      request error response
+
+   Related Protocol Extension:  CIMD Software Statement
+
+   Change Controller:  IESG
+
+   Specification Document(s):  This specification, Section 10
+
+   Error Name:  temporarily_unavailable
+
+   Existing Registration:  [RFC6749]
+
+   Error Usage Location:  token error response, in addition to the
+      locations already registered
+
+   Change Controller:  IESG
+
+   Specification Document(s):  [RFC6749], this specification
+      (Section 10)
+
+16.5.  OAuth Dynamic Client Registration Metadata Registry
+
+   This specification requests registration of the following client
+   metadata member, returned by an authorization server in a
+   registration response:
+
+   Client Metadata Name:  registration_expires_at
+
+   Client Metadata Description:  Time at which a statement-governed
+      registration ceases to be valid, as a NumericDate.
+
+   Change Controller:  IESG
+
+   Specification Document(s):  This specification, Section 5.1
+
+16.6.  OAuth Authorization Server Metadata Registry
+
+   This specification requests registration of the following values in
+   the IANA "OAuth Authorization Server Metadata" registry established
+   by [RFC8414].
+
+   Metadata Name:  software_statement_presentation_supported
+
+   Metadata Description:  JSON array of endpoint names at which the
+      authorization server accepts a software statement presented at
+      runtime.
+
+   Change Controller:  IESG
+
+   Specification Document(s):  This specification, Section 12
+
+   Metadata Name:  software_statement_presentation_grant_types_supported
+
+   Metadata Description:  JSON array of grant type identifiers on which
+      the authorization server accepts a runtime presentation, beyond
+      those the specification names.
+
+   Change Controller:  IESG
+
+   Specification Document(s):  This specification, Section 12
+
+   Metadata Name:  software_statement_registration_validity_supported
+
+   Metadata Description:  Boolean value indicating whether registrations
+      created from validated software statements are governed by the
+      statement validity and revalidation rules of this specification.
+
+   Change Controller:  IESG
+
+   Specification Document(s):  This specification, Section 12
+
 17.  References
 
 17.1.  Normative References
@@ -1464,85 +1581,6 @@ Table of Contents
    [SIGNALS]  "Shared Signals Events for CIMD Software Statements",
               n.d., <https://datatracker.ietf.org/doc/draft-mcguinness-
               oauth-cimd-sw-stmt-signals>.
-
-Appendix A.  OAuth Extensions Error Registry
-
-   This specification requests registration of the following error codes
-   in the IANA "OAuth Extensions Error Registry" established by
-   [RFC6749]:
-
-   Error Name:  statement_required
-
-   Error Usage Location:  token error response
-
-   Related Protocol Extension:  OAuth 2.0 Software Statement Consumption
-
-   Change Controller:  IESG
-
-   Specification Document(s):  This specification, Section 10
-
-   Error Name:  temporarily_unavailable
-
-   Existing Registration:  [RFC6749]
-
-   Error Usage Location:  token error response, in addition to the
-      locations already registered
-
-   Change Controller:  IESG
-
-   Specification Document(s):  [RFC6749], this specification
-      (Section 10)
-
-A.1.  OAuth Dynamic Client Registration Metadata Registry
-
-   This specification requests registration of the following client
-   metadata member, returned by an authorization server in a
-   registration response:
-
-   Client Metadata Name:  registration_expires_at
-
-   Client Metadata Description:  Time at which a statement-governed
-      registration ceases to be valid, as a NumericDate.
-
-   Change Controller:  IESG
-
-   Specification Document(s):  This specification, Section 5.1
-
-A.2.  OAuth Authorization Server Metadata Registry
-
-   This specification requests registration of the following values in
-   the IANA "OAuth Authorization Server Metadata" registry established
-   by [RFC8414].
-
-   Metadata Name:  software_statement_presentation_supported
-
-   Metadata Description:  Boolean value, or JSON array of endpoint
-      names, indicating whether and where the authorization server
-      accepts a software statement presented at runtime.
-
-   Change Controller:  IESG
-
-   Specification Document(s):  This specification, Section 12
-
-   Metadata Name:  software_statement_presentation_grant_types_supported
-
-   Metadata Description:  JSON array of grant type identifiers on which
-      the authorization server accepts a runtime presentation, beyond
-      those the specification names.
-
-   Change Controller:  IESG
-
-   Specification Document(s):  This specification, Section 12
-
-   Metadata Name:  software_statement_registration_validity_supported
-
-   Metadata Description:  Boolean value indicating whether registrations
-      created from validated software statements are governed by the
-      statement validity and revalidation rules of this specification.
-
-   Change Controller:  IESG
-
-   Specification Document(s):  This specification, Section 12
 
 Acknowledgments
 

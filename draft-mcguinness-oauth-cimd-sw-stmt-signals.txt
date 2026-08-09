@@ -86,8 +86,8 @@ Table of Contents
 
 1.  Introduction
 
-   [STATEMENT] defines a software statement in which an issuer attests
-   reviewed client metadata, and [STATEMENT] defines how a trusting
+   [STATEMENT] defines a software statement, in which an issuer vouches
+   for a reviewed Client ID Metadata Document, and how a trusting
    authorization server consumes one: at registration, where the
    statement's expiry can bound the registration's validity, and at
    runtime, where it establishes a client for a request.  In both cases
@@ -109,7 +109,7 @@ Table of Contents
    [RFC8417] delivered by the framework's push [RFC8935] or poll
    [RFC8936] bindings.
 
-   This specification defines the subject identification, event types,
+   This specification defines the subject identification, the event, its
    payload claims, the durable records a receiver keeps, and its
    processing rules.  It defines no new endpoint, transport, subject
    identifier format, or trust establishment mechanism.
@@ -120,7 +120,7 @@ Table of Contents
    is durable rather than momentary, which Section 5 specifies, so a
    client holding an unexpired statement cannot restore what an event
    ended.  Deployments therefore keep bounded statement lifetimes, and
-   neither [STATEMENT] nor [STATEMENT] depends on this specification.
+   [STATEMENT] does not depend on this specification.
 
    This mechanism buys latency, not correctness.  A statement is carried
    by the client it admits, and a client has no reason to stop
@@ -140,19 +140,19 @@ Table of Contents
    Transmitter, Receiver, Stream, and the delivery and configuration
    mechanisms are defined by [SSF].  Security Event Token, or SET, is
    defined by [RFC8417].  Subject identifier formats are defined by
-   [RFC9493].  The software statement, its claims, and its validation
-   are defined by [STATEMENT].  Issuer trust configuration, registration
-   validity, runtime presentation, and the per-grant establishment state
-   are defined by [STATEMENT].
+   [RFC9493].  The software statement, its claims, its validation,
+   issuer trust configuration, registration validity, runtime
+   presentation, and the per-grant establishment state are defined by
+   [STATEMENT].
 
    This specification additionally defines the following terms:
 
    Statement Issuer:  The party that signed a software statement, acting
       as a Transmitter of the events defined here.
 
-   Consuming Authorization Server:  A trusting authorization server that
-      has configured the statement issuer, acting as a Receiver of the
-      events defined here.
+   Consuming Authorization Server:  An authorization server that has
+      configured the statement issuer under [STATEMENT], acting as a
+      Receiver of the events defined here.
 
    Standing:  What a client may do at a consuming authorization server
       by virtue of a software statement: its registration and that
@@ -245,9 +245,9 @@ Table of Contents
 
    A statement from that issuer for that subject with an iat after the
    record's effective time is a later decision by the same authority.
-   It is accepted under the ordinary rules of [STATEMENT] and
-   [STATEMENT], and restores what the withdrawal ended.  This is the
-   only recovery path, and it requires the issuer to act.
+   It is accepted under the ordinary rules of [STATEMENT], and restores
+   what the withdrawal ended.  This is the only recovery path, and it
+   requires the issuer to act.
 
    A refusal under this section takes effect wherever the statement
    would otherwise be consumed: a registration governed by a refused
@@ -321,8 +321,8 @@ Table of Contents
    2.  reject an event whose aud does not contain its issuer identifier
        (Section 3), and an event whose type it does not recognize;
 
-   3.  resolve the subject (Section 4) and the scope of the effect from
-       the event type (Section 3); and
+   3.  resolve the subject (Section 4) and the scope of the effect
+       (Section 3); and
 
    4.  apply the effect the event type defines, recording it as
        Section 5 requires.
@@ -339,9 +339,9 @@ Table of Contents
    Two constraints bound every event:
 
    *  An event MUST NOT create standing, extend a statement's lifetime,
-      restore a statement previously revoked, or otherwise increase what
-      a client may do.  A receiver MUST ignore any payload member that
-      would have such an effect.  Restoring standing requires a
+      restore a statement previously withdrawn, or otherwise increase
+      what a client may do.  A receiver MUST ignore any payload member
+      that would have such an effect.  Restoring standing requires a
       statement, presented or delivered as [STATEMENT] defines.
 
    *  A receiver MUST continue to enforce statement expiry independently
@@ -359,8 +359,8 @@ Table of Contents
    event whose event_timestamp precedes the event that created it.  A
    delayed or replayed withdrawal therefore cannot destroy an approval
    the tenant recorded after making it.  Records are kept per subject
-   and issuer, and per jti for statement-revoked, so that a later event
-   never silently supersedes an earlier one of a different kind.
+   and issuer, and per jti where an event named one, so that a later
+   event never silently supersedes an earlier one of narrower scope.
 
    An effect applied by an event does not revoke access tokens already
    issued.  A receiver applies its own grant and token lifetime policy,
@@ -385,11 +385,11 @@ Table of Contents
    request that names no subjects and MUST NOT require subject
    enumeration as a condition of delivery.
 
-   A receiver SHOULD request every event type this specification defines
-   that the transmitting issuer's roles can produce, and SHOULD use the
-   stream verification facility of [SSF] on a schedule, since a stream
-   delivering nothing because it was misconfigured is otherwise
-   indistinguishable from an issuer with nothing to report.
+   A receiver SHOULD request the withdrawal event this specification
+   defines, and SHOULD use the stream verification facility of [SSF] on
+   a schedule, since a stream delivering nothing because it was
+   misconfigured is otherwise indistinguishable from an issuer with
+   nothing to report.
 
 9.  Security Considerations
 
@@ -457,7 +457,7 @@ Table of Contents
 
 11.1.  Event Type Assignment
 
-   The event types defined in Section 6 require URI identifiers under a
+   The event defined in Section 6 requires a URI identifier under a
    namespace this specification does not yet control.  This version uses
    the placeholder base https://schemas.openid.net/secevent/sw-stmt/
    event-type/ with the terminal segment withdrawn.  Assignment of the
@@ -501,6 +501,16 @@ Table of Contents
               DOI 10.17487/RFC8417, July 2018,
               <https://www.rfc-editor.org/rfc/rfc8417>.
 
+   [RFC8935]  Backman, A., Ed., Jones, M., Ed., Scurtescu, M., Ansari,
+              M., and A. Nadalin, "Push-Based Security Event Token (SET)
+              Delivery Using HTTP", RFC 8935, DOI 10.17487/RFC8935,
+              November 2020, <https://www.rfc-editor.org/rfc/rfc8935>.
+
+   [RFC8936]  Backman, A., Ed., Jones, M., Ed., Scurtescu, M., Ansari,
+              M., and A. Nadalin, "Poll-Based Security Event Token (SET)
+              Delivery Using HTTP", RFC 8936, DOI 10.17487/RFC8936,
+              November 2020, <https://www.rfc-editor.org/rfc/rfc8936>.
+
    [RFC9493]  Backman, A., Ed., Scurtescu, M., and P. Jain, "Subject
               Identifiers for Security Event Tokens", RFC 9493,
               DOI 10.17487/RFC9493, December 2023,
@@ -519,16 +529,6 @@ Table of Contents
 
    [CAEP]     "OpenID Continuous Access Evaluation Profile 1.0", n.d.,
               <https://openid.net/specs/openid-caep-1_0.html>.
-
-   [RFC8935]  Backman, A., Ed., Jones, M., Ed., Scurtescu, M., Ansari,
-              M., and A. Nadalin, "Push-Based Security Event Token (SET)
-              Delivery Using HTTP", RFC 8935, DOI 10.17487/RFC8935,
-              November 2020, <https://www.rfc-editor.org/rfc/rfc8935>.
-
-   [RFC8936]  Backman, A., Ed., Jones, M., Ed., Scurtescu, M., Ansari,
-              M., and A. Nadalin, "Poll-Based Security Event Token (SET)
-              Delivery Using HTTP", RFC 8936, DOI 10.17487/RFC8936,
-              November 2020, <https://www.rfc-editor.org/rfc/rfc8936>.
 
    [STATUS-LIST]
               "Token Status List", n.d.,

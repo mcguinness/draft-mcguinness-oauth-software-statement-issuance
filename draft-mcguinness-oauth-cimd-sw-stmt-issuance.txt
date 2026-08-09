@@ -29,8 +29,8 @@ Abstract
    instead uses OAuth 2.0 Token Exchange (RFC 8693), without a redirect.
 
    The issued statement is consumed through RFC 7591 dynamic client
-   registration; a companion specification defines sender-constrained
-   runtime presentation in authorization and token requests.
+   registration; the companion [STATEMENT] defines the artifact, its
+   validation, and its consumption.
 
 Status of This Memo
 
@@ -100,11 +100,11 @@ Table of Contents
      14.3.  OAuth Parameters Registry
      14.4.  OAuth Extensions Error Registry
      14.5.  OAuth Authorization Server Metadata Registry
-   15. Design Rationale
-   16. Acknowledgments
-   17. References
-     17.1.  Normative References
-     17.2.  Informative References
+   15. References
+     15.1.  Normative References
+     15.2.  Informative References
+   Appendix A.  Design Rationale
+   Acknowledgments
    Author's Address
 
 1.  Introduction
@@ -138,13 +138,11 @@ Table of Contents
    audience can rely on the signed decision under its own policy
    (Section 12.2, [STATEMENT], Section 1.1).
 
-   This specification supplies the missing issuance protocol and hardens
-   the existing artifact for interoperability ([STATEMENT]).  This
-   document owns the artifact and how a client obtains one.  Everything
-   a consuming authorization server does with a statement, validating
-   it, applying it, bounding a registration by its expiry, and
-   presenting it at runtime, is defined by the companion [STATEMENT].
-   It introduces no new client credential or federation architecture.
+   This specification supplies the missing issuance protocol.  The
+   artifact itself, its claims, its validation, and everything a
+   consuming authorization server does with it are defined by
+   [STATEMENT]; this document defines how a client obtains one.  It
+   introduces no new client credential or federation architecture.
    Portability remains bounded by configured issuer trust, typically
    within an ecosystem or administrative domain rather than the open
    web.
@@ -230,8 +228,8 @@ Table of Contents
 
    This specification uses the following building blocks:
 
-   *  [RFC7591] defines the software statement and the client metadata
-      carried in it.
+   *  [RFC7591] defines the software statement; [STATEMENT] profiles it
+      for clients identified by a Client ID Metadata Document.
 
    *  [CIMD] defines the client identifier, canonical metadata source,
       pre-registration, and metadata-change handling.  Those mechanisms
@@ -319,9 +317,7 @@ Table of Contents
    Metadata Snapshot:  The validated canonical metadata bound to a
       request, as defined in Section 4.1.
 
-   Metadata Digest:  The unpadded base64url encoding of the SHA-256 hash
-      of the retrieved octets of a metadata document, as defined in
-      Section 4.1.
+   Metadata Digest:  As defined in [STATEMENT].
 
 3.  Protocol Overview
 
@@ -569,13 +565,13 @@ Table of Contents
       values MUST NOT be repeated, and order is insignificant.
 
    The authorization server selects the final audience according to
-   policy.  When the parameter is present, every value in the
-   statement's aud claim MUST have appeared in the request, and where no
-   requested audience is acceptable the authorization server MUST reject
-   the request with invalid_target [RFC8693], following the
-   authorization-request precedent of [RFC8707].  These semantics apply
-   only to software statement requests and do not affect proprietary
-   uses of audience for access-token targeting.
+   policy.  The claim constraint that follows from a present parameter
+   is stated in [STATEMENT].  Where no requested audience is acceptable
+   the authorization server MUST reject the request with invalid_target
+   [RFC8693], following the authorization-request precedent of
+   [RFC8707].  These semantics apply only to software statement requests
+   and do not affect proprietary uses of audience for access-token
+   targeting.
 
    completion_mode:  OPTIONAL.  A value that includes deferred, sent as
       the advance hint [DTR] defines for an endpoint preceding a token
@@ -945,7 +941,7 @@ Table of Contents
       polling.  A client MUST NOT send the client_notification_token
       parameter of [DTR], and an authorization server MUST NOT deliver a
       callback, whatever the client's metadata says.  Callback delivery
-      is a deferred capability (Section 15).
+      is a deferred capability (Appendix A).
 
    *  A successful polling response is the software statement token
       response of Section 10, not an access token response.
@@ -975,7 +971,11 @@ Table of Contents
    application/json, and the following members:
 
    access_token:  REQUIRED.  The software statement issued by the
-      authorization server.
+      authorization server.  It MUST conform to [STATEMENT]: sub is the
+      client identifier URL of the request, cimd_digest is the digest of
+      the bound metadata snapshot, aud is the selected audience where
+      one is restricted, and the statement carries no client metadata
+      claims.
 
    issued_token_type:  REQUIRED.  The value MUST be
       urn:ietf:params:oauth:token-type:software-statement.
@@ -1171,7 +1171,7 @@ Table of Contents
    A software statement means one thing: the issuer evaluated the exact
    document content captured in the metadata snapshot (Section 4.1),
    under its issuance policy, at the time recorded in iat, and decided
-   to attest the contained metadata for the named audience.
+   to vouch for it to the named audience.
 
    The client authors the metadata document, so issuance does not make
    every value an independently verified fact.  It records an
@@ -1297,11 +1297,7 @@ Table of Contents
 
    *  Issuers SHOULD prefer signature algorithms with modern security
       properties, such as PS256, ES256, or EdDSA, over RSASSA-PKCS1-v1_5
-      (RS256).
-
-   *  Trusting authorization servers MUST restrict algorithms to those
-      allowed for the issuer and MUST follow [RFC8725] when selecting
-      keys and validating JWTs.
+      (RS256), and MUST follow [RFC8725] when signing.
 
 12.8.  Approver Identity and Audit
 
@@ -1474,82 +1470,9 @@ Table of Contents
    Specification Document(s):  This specification, Section 11 and
       Section 8
 
-15.  Design Rationale
+15.  References
 
-   *Why the issuer is an authorization server role.* Issuance is an
-   OAuth interaction: it authenticates a client, applies policy, and
-   returns a signed artifact.  Reusing the role gives key publication,
-   discovery, and client authentication without inventing any of them.
-
-   *Why the authorization endpoint.* A first-time client holds no
-   credential at the issuer, and approval may involve a human.  The
-   redirect flow is how OAuth already handles both.  A client that holds
-   an initial access token skips it entirely through the token exchange
-   profile.
-
-   *Why the software statement code is not an authorization code.*
-   Redeeming an authorization code issues an access token under
-   [RFC6749].  This flow issues an artifact that is not an access token
-   and grants nothing, so a distinct code keeps the two from being
-   confused by implementations that treat any code as spendable.
-
-   *Why the response uses access_token.* [RFC8693] defines the
-   container, and reusing it means existing token endpoint machinery
-   carries the artifact.  The issued_token_type says what it actually
-   is.
-
-   *Why not the device authorization grant.* [RFC8628] has the right
-   shape for a human decision that outlives a request, and an issuer
-   whose approval is always out of band can use it.  It assumes a user
-   co-present with a constrained device and returns a user code for that
-   person to enter elsewhere; issuance approval is made by an
-   administrator or reviewer who is not the party operating the client,
-   often not present at all, and the client already has a browser.  The
-   redirect flow reuses the machinery a client already has for the case
-   where the approver can be reached through it, and the token exchange
-   profile covers the case where no browser is involved.
-
-   *Why not a profile of attestation-based client authentication.* A
-   client attestation and a software statement are both signed third-
-   party assertions presented with a key proof, and the mechanics
-   converge at the token endpoint.  They differ in what the signer
-   speaks for: an attester vouches for a running instance and its key,
-   on a lifetime measured in minutes, to the server in front of it; a
-   statement issuer vouches for reviewed software, on a lifetime
-   measured in days, to every server that trusts it.  Profiling one as
-   the other would give the reviewed-software decision an instance-
-   scoped trust model, or give instance attestation a portability it
-   should not have.  [STATEMENT] composes the two rather than merging
-   them.
-
-   *Why not OpenID Federation trust marks.* A trust mark is the closest
-   prior art: a signed third-party assertion about an entity, with a
-   defined issuer and a status endpoint.  The difference is what a
-   consumer must join.  A trust mark is resolved through a federation,
-   which supplies key discovery, policy, and delegation, and requires
-   both parties to enroll in one; this specification is pairwise, so a
-   consumer configures an issuer directly and nothing above it exists.
-   Ecosystems already operating a federation should use trust marks.
-   This is for the ones that will not.
-
-   *Deliberately deferred capabilities.* This version omits several
-   capabilities, each with an extension point: callback delivery for
-   deferral, a canonicalized digest, acceptance-time status, and CIMD-
-   native conveyance of an issued statement, and partial review, by
-   which an issuer would vouch for particular members rather than a
-   whole document.  Consumption-side extensions, including endorsed
-   instance keys, are named by [STATEMENT].
-
-16.  Acknowledgments
-
-   This specification builds on [DTR], [CIMD], and [APPROVAL-DCR].  The
-   author thanks the authors and contributors to those specifications
-   and the OAuth working group participants whose discussions informed
-   this work.
-
-17.  References
-
-17.1.  Normative References
+15.1.  Normative References
 
    [CIMD]     "OAuth Client ID Metadata Document", n.d.,
               <https://datatracker.ietf.org/doc/draft-ietf-oauth-client-
@@ -1640,7 +1563,7 @@ Table of Contents
               <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
               cimd-sw-stmt>.
 
-17.2.  Informative References
+15.2.  Informative References
 
    [APPROVAL-DCR]
               "OAuth 2.0 Approval-Based Dynamic Client Registration",
@@ -1688,6 +1611,79 @@ Table of Contents
               "Open Banking UK Dynamic Client Registration Specification
               v3.3", n.d., <https://openbankinguk.github.io/dcr-docs-
               pub/v3.3/dynamic-client-registration.html>.
+
+Appendix A.  Design Rationale
+
+   *Why the issuer is an authorization server role.* Issuance is an
+   OAuth interaction: it authenticates a client, applies policy, and
+   returns a signed artifact.  Reusing the role gives key publication,
+   discovery, and client authentication without inventing any of them.
+
+   *Why the authorization endpoint.* A first-time client holds no
+   credential at the issuer, and approval may involve a human.  The
+   redirect flow is how OAuth already handles both.  A client that holds
+   an initial access token skips it entirely through the token exchange
+   profile.
+
+   *Why the software statement code is not an authorization code.*
+   Redeeming an authorization code issues an access token under
+   [RFC6749].  This flow issues an artifact that is not an access token
+   and grants nothing, so a distinct code keeps the two from being
+   confused by implementations that treat any code as spendable.
+
+   *Why the response uses access_token.* [RFC8693] defines the
+   container, and reusing it means existing token endpoint machinery
+   carries the artifact.  The issued_token_type says what it actually
+   is.
+
+   *Why not the device authorization grant.* [RFC8628] has the right
+   shape for a human decision that outlives a request, and an issuer
+   whose approval is always out of band can use it.  It assumes a user
+   co-present with a constrained device and returns a user code for that
+   person to enter elsewhere; issuance approval is made by an
+   administrator or reviewer who is not the party operating the client,
+   often not present at all, and the client already has a browser.  The
+   redirect flow reuses the machinery a client already has for the case
+   where the approver can be reached through it, and the token exchange
+   profile covers the case where no browser is involved.
+
+   *Why not a profile of attestation-based client authentication.* A
+   client attestation and a software statement are both signed third-
+   party assertions presented with a key proof, and the mechanics
+   converge at the token endpoint.  They differ in what the signer
+   speaks for: an attester vouches for a running instance and its key,
+   on a lifetime measured in minutes, to the server in front of it; a
+   statement issuer vouches for reviewed software, on a lifetime
+   measured in days, to every server that trusts it.  Profiling one as
+   the other would give the reviewed-software decision an instance-
+   scoped trust model, or give instance attestation a portability it
+   should not have.  [STATEMENT] composes the two rather than merging
+   them.
+
+   *Why not OpenID Federation trust marks.* A trust mark is the closest
+   prior art: a signed third-party assertion about an entity, with a
+   defined issuer and a status endpoint.  The difference is what a
+   consumer must join.  A trust mark is resolved through a federation,
+   which supplies key discovery, policy, and delegation, and requires
+   both parties to enroll in one; this specification is pairwise, so a
+   consumer configures an issuer directly and nothing above it exists.
+   Ecosystems already operating a federation should use trust marks.
+   This is for the ones that will not.
+
+   *Deliberately deferred capabilities.* This version omits several
+   capabilities, each with an extension point: callback delivery for
+   deferral, a canonicalized digest, acceptance-time status, and CIMD-
+   native conveyance of an issued statement, and partial review, by
+   which an issuer would vouch for particular members rather than a
+   whole document.  Consumption-side extensions, including endorsed
+   instance keys, are named by [STATEMENT].
+
+Acknowledgments
+
+   This specification builds on [DTR], [CIMD], and [APPROVAL-DCR].  The
+   author thanks the authors and contributors to those specifications
+   and the OAuth working group participants whose discussions informed
+   this work.
 
 Author's Address
 
