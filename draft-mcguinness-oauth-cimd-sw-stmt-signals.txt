@@ -223,16 +223,16 @@ Table of Contents
    the subject, an effective time, and the withdrawn jti where the event
    named one.
 
-   The effective time is the later of the event's event_timestamp and
-   the time the receiver accepted the event.  A receiver cannot verify
-   that an issuer stopped issuing when it decided to withdraw, and an
-   issuer whose renewal is automated may mint a scheduled statement
-   between the decision and the event's arrival; taking the later of the
-   two times keeps such a statement from restoring what the withdrawal
-   ended.  An issuer MUST NOT issue a statement for a subject after
-   transmitting a withdrawal for that subject unless it has made a new
-   decision to do so, and SHOULD suspend automated renewal for a subject
-   before transmitting.
+   The effective time is the event's event_timestamp, so every receiver
+   applies the same cutoff whatever its delivery latency; deriving it
+   from arrival time would make a legitimate reissued statement
+   acceptable at a prompt receiver and refused at a delayed one.  The
+   issuer is responsible for the cutoff being meaningful: it MUST NOT
+   issue a statement for a subject with an iat at or before the
+   event_timestamp of a withdrawal it has transmitted for that subject,
+   and SHOULD suspend automated renewal for the subject before
+   transmitting, so that a scheduled statement cannot land inside the
+   window the withdrawal covers.
 
    While a Withdrawal Record is retained, the receiver MUST refuse a
    statement matching it:
@@ -283,7 +283,7 @@ Table of Contents
       outcome Section 5 exists to prevent.
 
    reason_admin:  OPTIONAL.  A human-readable explanation intended for
-      an administrator, as [CAEP] defines the member.
+      an administrator, following the convention of [CAEP].
 
 6.1.  Withdrawn
 
@@ -471,8 +471,8 @@ Table of Contents
    specification for use in the event payload of Section 6.
    Registration in a registry of SET payload claims, where the
    publishing body maintains one, is to be resolved before publication.
-   The event_timestamp and reason_admin members are used as [CAEP]
-   defines them.
+   The event_timestamp and reason_admin members follow the conventions
+   of [CAEP].
 
 12.  References
 

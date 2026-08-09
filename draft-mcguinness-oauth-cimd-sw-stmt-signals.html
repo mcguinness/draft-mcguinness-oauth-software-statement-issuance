@@ -1287,7 +1287,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
       </h2>
 <p id="section-5-1">A withdrawal event names a decision that ended. Its effect is durable, and a receiver that only ceases some current activity has not applied it: in the runtime profile there is no current activity to cease, and in the registration profile the client holds a statement that would otherwise restore what the event withdrew.<a href="#section-5-1" class="pilcrow">¶</a></p>
 <p id="section-5-2">On applying a withdrawal, a consuming authorization server <span class="bcp14">MUST</span> create or update a Withdrawal Record holding the transmitting issuer, the subject, an effective time, and the withdrawn <code>jti</code> where the event named one.<a href="#section-5-2" class="pilcrow">¶</a></p>
-<p id="section-5-3">The effective time is the later of the event's <code>event_timestamp</code> and the time the receiver accepted the event. A receiver cannot verify that an issuer stopped issuing when it decided to withdraw, and an issuer whose renewal is automated may mint a scheduled statement between the decision and the event's arrival; taking the later of the two times keeps such a statement from restoring what the withdrawal ended. An issuer <span class="bcp14">MUST NOT</span> issue a statement for a subject after transmitting a withdrawal for that subject unless it has made a new decision to do so, and <span class="bcp14">SHOULD</span> suspend automated renewal for a subject before transmitting.<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-3">The effective time is the event's <code>event_timestamp</code>, so every receiver applies the same cutoff whatever its delivery latency; deriving it from arrival time would make a legitimate reissued statement acceptable at a prompt receiver and refused at a delayed one. The issuer is responsible for the cutoff being meaningful: it <span class="bcp14">MUST NOT</span> issue a statement for a subject with an <code>iat</code> at or before the <code>event_timestamp</code> of a withdrawal it has transmitted for that subject, and <span class="bcp14">SHOULD</span> suspend automated renewal for the subject before transmitting, so that a scheduled statement cannot land inside the window the withdrawal covers.<a href="#section-5-3" class="pilcrow">¶</a></p>
 <p id="section-5-4">While a Withdrawal Record is retained, the receiver <span class="bcp14">MUST</span> refuse a statement matching it:<a href="#section-5-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-5-5.1">
@@ -1324,7 +1324,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <dt id="section-6-2.5">
 <code>reason_admin</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-6-2.6">
-          <p id="section-6-2.6.1"><span class="bcp14">OPTIONAL</span>. A human-readable explanation intended for an administrator, as <span>[<a href="#CAEP" class="cite xref">CAEP</a>]</span> defines the member.<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-6-2.6.1"><span class="bcp14">OPTIONAL</span>. A human-readable explanation intended for an administrator, following the convention of <span>[<a href="#CAEP" class="cite xref">CAEP</a>]</span>.<a href="#section-6-2.6.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1450,7 +1450,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
         <h3 id="name-set-payload-claims">
 <a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-set-payload-claims" class="section-name selfRef">SET Payload Claims</a>
         </h3>
-<p id="section-11.2-1">The payload claim <code>software_statement_jti</code> is defined by this specification for use in the event payload of <a href="#events" class="auto internal xref">Section 6</a>. Registration in a registry of SET payload claims, where the publishing body maintains one, is to be resolved before publication. The <code>event_timestamp</code> and <code>reason_admin</code> members are used as <span>[<a href="#CAEP" class="cite xref">CAEP</a>]</span> defines them.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
+<p id="section-11.2-1">The payload claim <code>software_statement_jti</code> is defined by this specification for use in the event payload of <a href="#events" class="auto internal xref">Section 6</a>. Registration in a registry of SET payload claims, where the publishing body maintains one, is to be resolved before publication. The <code>event_timestamp</code> and <code>reason_admin</code> members follow the conventions of <span>[<a href="#CAEP" class="cite xref">CAEP</a>]</span>.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
