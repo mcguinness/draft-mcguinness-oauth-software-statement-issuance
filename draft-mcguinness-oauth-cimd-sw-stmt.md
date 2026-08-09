@@ -1,7 +1,7 @@
 ---
-title: "OAuth 2.0 Software Statement Consumption and Runtime Presentation"
-abbrev: oauth-sw-stmt-presentation
-docname: draft-mcguinness-oauth-sw-stmt-presentation-latest
+title: "CIMD Software Statement"
+abbrev: oauth-cimd-sw-stmt
+docname: draft-mcguinness-oauth-cimd-sw-stmt-latest
 category: std
 
 ipr: trust200902
@@ -29,6 +29,11 @@ author:
 
 normative:
   RFC6749:
+  RFC6234:
+  RFC6838:
+  RFC7515:
+  RFC7519:
+  RFC8725:
   RFC7521:
   RFC7591:
   RFC8414:
@@ -39,8 +44,8 @@ normative:
     target: https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document
     title: "OAuth Client ID Metadata Document"
   ISSUANCE:
-    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-software-statement-issuance
-    title: "OAuth 2.0 Software Statement Issuance"
+    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-issuance
+    title: "CIMD Software Statement Issuance"
 
 informative:
   RFC7592:
@@ -51,12 +56,12 @@ informative:
     target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-client-instance-assertion
     title: "OAuth 2.0 Client Instance Assertion"
   SIGNALS:
-    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-sw-stmt-signals
-    title: "Shared Signals Events for OAuth Software Statements"
+    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-signals
+    title: "Shared Signals Events for CIMD Software Statements"
 
 --- abstract
 
-RFC 7591 defines the software statement as input to dynamic client registration but does not define how long the resulting registration remains valid or how a client renews the statement on which it was based. This specification defines everything a trusting authorization server does with a software statement: which issuers it trusts, how it validates and applies one, and the two points at which it consumes one. Consumed in a registration request, a statement governs that registration until it expires and a replacement renews it. Presented in an authorization or token request, it establishes an otherwise unregistered client for that request and the grant state derived from it, on proof of a key the reviewed document carries, so possession of the statement alone is insufficient. Together these let an issuer curate approved client software across the authorization servers in a statement's audience while each server keeps control of trust, grants, and token lifetime.
+RFC 7591 defines the software statement as input to dynamic client registration but does not define how long the resulting registration remains valid or how a client renews the statement on which it was based. This specification profiles the software statement of RFC 7591 for clients identified by a Client ID Metadata Document, and defines everything a trusting authorization server does with one: which issuers it trusts, how it validates and applies one, and the two points at which it consumes one. Consumed in a registration request, a statement governs that registration until it expires and a replacement renews it. Presented in an authorization or token request, it establishes an otherwise unregistered client for that request and the grant state derived from it, on proof of a key the reviewed document carries, so possession of the statement alone is insufficient. Together these let an issuer curate approved client software across the authorization servers in a statement's audience while each server keeps control of trust, grants, and token lifetime.
 
 --- middle
 
@@ -137,35 +142,52 @@ Establishment:
 Proven Key:
 : The key for which the presenter demonstrates possession during runtime presentation. The accepted proof path binds this key to the statement as specified in {{sender-constraint}}.
 
-# Statement Requirements {#profiles}
+# The Software Statement {#profiles}
 
-This document consumes the software statement of {{ISSUANCE}}. The syntax, validation, and semantics of every element are defined there; this section states what a statement must carry to be consumed here, and what each element is consumed for. How the client acquired it is out of scope.
+The software statement is a compact JWT {{RFC7519}} protected by JWS {{RFC7515}}. Although {{RFC7591}} permits a MAC, a statement issued under this specification MUST use an asymmetric digital signature so trusting servers need not receive an issuer-held symmetric key. The issuer and trusting authorization server MUST follow {{RFC8725}} algorithm-verification guidance. The `none` algorithm and symmetric algorithms MUST NOT be used.
 
-`typ` header:
-: `software-statement+jwt`.
+The JOSE header MUST include `kid`, identifying the signing key within the issuer's JWK Set, and MUST include `typ` with the value `software-statement+jwt`, applying Section 3.11 of {{RFC8725}}. This value names `application/software-statement+jwt` ({{media-type}}) with the `application/` prefix omitted, as described in Section 4.1.9 of {{RFC7515}}. Explicit typing prevents confusion with other JWTs from the same issuer.
+
+Extensions can add claims; an incompatible revision would use a new type value. Supported algorithms appear in `software_statement_signing_alg_values_supported` ({{authorization-server-metadata}}).
+
+A statement says that its issuer evaluated the Client ID Metadata Document whose content the digest names, and vouches for it to whoever accepts that issuer. The document carries the metadata; the statement carries the decision. The JWT payload MUST contain the following claims.
 
 `iss`:
-: Identifies the issuer for trust and scope decisions, and forms part of the statement identity recorded with a registration or establishment.
+: REQUIRED. The issuer identifier of the issuing authorization server, as defined by {{RFC8414}}.
 
 `sub`:
-: The client's Client ID Metadata Document URL {{CIMD}}. In a runtime presentation the request's `client_id` equals it, by the rule of {{runtime-presentation}}.
+: REQUIRED. The exact client identifier URL presented in the request that produced the statement.
 
 `aud`:
-: OPTIONAL ({{ISSUANCE}}). Where present, the authorization server MUST reject the statement unless the claim names it; where absent, acceptance rests on configured issuer trust ({{issuer-trust}}).
+: OPTIONAL. One or more audience identifiers restricting which authorization servers may accept the statement, each an authorization server issuer identifier as defined by {{RFC8414}}. Where the claim is present, a trusting authorization server MUST reject the statement unless one of its locally configured audience identifiers exactly matches a value in it, and where the request carried `audience` values every value in the claim MUST have appeared among them. Where the claim is absent, the statement is unrestricted and acceptance rests on the consumer's configured trust in the issuer and its identifier scope (this specification). An issuer SHOULD omit the claim, so that one review serves every server that trusts it, and include it only where it means to limit reach: a statement attesting no key material is usable by whoever holds it, and naming an audience is what bounds that (this specification).
 
 `iat`:
-: The issuance time, which orders one statement against another when a replacement arrives ({{revalidation}}, {{refresh}}).
+: REQUIRED. A NumericDate value representing the time at which the software statement was issued. An issuer MUST NOT issue a statement for a given `iss` and `sub` pair with an `iat` earlier than one it has already issued for that pair, and SHOULD ensure the value is strictly increasing across its signing nodes, so that the order in which it made its decisions is recoverable from the statements themselves. Consumers rely on that order when one statement replaces another (this specification) and when a withdrawal separates statements issued before it from those issued after ({{SIGNALS}}). Back-dating a statement to allow for clock skew makes it unusable as a replacement.
 
 `exp`:
-: The expiry the issuer chose. It bounds registration validity ({{registration-validity}}), is checked at every presentation ({{enforcement-bounds}}).
+: REQUIRED. A NumericDate value representing the expiration time. A trusting authorization server MUST reject an expired statement.
 
 `jti`:
-: Identifies the statement within the issuer's namespace; inventory and concurrency bounds key on the `iss` and `jti` pair. A replacement statement has its own `jti`, so replacement matching does not key on this value.
+: REQUIRED. A unique identifier for the statement within the issuer's namespace.
 
 `cimd_digest`:
-: Binds the issuer's review to the exact document bytes evaluated and feeds the post-issuance change policy of {{ISSUANCE}}.
+: REQUIRED. The metadata digest of the Client ID Metadata Document the issuer evaluated. This claim binds the statement to the exact document content evaluated during issuance and lets any party determine whether the client's currently published metadata still matches what was attested.
 
-A statement lacking any of the required elements above cannot be consumed under this specification, and one failing validation is rejected as {{errors}} defines.
+A statement carries no client metadata. The reviewed metadata is the document the digest names, which a consuming authorization server retrieves and verifies for itself, so copying members into the statement would duplicate what the digest already binds and reopen questions of precedence and partial review that the digest settles. A statement issued under this specification MUST NOT contain client metadata claims.
+
+An issuer that means to vouch for particular members without binding the whole document needs an extension defining what a partial review asserts and how a consumer applies it ({{ISSUANCE}}).
+
+The issuer determines the lifetime, and any audience restriction, according to policy. Lifetime pulls in two directions: a short one bounds exposure and keeps the review fresh, while at a server implementing the registration-validity model of this specification the same value is the registration's validity, and so the renewal cadence both parties must sustain. An issuer SHOULD choose a lifetime it can renew reliably, and SHOULD stagger expiries or renew ahead of the boundary so that a fleet issued together does not lapse together.
+
+The `sub` claim is the client identifier URL, not the local `client_id` assigned through {{RFC7591}} registration. A trusting authorization server MAY use `sub` to correlate registrations and apply per-client policy (this specification).
+
+
+
+## Metadata Digest {#metadata-snapshot}
+
+The metadata digest is the unpadded base64url-encoded SHA-256 hash {{RFC6234}} of the retrieved representation body after removal of content coding. No transcoding, normalization, or re-serialization occurs; a byte order mark and trailing newline are included. Retrieval for snapshot purposes SHOULD NOT use content negotiation, and an issuance source SHOULD serve the document without negotiated variants, so that independent fetchers obtain identical bytes.
+
+An issuer computes the digest over the document it evaluated; a consumer computes it over the document it retrieves, and equality is what says the two are the same bytes ({{effective-metadata}}).
 
 # Issuer Trust Establishment {#issuer-trust}
 
@@ -532,6 +554,76 @@ Change Controller:
 
 Specification Document(s):
 : This specification, {{runtime-presentation}}
+
+## Media Type Registration {#media-type}
+
+This specification requests registration of the `application/software-statement+jwt` media type in the IANA "Media Types" registry {{RFC6838}}.
+
+Type name:
+: application
+
+Subtype name:
+: software-statement+jwt
+
+Required parameters:
+: n/a
+
+Optional parameters:
+: n/a
+
+Encoding considerations:
+: 8bit. A software statement is a JWT; JWT values are encoded as a series of base64url-encoded values separated by period ('.') characters, as registered for `application/jwt` in Section 10.3.1 of {{RFC7519}}.
+
+Security considerations:
+: See {{security-considerations}} of this specification and Section 11 of {{RFC7519}}.
+
+Interoperability considerations:
+: n/a
+
+Published specification:
+: This specification
+
+Applications that use this media type:
+: Authorization servers and clients that issue, request, or accept OAuth 2.0 software statements
+
+Fragment identifier considerations:
+: n/a
+
+Additional information:
+: File extension(s): n/a. Macintosh file type code(s): n/a.
+
+Person & email address to contact for further information:
+: Karl McGuinness, public@karlmcguinness.com
+
+Intended usage:
+: COMMON
+
+Restrictions on usage:
+: none
+
+Author:
+: Karl McGuinness, public@karlmcguinness.com
+
+Change controller:
+: IETF
+
+## JSON Web Token Claims Registry
+
+This specification requests registration of the following value in the IANA "JSON Web Token Claims" registry established by {{RFC7519}}:
+
+Claim Name:
+: `cimd_digest`
+
+Claim Description:
+: Unpadded base64url-encoded SHA-256 digest of the retrieved octets of the Client ID Metadata Document evaluated during software statement issuance
+
+Change Controller:
+: IESG
+
+Specification Document(s):
+: This specification, {{profiles}}
+
+--- back
 
 ## OAuth Extensions Error Registry
 

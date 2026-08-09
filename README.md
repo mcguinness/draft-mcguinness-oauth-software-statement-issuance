@@ -1,28 +1,28 @@
-# OAuth 2.0 Software Statement Issuance
+# CIMD Software Statement Issuance
 
-This is the working area for the individual Internet-Draft, "OAuth 2.0 Software Statement Issuance".
+This is the working area for the individual Internet-Draft, "CIMD Software Statement Issuance".
 
 RFC 7591 standardizes how a client presents a software statement and how a registration endpoint consumes it, but not how the client obtains one. This specification defines the missing issuance protocol: a redirect flow returning a `software_statement_code` redeemed at the token endpoint, a token exchange profile for pre-authorized issuance and renewal, and deferred processing under Deferred Token Response so approval can complete out of band over hours or days. Clients are identified by a Client ID Metadata Document, and every statement is bound by canonical digest to the exact metadata reviewed.
 
-* [Editor's Copy (HTML)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-software-statement-issuance.html)
-* [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-software-statement-issuance.txt)
-* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-software-statement-issuance/) (after first submission)
+* [Editor's Copy (HTML)](https://mcguinness.github.io/draft-mcguinness-oauth-cimd-sw-stmt-issuance/draft-mcguinness-oauth-cimd-sw-stmt-issuance.html)
+* [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-cimd-sw-stmt-issuance/draft-mcguinness-oauth-cimd-sw-stmt-issuance.txt)
+* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-issuance/) (after first submission)
 
 ## OAuth 2.0 Software Statement Runtime Presentation
 
 This repository also hosts the companion Internet-Draft, "OAuth 2.0 Software Statement Runtime Presentation", which defines the second consumption path for the issued statement: a client presents it at runtime in an authorization or token request, sender-constrained by a proof that chains to the statement, and the authorization server applies the attested metadata to that request without creating a persistent registration.
 
-* [Editor's Copy (HTML)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-sw-stmt-presentation.html)
-* [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-sw-stmt-presentation.txt)
-* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-sw-stmt-presentation/) (after first submission)
+* [Editor's Copy (HTML)](https://mcguinness.github.io/draft-mcguinness-oauth-cimd-sw-stmt-issuance/draft-mcguinness-oauth-cimd-sw-stmt.html)
+* [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-cimd-sw-stmt-issuance/draft-mcguinness-oauth-cimd-sw-stmt.txt)
+* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt/) (after first submission)
 
-## Shared Signals Events for OAuth Software Statements
+## Shared Signals Events for CIMD Software Statements
 
-The repository also hosts "Shared Signals Events for OAuth Software Statements", an optional profile that lets a statement issuer withdraw a decision before the statement expires. The issuer transmits lifecycle events over the Shared Signals Framework to the authorization servers that already trust it: statement revoked, approval withdrawn, establishment withdrawn, metadata changed, plus an optional reverse-direction event by which a consuming server reports where a statement is in force. Events can only reduce standing, and a receiver that misses one falls back to expiry, so neither of the other drafts depends on this one.
+The repository also hosts "Shared Signals Events for CIMD Software Statements", an optional profile that lets a statement issuer withdraw a decision before the statement expires. The issuer transmits lifecycle events over the Shared Signals Framework to the authorization servers that already trust it: statement revoked, approval withdrawn, establishment withdrawn, metadata changed, plus an optional reverse-direction event by which a consuming server reports where a statement is in force. Events can only reduce standing, and a receiver that misses one falls back to expiry, so neither of the other drafts depends on this one.
 
-* [Editor's Copy (HTML)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-sw-stmt-signals.html)
-* [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-sw-stmt-signals.txt)
-* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-sw-stmt-signals/) (after first submission)
+* [Editor's Copy (HTML)](https://mcguinness.github.io/draft-mcguinness-oauth-cimd-sw-stmt-issuance/draft-mcguinness-oauth-cimd-sw-stmt-signals.html)
+* [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-cimd-sw-stmt-issuance/draft-mcguinness-oauth-cimd-sw-stmt-signals.txt)
+* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-signals/) (after first submission)
 
 ## Deployment Model
 

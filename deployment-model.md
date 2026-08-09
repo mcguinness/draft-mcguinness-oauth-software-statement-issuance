@@ -2,9 +2,9 @@
 
 This is a non-normative companion to the three drafts in this repository. It sketches one end-to-end deployment, names the actors, and shows which part of each draft carries which decision. Nothing here is normative; where this document and a draft disagree, the draft wins.
 
-* [OAuth 2.0 Software Statement Issuance](draft-mcguinness-oauth-software-statement-issuance.md), referred to below as the issuance draft.
-* [OAuth 2.0 Software Statement Consumption and Runtime Presentation](draft-mcguinness-oauth-sw-stmt-presentation.md), referred to below as the consumption draft.
-* [Shared Signals Events for OAuth Software Statements](draft-mcguinness-oauth-sw-stmt-signals.md), referred to below as the signals draft, which is optional to both.
+* [CIMD Software Statement Issuance](draft-mcguinness-oauth-cimd-sw-stmt-issuance.md), referred to below as the issuance draft.
+* [CIMD Software Statement](draft-mcguinness-oauth-cimd-sw-stmt.md), referred to below as the consumption draft.
+* [Shared Signals Events for CIMD Software Statements](draft-mcguinness-oauth-cimd-sw-stmt-signals.md), referred to below as the signals draft, which is optional to both.
 
 ## The situation being addressed
 
@@ -152,7 +152,7 @@ Because an ID-JAG assertion is validated at every grant, ceasing assertion issua
 
 Approvals that a provider retrieves end by absence, so nothing more is needed for them. Establishment statements are different: a client carries one and has no reason to stop, so withdrawing a listing before its expiry is enforced on a clock. An approval or a listing ends when its statement expires unrenewed, so how fast a decision takes effect is set by how short the issuer made the lifetime, and short lifetimes buy responsiveness with renewal traffic. That trade is avoidable: the parties are already in a configured pairwise relationship, since a trusting authorization server holds each issuer's identifier, keys, scope, and role, and that same relationship can carry an event stream.
 
-[Shared Signals Events for OAuth Software Statements](draft-mcguinness-oauth-sw-stmt-signals.md), the third draft in this repository, defines those events over the [Shared Signals Framework](https://openid.net/specs/openid-sharedsignals-framework-1_0.html). The statement issuer is the transmitter, the trusting authorization server is the receiver, events travel as [Security Event Tokens](https://www.rfc-editor.org/rfc/rfc8417.html) over the framework's push or poll delivery, and subjects use the [identifier formats of RFC 9493](https://www.rfc-editor.org/rfc/rfc9493.html): the `uri` format for a Client ID Metadata Document URL, and `iss_sub` for an `software_id` under the issuer that names it. Nothing new is invented at the transport or trust layer; the profile's work is naming events and their effects.
+[Shared Signals Events for CIMD Software Statements](draft-mcguinness-oauth-cimd-sw-stmt-signals.md), the third draft in this repository, defines those events over the [Shared Signals Framework](https://openid.net/specs/openid-sharedsignals-framework-1_0.html). The statement issuer is the transmitter, the trusting authorization server is the receiver, events travel as [Security Event Tokens](https://www.rfc-editor.org/rfc/rfc8417.html) over the framework's push or poll delivery, and subjects use the [identifier formats of RFC 9493](https://www.rfc-editor.org/rfc/rfc9493.html): the `uri` format for a Client ID Metadata Document URL, and `iss_sub` for an `software_id` under the issuer that names it. Nothing new is invented at the transport or trust layer; the profile's work is naming events and their effects.
 
 One event carries the semantics this deployment needs, in two forms:
 
