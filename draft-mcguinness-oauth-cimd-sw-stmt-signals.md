@@ -110,7 +110,7 @@ A consuming authorization server MUST match the subject by exact comparison of t
 Each event is a member of the SET `events` claim, whose value is the event payload object. All payloads share these claims:
 
 `event_timestamp`:
-: REQUIRED. A NumericDate value giving the time the issuer changed the status the event reports.
+: REQUIRED. A NumericDate value giving the time the issuer changed the status the event reports. It is informational, for logging and audit. A receiver does not use it to order, bound, or scope anything, since the event carries no decision and the resolved status is what governs ({{processing}}).
 
 `software_statement_jti`:
 : OPTIONAL. The `jti` of a single statement whose status changed. Where absent, the event reports that the status of one or more statements for the subject changed without naming them, and the receiver resolves the subject's statements it holds.
@@ -139,7 +139,7 @@ Where the event names a `software_statement_jti`, the affected statements are th
 
 A receiver MUST invalidate any cached Status List Token for the affected statements before resolving, since a cached copy is what the event exists to correct.
 
-Pending resolution, a receiver MAY refuse the affected statements. A receiver that does so MUST complete the resolution and MUST apply its result, including where that result is `VALID`. Refusal pending resolution is a provisional measure, never a durable record: this specification defines no receiver-side state that outlives a resolution, and a receiver MUST NOT retain a refusal that the resolved status does not support.
+Pending resolution, a receiver MAY refuse the affected statements. A receiver that does so MUST apply the result of its next successful resolution, including where that result is `VALID`, and where resolution does not complete MUST fall back to the rules of {{STATEMENT}} rather than hold the refusal indefinitely. Refusal pending resolution is a provisional measure, never a durable record: this specification defines no receiver-side state that outlives a resolution, and a receiver MUST NOT retain a refusal that a later resolution does not support.
 
 A receiver MUST treat an event it has already applied as successfully delivered and acknowledge it as {{RFC8935}} or {{RFC8936}} requires, rather than reporting a delivery error; duplicate delivery is ordinary retry behavior and rejecting it can stall or disable a stream carrying later events. Duplicate detection is per transmitting issuer, since SET `jti` values are unique only within an issuer.
 
@@ -166,7 +166,7 @@ A receiver SHOULD request the event this specification defines, and SHOULD use t
 
 An event names no status, so a forged, replayed, or reordered event cannot change what any statement is worth. Its effect is confined to causing a resolution the receiver was going to perform anyway, against a Status List Token signed by the issuer. That is the security argument for this mechanism, and it is why the mechanism holds no durable receiver-side state.
 
-The residual exposure is resource cost. An attacker holding the issuer's key, or a transmitter behaving badly, can drive resolutions. A receiver bounds the rate at which it resolves in response to events, coalescing events for the same issuer, and MUST NOT let event-driven resolution displace its scheduled resolution.
+The residual exposure is resource cost. An attacker holding the issuer's key, or a transmitter behaving badly, can drive resolutions. A receiver SHOULD bound the rate at which it resolves in response to events, coalescing events for the same issuer, and MUST NOT let event-driven resolution displace its scheduled resolution.
 
 ## Status Remains the Authority
 

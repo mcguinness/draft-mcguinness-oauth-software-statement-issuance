@@ -524,6 +524,8 @@ The authorization server MUST validate the subject token before retrieving clien
 
 A client renews by presenting its current or most recent software statement as the subject token. The authorization server MUST verify that it issued the statement, that the statement's `sub` equals the request's `client_id`, and that the client authenticated with a key carried by the Client ID Metadata Document the statement vouches for. That authentication is the holder binding: a statement is otherwise a bearer artifact, and without it whoever held a copy could renew.
 
+An issuer that publishes status MUST NOT accept as subject token a statement whose own published status is other than `VALID`. Renewing a statement it has withdrawn would reissue the decision that withdrawal ended.
+
 The authorization server MAY accept a statement that has expired, and SHOULD bound how long after expiry it will do so, since a client absent for an extended period is asking to be re-established rather than renewed. Whether renewal requires fresh review is issuer policy; the request is a new issuance decision, and the issuer re-evaluates the current document as it would for any other request ({{metadata-snapshot}}).
 
 Renewal needs no credential beyond the statement the client already holds, which is what keeps automated renewal from depending on an out-of-band credential outliving every statement it renews ({{security-considerations}}).
@@ -609,7 +611,7 @@ An issuing authorization server that ends decisions before their expiry publishe
 
 An issuer that publishes status:
 
-* MUST publish it for every statement it issues under a given `iss`, rather than for a subset, so that a consumer may read an absent claim as meaning this issuer publishes no status at all;
+* MUST publish it for every statement it issues under a given `iss` from the point it begins publishing, rather than for a subset, so that a consumer may read an absent claim as meaning this issuer publishes no status at all. Statements issued before that point carry no claim and cannot be located in the list, so the inference holds once those have expired;
 * MUST assign each statement its own index and MUST NOT reuse an index across statements. Withdrawing a statement sets that statement's index and affects no other. A replacement obtained through {{renewal}} occupies its own index, so withdrawing a superseded statement does not withdraw its replacement, and withdrawing a replacement does not restore its predecessor; and
 * MUST sign the Status List Token with a key a consumer obtains the way it obtains statement signing keys, through the issuer's authorization server metadata {{RFC8414}}.
 
@@ -873,7 +875,7 @@ Specification Document(s):
 
 **Why not OpenID Federation trust marks.** A trust mark is the closest prior art: a signed third-party assertion about an entity, with a defined issuer and a status endpoint. The difference is what a consumer must join. A trust mark is resolved through a federation, which supplies key discovery, policy, and delegation, and requires both parties to enroll in one; this specification is pairwise, so a consumer configures an issuer directly and nothing above it exists. Ecosystems already operating a federation should use trust marks. This is for the ones that will not.
 
-**Deliberately deferred capabilities.** This version omits several capabilities, each with an extension point: callback delivery for deferral, a canonicalized digest, acceptance-time status, and CIMD-native conveyance of an issued statement, and partial review, by which an issuer would vouch for particular members rather than a whole document. Consumption-side extensions, including endorsed instance keys, are named by {{STATEMENT}}.
+**Deliberately deferred capabilities.** This version omits several capabilities, each with an extension point: callback delivery for deferral, a canonicalized digest, and CIMD-native conveyance of an issued statement, and partial review, by which an issuer would vouch for particular members rather than a whole document. Consumption-side extensions, including endorsed instance keys, are named by {{STATEMENT}}.
 
 # Acknowledgments
 {:numbered="false"}

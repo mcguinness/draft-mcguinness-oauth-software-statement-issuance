@@ -136,7 +136,7 @@ They compose, and a deployment needing only the first can stop there and never t
 
 ## Composition with Shared Signals
 
-A statement is carried by the client it admits, and a client has no reason to stop presenting one, so ending a review early needs somewhere a provider can check. That place is the reviewer's status list. Statements carry a `status` claim locating them in it, per [Token Status List](https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list/), and a provider resolves that status on its own schedule. Withdrawing a review is then a matter of setting one entry, and one signed list answers for every statement the reviewer has issued.
+A statement is carried by the client it admits, and a client has no reason to stop presenting one, so ending a review early needs somewhere a provider can check. That place is the reviewer's status list. Statements can carry a `status` claim locating them in it, per [Token Status List](https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list/), and a provider resolves that status on its own schedule. Withdrawing a review is then a matter of setting one entry, and one signed list answers for every statement the reviewer has issued.
 
 What remains is latency. A provider resolving hourly learns of a delisting within the hour. Shortening that for everyone means everyone polls harder, and nearly every poll reports no change.
 
