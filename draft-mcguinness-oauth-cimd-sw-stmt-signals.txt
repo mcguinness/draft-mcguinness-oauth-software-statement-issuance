@@ -8,8 +8,8 @@ Intended status: Standards Track                           9 August 2026
 Expires: 10 February 2027
 
 
-          Shared Signals Events for OAuth Software Statements
-             draft-mcguinness-oauth-sw-stmt-signals-latest
+           Shared Signals Events for CIMD Software Statements
+           draft-mcguinness-oauth-cimd-sw-stmt-signals-latest
 
 Abstract
 
@@ -86,8 +86,8 @@ Table of Contents
 
 1.  Introduction
 
-   [ISSUANCE] defines a software statement in which an issuer attests
-   reviewed client metadata, and [PRESENTATION] defines how a trusting
+   [STATEMENT] defines a software statement in which an issuer attests
+   reviewed client metadata, and [STATEMENT] defines how a trusting
    authorization server consumes one: at registration, where the
    statement's expiry can bound the registration's validity, and at
    runtime, where it establishes a client for a request.  In both cases
@@ -102,7 +102,7 @@ Table of Contents
    The coupling is unnecessary, because the parties are already in a
    configured relationship.  A trusting authorization server records
    each issuer's identifier, key source, scope, and role in order to
-   accept its statements at all ([ISSUANCE]).  This specification uses
+   accept its statements at all ([STATEMENT]).  This specification uses
    that relationship to carry lifecycle events over the Shared Signals
    Framework [SSF]: the statement issuer transmits, the trusting
    authorization server receives, and events are Security Event Tokens
@@ -120,7 +120,7 @@ Table of Contents
    is durable rather than momentary, which Section 5 specifies, so a
    client holding an unexpired statement cannot restore what an event
    ended.  Deployments therefore keep bounded statement lifetimes, and
-   neither [ISSUANCE] nor [PRESENTATION] depends on this specification.
+   neither [STATEMENT] nor [STATEMENT] depends on this specification.
 
    This mechanism buys latency, not correctness.  A statement is carried
    by the client it admits, and a client has no reason to stop
@@ -141,9 +141,9 @@ Table of Contents
    mechanisms are defined by [SSF].  Security Event Token, or SET, is
    defined by [RFC8417].  Subject identifier formats are defined by
    [RFC9493].  The software statement, its claims, and its validation
-   are defined by [ISSUANCE].  Issuer trust configuration, registration
+   are defined by [STATEMENT].  Issuer trust configuration, registration
    validity, runtime presentation, and the per-grant establishment state
-   are defined by [PRESENTATION].
+   are defined by [STATEMENT].
 
    This specification additionally defines the following terms:
 
@@ -157,7 +157,7 @@ Table of Contents
    Standing:  What a client may do at a consuming authorization server
       by virtue of a software statement: its registration and that
       registration's validity, and its establishment at request time
-      ([PRESENTATION]).  Standing is created and extended only by
+      ([STATEMENT]).  Standing is created and extended only by
       statements, never by the events defined here.
 
    Withdrawal Record:  The state a receiver retains when it applies a
@@ -184,7 +184,7 @@ Table of Contents
    A SET carrying an event defined here MUST use the explicit typ header
    value secevent+jwt ([RFC8417]), so that a receiver validating JWTs
    from a configured issuer distinguishes an event from a software
-   statement, whose own typing [ISSUANCE] fixes.  Its aud MUST contain
+   statement, whose own typing [STATEMENT] fixes.  Its aud MUST contain
    the receiving authorization server's issuer identifier as defined by
    [RFC8414], which is the value that appears in a statement's aud; a
    stream audience negotiated under [SSF] does not replace it.
@@ -245,18 +245,18 @@ Table of Contents
 
    A statement from that issuer for that subject with an iat after the
    record's effective time is a later decision by the same authority.
-   It is accepted under the ordinary rules of [ISSUANCE] and
-   [PRESENTATION], and restores what the withdrawal ended.  This is the
+   It is accepted under the ordinary rules of [STATEMENT] and
+   [STATEMENT], and restores what the withdrawal ended.  This is the
    only recovery path, and it requires the issuer to act.
 
    A refusal under this section takes effect wherever the statement
    would otherwise be consumed: a registration governed by a refused
-   statement is expired as [PRESENTATION] defines for a lapsed
+   statement is expired as [STATEMENT] defines for a lapsed
    registration, and a runtime presentation carrying one fails as it
    does for a statement that is not current.  A grant already open under
    a refused statement continues only as far as its next currency check:
    a receiver MUST treat a refused statement as not current when
-   [PRESENTATION] requires currency at refresh, so that a withdrawal
+   [STATEMENT] requires currency at refresh, so that a withdrawal
    reaches running grants on the same terms as an expiry rather than
    waiting for the statement's own.
 
@@ -264,7 +264,7 @@ Table of Contents
    exp has passed, and MAY discard any Withdrawal Record once every
    statement it could refuse has expired, which a receiver that does not
    retain statement lifetimes bounds by the maximum lifetime it honors
-   for that issuer ([ISSUANCE]).  Discarding a record earlier reopens
+   for that issuer ([STATEMENT]).  Discarding a record earlier reopens
    the withdrawal.
 
 6.  Event Types
@@ -300,14 +300,14 @@ Table of Contents
 
    A receiver MUST record the withdrawal (Section 5) and stop treating
    the affected statements as current.  At a server implementing the
-   registration-validity model of [PRESENTATION], a registration
-   governed by a refused statement is expired as that specification
-   defines for a lapsed registration; at a server that does not, the
-   registration remains subject to that server's own client lifecycle,
-   and the record still refuses further statements.  A runtime
-   presentation carrying a refused statement fails as [PRESENTATION]
-   defines for a statement that is not current, and a grant already open
-   under one continues only as far as its next currency check.
+   registration-validity model of [STATEMENT], a registration governed
+   by a refused statement is expired as that specification defines for a
+   lapsed registration; at a server that does not, the registration
+   remains subject to that server's own client lifecycle, and the record
+   still refuses further statements.  A runtime presentation carrying a
+   refused statement fails as [STATEMENT] defines for a statement that
+   is not current, and a grant already open under one continues only as
+   far as its next currency check.
 
 7.  Receiver Processing
 
@@ -342,7 +342,7 @@ Table of Contents
       restore a statement previously revoked, or otherwise increase what
       a client may do.  A receiver MUST ignore any payload member that
       would have such an effect.  Restoring standing requires a
-      statement, presented or delivered as [PRESENTATION] defines.
+      statement, presented or delivered as [STATEMENT] defines.
 
    *  A receiver MUST continue to enforce statement expiry independently
       of this mechanism.  Stream loss, transmitter unavailability, or
@@ -425,7 +425,7 @@ Table of Contents
    signing key, published in the same metadata.  Compromise of a
    statement signing key is the more serious event, because statements
    grant standing and events cannot; a receiver responding to such a
-   compromise removes trust in the issuer or its scope as [ISSUANCE]
+   compromise removes trust in the issuer or its scope as [STATEMENT]
    describes, which also ends event acceptance.
 
 9.4.  Comparison with Acceptance-Time Status
@@ -445,7 +445,7 @@ Table of Contents
    software estate.  A transmitter SHOULD scope each stream to the
    subjects the receiving authorization server can act on, and a
    receiver SHOULD apply to event logs the handling it applies to
-   statements ([ISSUANCE]).
+   statements ([STATEMENT]).
 
    Withdrawal Records (Section 5) persist an issuer's negative decisions
    at every receiver, in some cases beyond the lifetime of the
@@ -482,15 +482,6 @@ Table of Contents
               <https://datatracker.ietf.org/doc/draft-ietf-oauth-client-
               id-metadata-document>.
 
-   [ISSUANCE] "OAuth 2.0 Software Statement Issuance", n.d.,
-              <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
-              software-statement-issuance>.
-
-   [PRESENTATION]
-              "OAuth 2.0 Software Statement Consumption and Runtime
-              Presentation", n.d., <https://datatracker.ietf.org/doc/
-              draft-mcguinness-oauth-sw-stmt-presentation>.
-
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
@@ -519,15 +510,15 @@ Table of Contents
               <https://openid.net/specs/openid-sharedsignals-framework-
               1_0.html>.
 
+   [STATEMENT]
+              "CIMD Software Statement", n.d.,
+              <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
+              cimd-sw-stmt>.
+
 12.2.  Informative References
 
    [CAEP]     "OpenID Continuous Access Evaluation Profile 1.0", n.d.,
               <https://openid.net/specs/openid-caep-1_0.html>.
-
-   [RFC7591]  Richer, J., Ed., Jones, M., Bradley, J., Machulak, M., and
-              P. Hunt, "OAuth 2.0 Dynamic Client Registration Protocol",
-              RFC 7591, DOI 10.17487/RFC7591, July 2015,
-              <https://www.rfc-editor.org/rfc/rfc7591>.
 
    [RFC8935]  Backman, A., Ed., Jones, M., Ed., Scurtescu, M., Ansari,
               M., and A. Nadalin, "Push-Based Security Event Token (SET)

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta content="Common,Latin" name="scripts">
 <meta content="initial-scale=1.0" name="viewport">
-<title>Shared Signals Events for OAuth Software Statements</title>
+<title>Shared Signals Events for CIMD Software Statements</title>
 <meta content="Karl McGuinness" name="author">
 <meta content="
        A software statement carries a reviewer's decision about client software, bounded by an expiry the issuer chose. Ending that decision early has no standard mechanism, so how quickly a withdrawal takes effect is determined by how short the issuer made the statement's lifetime. This specification profiles the Shared Signals Framework for software statement lifecycle events, so that a statement issuer can tell the authorization servers that rely on its statements that a review, or a single statement carrying it, is withdrawn before it expires. Events can only reduce a client's standing, never create or extend it, and a receiver that misses an event falls back to expiry, so the mechanism shortens the interval between a decision and its effect without becoming load-bearing for security. 
@@ -15,7 +15,7 @@
 <meta content="Shared Signals" name="keyword">
 <meta content="Security Event Token" name="keyword">
 <meta content="Revocation" name="keyword">
-<meta content="draft-mcguinness-oauth-sw-stmt-signals-latest" name="ietf.draft">
+<meta content="draft-mcguinness-oauth-cimd-sw-stmt-signals-latest" name="ietf.draft">
 <!-- Generator version information:
   xml2rfc 3.34.0
     Python 3.14.5
@@ -31,7 +31,7 @@
     requests 2.33.1
     wcwidth 0.8.2
 -->
-<link href="draft-mcguinness-oauth-sw-stmt-signals.xml" rel="alternate" type="application/rfc+xml">
+<link href="draft-mcguinness-oauth-cimd-sw-stmt-signals.xml" rel="alternate" type="application/rfc+xml">
 <link href="#copyright" rel="license">
 <style type="text/css">@font-face {
   font-family: 'Lora';
@@ -1044,7 +1044,7 @@ svg {
 <table class="ears">
 <thead><tr>
 <td class="left">Internet-Draft</td>
-<td class="center">oauth-sw-stmt-signals</td>
+<td class="center">oauth-cimd-sw-stmt-signals</td>
 <td class="right">August 2026</td>
 </tr></thead>
 <tfoot><tr>
@@ -1059,7 +1059,7 @@ svg {
 <dt class="label-workgroup">Workgroup:</dt>
 <dd class="workgroup">Web Authorization Protocol</dd>
 <dt class="label-internet-draft">Internet-Draft:</dt>
-<dd class="internet-draft">draft-mcguinness-oauth-sw-stmt-signals-latest</dd>
+<dd class="internet-draft">draft-mcguinness-oauth-cimd-sw-stmt-signals-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
 <time datetime="2026-08-09" class="published">9 August 2026</time>
@@ -1077,7 +1077,7 @@ svg {
 </dd>
 </dl>
 </div>
-<h1 id="title">Shared Signals Events for OAuth Software Statements</h1>
+<h1 id="title">Shared Signals Events for CIMD Software Statements</h1>
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
 <p id="section-abstract-1">A software statement carries a reviewer's decision about client software, bounded by an expiry the issuer chose. Ending that decision early has no standard mechanism, so how quickly a withdrawal takes effect is determined by how short the issuer made the statement's lifetime. This specification profiles the Shared Signals Framework for software statement lifecycle events, so that a statement issuer can tell the authorization servers that rely on its statements that a review, or a single statement carrying it, is withdrawn before it expires. Events can only reduce a client's standing, never create or extend it, and a receiver that misses an event falls back to expiry, so the mechanism shortens the interval between a decision and its effect without becoming load-bearing for security.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
@@ -1216,11 +1216,11 @@ svg {
       <h2 id="name-introduction">
 <a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
       </h2>
-<p id="section-1-1"><span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> defines a software statement in which an issuer attests reviewed client metadata, and <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> defines how a trusting authorization server consumes one: at registration, where the statement's expiry can bound the registration's validity, and at runtime, where it establishes a client for a request. In both cases the decision ends when the statement expires unrenewed.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-1"><span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> defines a software statement in which an issuer attests reviewed client metadata, and <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> defines how a trusting authorization server consumes one: at registration, where the statement's expiry can bound the registration's validity, and at runtime, where it establishes a client for a request. In both cases the decision ends when the statement expires unrenewed.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">That leaves responsiveness coupled to lifetime. An issuer that wants a withdrawal to take effect within minutes must issue statements that live for minutes, and pay the renewal traffic for every client at every audience. An issuer that wants a manageable renewal cadence accepts that a withdrawal takes as long as the remaining lifetime.<a href="#section-1-2" class="pilcrow">¶</a></p>
-<p id="section-1-3">The coupling is unnecessary, because the parties are already in a configured relationship. A trusting authorization server records each issuer's identifier, key source, scope, and role in order to accept its statements at all (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>). This specification uses that relationship to carry lifecycle events over the Shared Signals Framework <span>[<a href="#SSF" class="cite xref">SSF</a>]</span>: the statement issuer transmits, the trusting authorization server receives, and events are Security Event Tokens <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span> delivered by the framework's push <span>[<a href="#RFC8935" class="cite xref">RFC8935</a>]</span> or poll <span>[<a href="#RFC8936" class="cite xref">RFC8936</a>]</span> bindings.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-3">The coupling is unnecessary, because the parties are already in a configured relationship. A trusting authorization server records each issuer's identifier, key source, scope, and role in order to accept its statements at all (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>). This specification uses that relationship to carry lifecycle events over the Shared Signals Framework <span>[<a href="#SSF" class="cite xref">SSF</a>]</span>: the statement issuer transmits, the trusting authorization server receives, and events are Security Event Tokens <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span> delivered by the framework's push <span>[<a href="#RFC8935" class="cite xref">RFC8935</a>]</span> or poll <span>[<a href="#RFC8936" class="cite xref">RFC8936</a>]</span> bindings.<a href="#section-1-3" class="pilcrow">¶</a></p>
 <p id="section-1-4">This specification defines the subject identification, event types, payload claims, the durable records a receiver keeps, and its processing rules. It defines no new endpoint, transport, subject identifier format, or trust establishment mechanism.<a href="#section-1-4" class="pilcrow">¶</a></p>
-<p id="section-1-5">Two properties bound what the mechanism can do, and are normative in <a href="#processing" class="auto internal xref">Section 7</a>: an event can only reduce standing, and a receiver that misses events enforces expiry exactly as it does today. A withdrawal is durable rather than momentary, which <a href="#withdrawal-records" class="auto internal xref">Section 5</a> specifies, so a client holding an unexpired statement cannot restore what an event ended. Deployments therefore keep bounded statement lifetimes, and neither <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> nor <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> depends on this specification.<a href="#section-1-5" class="pilcrow">¶</a></p>
+<p id="section-1-5">Two properties bound what the mechanism can do, and are normative in <a href="#processing" class="auto internal xref">Section 7</a>: an event can only reduce standing, and a receiver that misses events enforces expiry exactly as it does today. A withdrawal is durable rather than momentary, which <a href="#withdrawal-records" class="auto internal xref">Section 5</a> specifies, so a client holding an unexpired statement cannot restore what an event ended. Deployments therefore keep bounded statement lifetimes, and neither <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> nor <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> depends on this specification.<a href="#section-1-5" class="pilcrow">¶</a></p>
 <p id="section-1-6">This mechanism buys latency, not correctness. A statement is carried by the client it admits, and a client has no reason to stop presenting one, so withdrawing a review before its expiry is what these events are for. A decision a consuming server evaluates afresh on every request, such as one carried by an identity assertion, needs no event at all.<a href="#section-1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1233,7 +1233,7 @@ svg {
 "<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
 described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
 appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
-<p id="section-2-2">Transmitter, Receiver, Stream, and the delivery and configuration mechanisms are defined by <span>[<a href="#SSF" class="cite xref">SSF</a>]</span>. Security Event Token, or SET, is defined by <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span>. Subject identifier formats are defined by <span>[<a href="#RFC9493" class="cite xref">RFC9493</a>]</span>. The software statement, its claims, and its validation are defined by <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>. Issuer trust configuration, registration validity, runtime presentation, and the per-grant establishment state are defined by <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>.<a href="#section-2-2" class="pilcrow">¶</a></p>
+<p id="section-2-2">Transmitter, Receiver, Stream, and the delivery and configuration mechanisms are defined by <span>[<a href="#SSF" class="cite xref">SSF</a>]</span>. Security Event Token, or SET, is defined by <span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span>. Subject identifier formats are defined by <span>[<a href="#RFC9493" class="cite xref">RFC9493</a>]</span>. The software statement, its claims, and its validation are defined by <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>. Issuer trust configuration, registration validity, runtime presentation, and the per-grant establishment state are defined by <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>.<a href="#section-2-2" class="pilcrow">¶</a></p>
 <p id="section-2-3">This specification additionally defines the following terms:<a href="#section-2-3" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-2-4">
         <dt id="section-2-4.1">Statement Issuer:</dt>
@@ -1248,7 +1248,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
         <dd class="break"></dd>
 <dt id="section-2-4.5">Standing:</dt>
         <dd style="margin-left: 1.5em" id="section-2-4.6">
-          <p id="section-2-4.6.1">What a client may do at a consuming authorization server by virtue of a software statement: its registration and that registration's validity, and its establishment at request time (<span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>). Standing is created and extended only by statements, never by the events defined here.<a href="#section-2-4.6.1" class="pilcrow">¶</a></p>
+          <p id="section-2-4.6.1">What a client may do at a consuming authorization server by virtue of a software statement: its registration and that registration's validity, and its establishment at request time (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>). Standing is created and extended only by statements, never by the events defined here.<a href="#section-2-4.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-2-4.7">Withdrawal Record:</dt>
@@ -1267,7 +1267,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <p id="section-3-1">The events defined here carry no authority of their own. They report that a decision the issuer already had the authority to make has ended earlier than its expiry announced.<a href="#section-3-1" class="pilcrow">¶</a></p>
 <p id="section-3-2">An event bears on the statements the transmitting issuer has made about the named subject, and on nothing else. A withdrawal by one issuer never reaches statements another issuer made about the same software, whatever those two issuers each vouched for.<a href="#section-3-2" class="pilcrow">¶</a></p>
 <p id="section-3-3">A consuming authorization server <span class="bcp14">MUST NOT</span> accept an event from an issuer it has not configured, and <span class="bcp14">MUST</span> verify the SET using keys obtained as it obtains that issuer's statement verification keys, from the issuer's authorization server metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>. It <span class="bcp14">MUST NOT</span> derive event trust from any key-location value carried in the event.<a href="#section-3-3" class="pilcrow">¶</a></p>
-<p id="section-3-4">A SET carrying an event defined here <span class="bcp14">MUST</span> use the explicit <code>typ</code> header value <code>secevent+jwt</code> (<span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span>), so that a receiver validating JWTs from a configured issuer distinguishes an event from a software statement, whose own typing <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> fixes. Its <code>aud</code> <span class="bcp14">MUST</span> contain the receiving authorization server's issuer identifier as defined by <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>, which is the value that appears in a statement's <code>aud</code>; a stream audience negotiated under <span>[<a href="#SSF" class="cite xref">SSF</a>]</span> does not replace it.<a href="#section-3-4" class="pilcrow">¶</a></p>
+<p id="section-3-4">A SET carrying an event defined here <span class="bcp14">MUST</span> use the explicit <code>typ</code> header value <code>secevent+jwt</code> (<span>[<a href="#RFC8417" class="cite xref">RFC8417</a>]</span>), so that a receiver validating JWTs from a configured issuer distinguishes an event from a software statement, whose own typing <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> fixes. Its <code>aud</code> <span class="bcp14">MUST</span> contain the receiving authorization server's issuer identifier as defined by <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>, which is the value that appears in a statement's <code>aud</code>; a stream audience negotiated under <span>[<a href="#SSF" class="cite xref">SSF</a>]</span> does not replace it.<a href="#section-3-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="subjects">
@@ -1297,9 +1297,9 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
           <p id="section-5-5.2.1">a record naming none refuses every statement from that issuer for that subject whose <code>iat</code> is at or before the record's effective time.<a href="#section-5-5.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-5-6">A statement from that issuer for that subject with an <code>iat</code> after the record's effective time is a later decision by the same authority. It is accepted under the ordinary rules of <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> and <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>, and restores what the withdrawal ended. This is the only recovery path, and it requires the issuer to act.<a href="#section-5-6" class="pilcrow">¶</a></p>
-<p id="section-5-7">A refusal under this section takes effect wherever the statement would otherwise be consumed: a registration governed by a refused statement is expired as <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> defines for a lapsed registration, and a runtime presentation carrying one fails as it does for a statement that is not current. A grant already open under a refused statement continues only as far as its next currency check: a receiver <span class="bcp14">MUST</span> treat a refused statement as not current when <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> requires currency at refresh, so that a withdrawal reaches running grants on the same terms as an expiry rather than waiting for the statement's own.<a href="#section-5-7" class="pilcrow">¶</a></p>
-<p id="section-5-8">A receiver <span class="bcp14">MAY</span> discard a record naming a <code>jti</code> once that statement's <code>exp</code> has passed, and <span class="bcp14">MAY</span> discard any Withdrawal Record once every statement it could refuse has expired, which a receiver that does not retain statement lifetimes bounds by the maximum lifetime it honors for that issuer (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>). Discarding a record earlier reopens the withdrawal.<a href="#section-5-8" class="pilcrow">¶</a></p>
+<p id="section-5-6">A statement from that issuer for that subject with an <code>iat</code> after the record's effective time is a later decision by the same authority. It is accepted under the ordinary rules of <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> and <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>, and restores what the withdrawal ended. This is the only recovery path, and it requires the issuer to act.<a href="#section-5-6" class="pilcrow">¶</a></p>
+<p id="section-5-7">A refusal under this section takes effect wherever the statement would otherwise be consumed: a registration governed by a refused statement is expired as <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> defines for a lapsed registration, and a runtime presentation carrying one fails as it does for a statement that is not current. A grant already open under a refused statement continues only as far as its next currency check: a receiver <span class="bcp14">MUST</span> treat a refused statement as not current when <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> requires currency at refresh, so that a withdrawal reaches running grants on the same terms as an expiry rather than waiting for the statement's own.<a href="#section-5-7" class="pilcrow">¶</a></p>
+<p id="section-5-8">A receiver <span class="bcp14">MAY</span> discard a record naming a <code>jti</code> once that statement's <code>exp</code> has passed, and <span class="bcp14">MAY</span> discard any Withdrawal Record once every statement it could refuse has expired, which a receiver that does not retain statement lifetimes bounds by the maximum lifetime it honors for that issuer (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>). Discarding a record earlier reopens the withdrawal.<a href="#section-5-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="events">
@@ -1335,7 +1335,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
         </h3>
 <p id="section-6.1-1">The issuer ends a review before the statements carrying it expire, for example on delisting software, on discovering that a statement was mis-issued, or on a compromise of the client's key.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
 <p id="section-6.1-2">Without <code>software_statement_jti</code> the event withdraws the decision: the receiver refuses every statement from that issuer for that subject issued at or before the record's effective time. With it, the event withdraws one artifact and the receiver refuses that <code>jti</code> alone, which suits a mis-issued statement where the underlying review still stands.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
-<p id="section-6.1-3">A receiver <span class="bcp14">MUST</span> record the withdrawal (<a href="#withdrawal-records" class="auto internal xref">Section 5</a>) and stop treating the affected statements as current. At a server implementing the registration-validity model of <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span>, a registration governed by a refused statement is expired as that specification defines for a lapsed registration; at a server that does not, the registration remains subject to that server's own client lifecycle, and the record still refuses further statements. A runtime presentation carrying a refused statement fails as <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> defines for a statement that is not current, and a grant already open under one continues only as far as its next currency check.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+<p id="section-6.1-3">A receiver <span class="bcp14">MUST</span> record the withdrawal (<a href="#withdrawal-records" class="auto internal xref">Section 5</a>) and stop treating the affected statements as current. At a server implementing the registration-validity model of <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>, a registration governed by a refused statement is expired as that specification defines for a lapsed registration; at a server that does not, the registration remains subject to that server's own client lifecycle, and the record still refuses further statements. A runtime presentation carrying a refused statement fails as <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> defines for a statement that is not current, and a grant already open under one continues only as far as its next currency check.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1364,7 +1364,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <p id="section-7-4">Two constraints bound every event:<a href="#section-7-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7-5.1">
-          <p id="section-7-5.1.1">An event <span class="bcp14">MUST NOT</span> create standing, extend a statement's lifetime, restore a statement previously revoked, or otherwise increase what a client may do. A receiver <span class="bcp14">MUST</span> ignore any payload member that would have such an effect. Restoring standing requires a statement, presented or delivered as <span>[<a href="#PRESENTATION" class="cite xref">PRESENTATION</a>]</span> defines.<a href="#section-7-5.1.1" class="pilcrow">¶</a></p>
+          <p id="section-7-5.1.1">An event <span class="bcp14">MUST NOT</span> create standing, extend a statement's lifetime, restore a statement previously revoked, or otherwise increase what a client may do. A receiver <span class="bcp14">MUST</span> ignore any payload member that would have such an effect. Restoring standing requires a statement, presented or delivered as <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> defines.<a href="#section-7-5.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-7-5.2">
           <p id="section-7-5.2.1">A receiver <span class="bcp14">MUST</span> continue to enforce statement expiry independently of this mechanism. Stream loss, transmitter unavailability, or delivery failure leaves standing to end at expiry, which remains the floor.<a href="#section-7-5.2.1" class="pilcrow">¶</a></p>
@@ -1410,7 +1410,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
         <h3 id="name-key-separation-and-compromi">
 <a href="#section-9.3" class="section-number selfRef">9.3. </a><a href="#name-key-separation-and-compromi" class="section-name selfRef">Key Separation and Compromise</a>
         </h3>
-<p id="section-9.3-1">A transmitter <span class="bcp14">MAY</span> sign SETs with a key distinct from its statement signing key, published in the same metadata. Compromise of a statement signing key is the more serious event, because statements grant standing and events cannot; a receiver responding to such a compromise removes trust in the issuer or its scope as <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> describes, which also ends event acceptance.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
+<p id="section-9.3-1">A transmitter <span class="bcp14">MAY</span> sign SETs with a key distinct from its statement signing key, published in the same metadata. Compromise of a statement signing key is the more serious event, because statements grant standing and events cannot; a receiver responding to such a compromise removes trust in the issuer or its scope as <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> describes, which also ends event acceptance.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="comparison-with-acceptance-time-status">
@@ -1428,7 +1428,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
       <h2 id="name-privacy-considerations">
 <a href="#section-10" class="section-number selfRef">10. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
-<p id="section-10-1">Subject identifiers in these events name software an issuer has reviewed and, in aggregate, describe an organization's approved software estate. A transmitter <span class="bcp14">SHOULD</span> scope each stream to the subjects the receiving authorization server can act on, and a receiver <span class="bcp14">SHOULD</span> apply to event logs the handling it applies to statements (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>).<a href="#section-10-1" class="pilcrow">¶</a></p>
+<p id="section-10-1">Subject identifiers in these events name software an issuer has reviewed and, in aggregate, describe an organization's approved software estate. A transmitter <span class="bcp14">SHOULD</span> scope each stream to the subjects the receiving authorization server can act on, and a receiver <span class="bcp14">SHOULD</span> apply to event logs the handling it applies to statements (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>).<a href="#section-10-1" class="pilcrow">¶</a></p>
 <p id="section-10-2">Withdrawal Records (<a href="#withdrawal-records" class="auto internal xref">Section 5</a>) persist an issuer's negative decisions at every receiver, in some cases beyond the lifetime of the statements they concern. A receiver <span class="bcp14">SHOULD</span> retain them no longer than the refusal rules require and <span class="bcp14">SHOULD</span> apply to them the handling it applies to statements.<a href="#section-10-2" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1470,14 +1470,6 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
         <dd>
 <span class="refTitle">"OAuth Client ID Metadata Document"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document">https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="ISSUANCE">[ISSUANCE]</dt>
-        <dd>
-<span class="refTitle">"OAuth 2.0 Software Statement Issuance"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-software-statement-issuance">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-software-statement-issuance</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="PRESENTATION">[PRESENTATION]</dt>
-        <dd>
-<span class="refTitle">"OAuth 2.0 Software Statement Consumption and Runtime Presentation"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-sw-stmt-presentation">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-sw-stmt-presentation</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
 <span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
@@ -1499,8 +1491,12 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <span class="refAuthor">Backman, A., Ed.</span>, <span class="refAuthor">Scurtescu, M.</span>, and <span class="refAuthor">P. Jain</span>, <span class="refTitle">"Subject Identifiers for Security Event Tokens"</span>, <span class="seriesInfo">RFC 9493</span>, <span class="seriesInfo">DOI 10.17487/RFC9493</span>, <time datetime="2023-12" class="refDate">December 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9493">https://www.rfc-editor.org/rfc/rfc9493</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="SSF">[SSF]</dt>
-      <dd>
+        <dd>
 <span class="refTitle">"OpenID Shared Signals Framework Specification 1.0"</span>, <span>n.d.</span>, <span>&lt;<a href="https://openid.net/specs/openid-sharedsignals-framework-1_0.html">https://openid.net/specs/openid-sharedsignals-framework-1_0.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="STATEMENT">[STATEMENT]</dt>
+      <dd>
+<span class="refTitle">"CIMD Software Statement"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
@@ -1514,10 +1510,6 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <dt id="CAEP">[CAEP]</dt>
         <dd>
 <span class="refTitle">"OpenID Continuous Access Evaluation Profile 1.0"</span>, <span>n.d.</span>, <span>&lt;<a href="https://openid.net/specs/openid-caep-1_0.html">https://openid.net/specs/openid-caep-1_0.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="RFC7591">[RFC7591]</dt>
-        <dd>
-<span class="refAuthor">Richer, J., Ed.</span>, <span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Machulak, M.</span>, and <span class="refAuthor">P. Hunt</span>, <span class="refTitle">"OAuth 2.0 Dynamic Client Registration Protocol"</span>, <span class="seriesInfo">RFC 7591</span>, <span class="seriesInfo">DOI 10.17487/RFC7591</span>, <time datetime="2015-07" class="refDate">July 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7591">https://www.rfc-editor.org/rfc/rfc7591</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC8935">[RFC8935]</dt>
         <dd>

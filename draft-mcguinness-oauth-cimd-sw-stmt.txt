@@ -8,26 +8,27 @@ Intended status: Standards Track                           9 August 2026
 Expires: 10 February 2027
 
 
-   OAuth 2.0 Software Statement Consumption and Runtime Presentation
-           draft-mcguinness-oauth-sw-stmt-presentation-latest
+                        CIMD Software Statement
+               draft-mcguinness-oauth-cimd-sw-stmt-latest
 
 Abstract
 
    RFC 7591 defines the software statement as input to dynamic client
    registration but does not define how long the resulting registration
    remains valid or how a client renews the statement on which it was
-   based.  This specification defines everything a trusting
-   authorization server does with a software statement: which issuers it
-   trusts, how it validates and applies one, and the two points at which
-   it consumes one.  Consumed in a registration request, a statement
-   governs that registration until it expires and a replacement renews
-   it.  Presented in an authorization or token request, it establishes
-   an otherwise unregistered client for that request and the grant state
-   derived from it, on proof of a key the reviewed document carries, so
-   possession of the statement alone is insufficient.  Together these
-   let an issuer curate approved client software across the
-   authorization servers in a statement's audience while each server
-   keeps control of trust, grants, and token lifetime.
+   based.  This specification profiles the software statement of RFC
+   7591 for clients identified by a Client ID Metadata Document, and
+   defines everything a trusting authorization server does with one:
+   which issuers it trusts, how it validates and applies one, and the
+   two points at which it consumes one.  Consumed in a registration
+   request, a statement governs that registration until it expires and a
+   replacement renews it.  Presented in an authorization or token
+   request, it establishes an otherwise unregistered client for that
+   request and the grant state derived from it, on proof of a key the
+   reviewed document carries, so possession of the statement alone is
+   insufficient.  Together these let an issuer curate approved client
+   software across the authorization servers in a statement's audience
+   while each server keeps control of trust, grants, and token lifetime.
 
 Status of This Memo
 
@@ -66,7 +67,8 @@ Table of Contents
      1.1.  Protocol Overview
      1.2.  Relationship to Client Attestation
    2.  Conventions and Definitions
-   3.  Statement Requirements
+   3.  The Software Statement
+     3.1.  Metadata Digest
    4.  Issuer Trust Establishment
    5.  Consumption at Registration
      5.1.  Registration Validity
@@ -103,12 +105,14 @@ Table of Contents
    15. Privacy Considerations
    16. IANA Considerations
      16.1.  OAuth Parameters Registry
-     16.2.  OAuth Extensions Error Registry
-     16.3.  OAuth Dynamic Client Registration Metadata Registry
-     16.4.  OAuth Authorization Server Metadata Registry
+     16.2.  Media Type Registration
+     16.3.  JSON Web Token Claims Registry
    17. References
      17.1.  Normative References
      17.2.  Informative References
+   Appendix A.  OAuth Extensions Error Registry
+     A.1.  OAuth Dynamic Client Registration Metadata Registry
+     A.2.  OAuth Authorization Server Metadata Registry
    Acknowledgments
    Author's Address
 
@@ -288,45 +292,121 @@ Table of Contents
       during runtime presentation.  The accepted proof path binds this
       key to the statement as specified in Section 6.3.
 
-3.  Statement Requirements
+3.  The Software Statement
 
-   This document consumes the software statement of [ISSUANCE].  The
-   syntax, validation, and semantics of every element are defined there;
-   this section states what a statement must carry to be consumed here,
-   and what each element is consumed for.  How the client acquired it is
-   out of scope.
+   The software statement is a compact JWT [RFC7519] protected by JWS
+   [RFC7515].  Although [RFC7591] permits a MAC, a statement issued
+   under this specification MUST use an asymmetric digital signature so
+   trusting servers need not receive an issuer-held symmetric key.  The
+   issuer and trusting authorization server MUST follow [RFC8725]
+   algorithm-verification guidance.  The none algorithm and symmetric
+   algorithms MUST NOT be used.
 
-   typ header:  software-statement+jwt.
+   The JOSE header MUST include kid, identifying the signing key within
+   the issuer's JWK Set, and MUST include typ with the value software-
+   statement+jwt, applying Section 3.11 of [RFC8725].  This value names
+   application/software-statement+jwt (Section 16.2) with the
+   application/ prefix omitted, as described in Section 4.1.9 of
+   [RFC7515].  Explicit typing prevents confusion with other JWTs from
+   the same issuer.
 
-   iss:  Identifies the issuer for trust and scope decisions, and forms
-      part of the statement identity recorded with a registration or
-      establishment.
+   Extensions can add claims; an incompatible revision would use a new
+   type value.  Supported algorithms appear in
+   software_statement_signing_alg_values_supported (Section 12).
 
-   sub:  The client's Client ID Metadata Document URL [CIMD].  In a
-      runtime presentation the request's client_id equals it, by the
-      rule of Section 6.1.
+   A statement says that its issuer evaluated the Client ID Metadata
+   Document whose content the digest names, and vouches for it to
+   whoever accepts that issuer.  The document carries the metadata; the
+   statement carries the decision.  The JWT payload MUST contain the
+   following claims.
 
-   aud:  OPTIONAL ([ISSUANCE]).  Where present, the authorization server
-      MUST reject the statement unless the claim names it; where absent,
-      acceptance rests on configured issuer trust (Section 4).
+   iss:  REQUIRED.  The issuer identifier of the issuing authorization
+      server, as defined by [RFC8414].
 
-   iat:  The issuance time, which orders one statement against another
-      when a replacement arrives (Section 5.2, Section 6.5.1).
+   sub:  REQUIRED.  The exact client identifier URL presented in the
+      request that produced the statement.
 
-   exp:  The expiry the issuer chose.  It bounds registration validity
-      (Section 5.1), is checked at every presentation (Section 14.5).
+   aud:  OPTIONAL.  One or more audience identifiers restricting which
+      authorization servers may accept the statement, each an
+      authorization server issuer identifier as defined by [RFC8414].
+      Where the claim is present, a trusting authorization server MUST
+      reject the statement unless one of its locally configured audience
+      identifiers exactly matches a value in it, and where the request
+      carried audience values every value in the claim MUST have
+      appeared among them.  Where the claim is absent, the statement is
+      unrestricted and acceptance rests on the consumer's configured
+      trust in the issuer and its identifier scope (this specification).
+      An issuer SHOULD omit the claim, so that one review serves every
+      server that trusts it, and include it only where it means to limit
+      reach: a statement attesting no key material is usable by whoever
+      holds it, and naming an audience is what bounds that (this
+      specification).
 
-   jti:  Identifies the statement within the issuer's namespace;
-      inventory and concurrency bounds key on the iss and jti pair.  A
-      replacement statement has its own jti, so replacement matching
-      does not key on this value.
+   iat:  REQUIRED.  A NumericDate value representing the time at which
+      the software statement was issued.  An issuer MUST NOT issue a
+      statement for a given iss and sub pair with an iat earlier than
+      one it has already issued for that pair, and SHOULD ensure the
+      value is strictly increasing across its signing nodes, so that the
+      order in which it made its decisions is recoverable from the
+      statements themselves.  Consumers rely on that order when one
+      statement replaces another (this specification) and when a
+      withdrawal separates statements issued before it from those issued
+      after ([SIGNALS]).  Back-dating a statement to allow for clock
+      skew makes it unusable as a replacement.
 
-   cimd_digest:  Binds the issuer's review to the exact document bytes
-      evaluated and feeds the post-issuance change policy of [ISSUANCE].
+   exp:  REQUIRED.  A NumericDate value representing the expiration
+      time.  A trusting authorization server MUST reject an expired
+      statement.
 
-   A statement lacking any of the required elements above cannot be
-   consumed under this specification, and one failing validation is
-   rejected as Section 10 defines.
+   jti:  REQUIRED.  A unique identifier for the statement within the
+      issuer's namespace.
+
+   cimd_digest:  REQUIRED.  The metadata digest of the Client ID
+      Metadata Document the issuer evaluated.  This claim binds the
+      statement to the exact document content evaluated during issuance
+      and lets any party determine whether the client's currently
+      published metadata still matches what was attested.
+
+   A statement carries no client metadata.  The reviewed metadata is the
+   document the digest names, which a consuming authorization server
+   retrieves and verifies for itself, so copying members into the
+   statement would duplicate what the digest already binds and reopen
+   questions of precedence and partial review that the digest settles.
+   A statement issued under this specification MUST NOT contain client
+   metadata claims.
+
+   An issuer that means to vouch for particular members without binding
+   the whole document needs an extension defining what a partial review
+   asserts and how a consumer applies it ([ISSUANCE]).
+
+   The issuer determines the lifetime, and any audience restriction,
+   according to policy.  Lifetime pulls in two directions: a short one
+   bounds exposure and keeps the review fresh, while at a server
+   implementing the registration-validity model of this specification
+   the same value is the registration's validity, and so the renewal
+   cadence both parties must sustain.  An issuer SHOULD choose a
+   lifetime it can renew reliably, and SHOULD stagger expiries or renew
+   ahead of the boundary so that a fleet issued together does not lapse
+   together.
+
+   The sub claim is the client identifier URL, not the local client_id
+   assigned through [RFC7591] registration.  A trusting authorization
+   server MAY use sub to correlate registrations and apply per-client
+   policy (this specification).
+
+3.1.  Metadata Digest
+
+   The metadata digest is the unpadded base64url-encoded SHA-256 hash
+   [RFC6234] of the retrieved representation body after removal of
+   content coding.  No transcoding, normalization, or re-serialization
+   occurs; a byte order mark and trailing newline are included.
+   Retrieval for snapshot purposes SHOULD NOT use content negotiation,
+   and an issuance source SHOULD serve the document without negotiated
+   variants, so that independent fetchers obtain identical bytes.
+
+   An issuer computes the digest over the document it evaluated; a
+   consumer computes it over the document it retrieves, and equality is
+   what says the two are the same bytes (Section 6.4).
 
 4.  Issuer Trust Establishment
 
@@ -1229,7 +1309,163 @@ Table of Contents
 
    Specification Document(s):  This specification, Section 6.1
 
-16.2.  OAuth Extensions Error Registry
+16.2.  Media Type Registration
+
+   This specification requests registration of the application/software-
+   statement+jwt media type in the IANA "Media Types" registry
+   [RFC6838].
+
+   Type name:  application
+
+   Subtype name:  software-statement+jwt
+
+   Required parameters:  n/a
+
+   Optional parameters:  n/a
+
+   Encoding considerations:  8bit.  A software statement is a JWT; JWT
+      values are encoded as a series of base64url-encoded values
+      separated by period ('.') characters, as registered for
+      application/jwt in Section 10.3.1 of [RFC7519].
+
+   Security considerations:  See Section 14 of this specification and
+      Section 11 of [RFC7519].
+
+   Interoperability considerations:  n/a
+
+   Published specification:  This specification
+
+   Applications that use this media type:  Authorization servers and
+      clients that issue, request, or accept OAuth 2.0 software
+      statements
+
+   Fragment identifier considerations:  n/a
+
+   Additional information:  File extension(s): n/a.  Macintosh file type
+      code(s): n/a.
+
+   Person & email address to contact for further information:  Karl
+      McGuinness, public@karlmcguinness.com
+
+   Intended usage:  COMMON
+
+   Restrictions on usage:  none
+
+   Author:  Karl McGuinness, public@karlmcguinness.com
+
+   Change controller:  IETF
+
+16.3.  JSON Web Token Claims Registry
+
+   This specification requests registration of the following value in
+   the IANA "JSON Web Token Claims" registry established by [RFC7519]:
+
+   Claim Name:  cimd_digest
+
+   Claim Description:  Unpadded base64url-encoded SHA-256 digest of the
+      retrieved octets of the Client ID Metadata Document evaluated
+      during software statement issuance
+
+   Change Controller:  IESG
+
+   Specification Document(s):  This specification, Section 3
+
+17.  References
+
+17.1.  Normative References
+
+   [CIMD]     "OAuth Client ID Metadata Document", n.d.,
+              <https://datatracker.ietf.org/doc/draft-ietf-oauth-client-
+              id-metadata-document>.
+
+   [ISSUANCE] "CIMD Software Statement Issuance", n.d.,
+              <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
+              cimd-sw-stmt-issuance>.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC6234]  Eastlake 3rd, D. and T. Hansen, "US Secure Hash Algorithms
+              (SHA and SHA-based HMAC and HKDF)", RFC 6234,
+              DOI 10.17487/RFC6234, May 2011,
+              <https://www.rfc-editor.org/rfc/rfc6234>.
+
+   [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
+              RFC 6749, DOI 10.17487/RFC6749, October 2012,
+              <https://www.rfc-editor.org/rfc/rfc6749>.
+
+   [RFC6838]  Freed, N., Klensin, J., and T. Hansen, "Media Type
+              Specifications and Registration Procedures", BCP 13,
+              RFC 6838, DOI 10.17487/RFC6838, January 2013,
+              <https://www.rfc-editor.org/rfc/rfc6838>.
+
+   [RFC7515]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web
+              Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
+              2015, <https://www.rfc-editor.org/rfc/rfc7515>.
+
+   [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
+              (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
+              <https://www.rfc-editor.org/rfc/rfc7519>.
+
+   [RFC7521]  "*** BROKEN REFERENCE ***".
+
+   [RFC7591]  Richer, J., Ed., Jones, M., Bradley, J., Machulak, M., and
+              P. Hunt, "OAuth 2.0 Dynamic Client Registration Protocol",
+              RFC 7591, DOI 10.17487/RFC7591, July 2015,
+              <https://www.rfc-editor.org/rfc/rfc7591>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+   [RFC8414]  Jones, M., Sakimura, N., and J. Bradley, "OAuth 2.0
+              Authorization Server Metadata", RFC 8414,
+              DOI 10.17487/RFC8414, June 2018,
+              <https://www.rfc-editor.org/rfc/rfc8414>.
+
+   [RFC8725]  Sheffer, Y., Hardt, D., and M. Jones, "JSON Web Token Best
+              Current Practices", BCP 225, RFC 8725,
+              DOI 10.17487/RFC8725, February 2020,
+              <https://www.rfc-editor.org/rfc/rfc8725>.
+
+   [RFC9126]  Lodderstedt, T., Campbell, B., Sakimura, N., Tonge, D.,
+              and F. Skokan, "OAuth 2.0 Pushed Authorization Requests",
+              RFC 9126, DOI 10.17487/RFC9126, September 2021,
+              <https://www.rfc-editor.org/rfc/rfc9126>.
+
+   [RFC9449]  Fett, D., Campbell, B., Bradley, J., Lodderstedt, T.,
+              Jones, M., and D. Waite, "OAuth 2.0 Demonstrating Proof of
+              Possession (DPoP)", RFC 9449, DOI 10.17487/RFC9449,
+              September 2023, <https://www.rfc-editor.org/rfc/rfc9449>.
+
+   [RFC9700]  Lodderstedt, T., Bradley, J., Labunets, A., and D. Fett,
+              "Best Current Practice for OAuth 2.0 Security", BCP 240,
+              RFC 9700, DOI 10.17487/RFC9700, January 2025,
+              <https://www.rfc-editor.org/rfc/rfc9700>.
+
+17.2.  Informative References
+
+   [ABCA]     "OAuth 2.0 Attestation-Based Client Authentication", n.d.,
+              <https://datatracker.ietf.org/doc/draft-ietf-oauth-
+              attestation-based-client-auth>.
+
+   [CLIENT-INSTANCE]
+              "OAuth 2.0 Client Instance Assertion", n.d.,
+              <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
+              client-instance-assertion>.
+
+   [RFC7592]  Richer, J., Ed., Jones, M., Bradley, J., and M. Machulak,
+              "OAuth 2.0 Dynamic Client Registration Management
+              Protocol", RFC 7592, DOI 10.17487/RFC7592, July 2015,
+              <https://www.rfc-editor.org/rfc/rfc7592>.
+
+   [SIGNALS]  "Shared Signals Events for CIMD Software Statements",
+              n.d., <https://datatracker.ietf.org/doc/draft-mcguinness-
+              oauth-cimd-sw-stmt-signals>.
+
+Appendix A.  OAuth Extensions Error Registry
 
    This specification requests registration of the following error codes
    in the IANA "OAuth Extensions Error Registry" established by
@@ -1257,7 +1493,7 @@ Table of Contents
    Specification Document(s):  [RFC6749], this specification
       (Section 10)
 
-16.3.  OAuth Dynamic Client Registration Metadata Registry
+A.1.  OAuth Dynamic Client Registration Metadata Registry
 
    This specification requests registration of the following client
    metadata member, returned by an authorization server in a
@@ -1272,7 +1508,7 @@ Table of Contents
 
    Specification Document(s):  This specification, Section 5.1
 
-16.4.  OAuth Authorization Server Metadata Registry
+A.2.  OAuth Authorization Server Metadata Registry
 
    This specification requests registration of the following values in
    the IANA "OAuth Authorization Server Metadata" registry established
@@ -1307,78 +1543,6 @@ Table of Contents
    Change Controller:  IESG
 
    Specification Document(s):  This specification, Section 12
-
-17.  References
-
-17.1.  Normative References
-
-   [CIMD]     "OAuth Client ID Metadata Document", n.d.,
-              <https://datatracker.ietf.org/doc/draft-ietf-oauth-client-
-              id-metadata-document>.
-
-   [ISSUANCE] "OAuth 2.0 Software Statement Issuance", n.d.,
-              <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
-              software-statement-issuance>.
-
-   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
-              Requirement Levels", BCP 14, RFC 2119,
-              DOI 10.17487/RFC2119, March 1997,
-              <https://www.rfc-editor.org/rfc/rfc2119>.
-
-   [RFC6749]  Hardt, D., Ed., "The OAuth 2.0 Authorization Framework",
-              RFC 6749, DOI 10.17487/RFC6749, October 2012,
-              <https://www.rfc-editor.org/rfc/rfc6749>.
-
-   [RFC7521]  "*** BROKEN REFERENCE ***".
-
-   [RFC7591]  Richer, J., Ed., Jones, M., Bradley, J., Machulak, M., and
-              P. Hunt, "OAuth 2.0 Dynamic Client Registration Protocol",
-              RFC 7591, DOI 10.17487/RFC7591, July 2015,
-              <https://www.rfc-editor.org/rfc/rfc7591>.
-
-   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
-              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
-              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
-
-   [RFC8414]  Jones, M., Sakimura, N., and J. Bradley, "OAuth 2.0
-              Authorization Server Metadata", RFC 8414,
-              DOI 10.17487/RFC8414, June 2018,
-              <https://www.rfc-editor.org/rfc/rfc8414>.
-
-   [RFC9126]  Lodderstedt, T., Campbell, B., Sakimura, N., Tonge, D.,
-              and F. Skokan, "OAuth 2.0 Pushed Authorization Requests",
-              RFC 9126, DOI 10.17487/RFC9126, September 2021,
-              <https://www.rfc-editor.org/rfc/rfc9126>.
-
-   [RFC9449]  Fett, D., Campbell, B., Bradley, J., Lodderstedt, T.,
-              Jones, M., and D. Waite, "OAuth 2.0 Demonstrating Proof of
-              Possession (DPoP)", RFC 9449, DOI 10.17487/RFC9449,
-              September 2023, <https://www.rfc-editor.org/rfc/rfc9449>.
-
-   [RFC9700]  Lodderstedt, T., Bradley, J., Labunets, A., and D. Fett,
-              "Best Current Practice for OAuth 2.0 Security", BCP 240,
-              RFC 9700, DOI 10.17487/RFC9700, January 2025,
-              <https://www.rfc-editor.org/rfc/rfc9700>.
-
-17.2.  Informative References
-
-   [ABCA]     "OAuth 2.0 Attestation-Based Client Authentication", n.d.,
-              <https://datatracker.ietf.org/doc/draft-ietf-oauth-
-              attestation-based-client-auth>.
-
-   [CLIENT-INSTANCE]
-              "OAuth 2.0 Client Instance Assertion", n.d.,
-              <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
-              client-instance-assertion>.
-
-   [RFC7592]  Richer, J., Ed., Jones, M., Bradley, J., and M. Machulak,
-              "OAuth 2.0 Dynamic Client Registration Management
-              Protocol", RFC 7592, DOI 10.17487/RFC7592, July 2015,
-              <https://www.rfc-editor.org/rfc/rfc7592>.
-
-   [SIGNALS]  "Shared Signals Events for OAuth Software Statements",
-              n.d., <https://datatracker.ietf.org/doc/draft-mcguinness-
-              oauth-sw-stmt-signals>.
 
 Acknowledgments
 
