@@ -51,7 +51,7 @@ informative:
 
 --- abstract
 
-A software statement carries a reviewer's decision about client software, bounded by an expiry the issuer chose. Ending that decision early has no standard mechanism, so how quickly a withdrawal takes effect is determined by how short the issuer made the statement's lifetime. This specification profiles the Shared Signals Framework for software statement lifecycle events, so that a statement issuer can tell the authorization servers that rely on its statements that a review, or a single statement carrying it, is withdrawn before it expires. Events can only reduce a client's standing, never create or extend it, and a receiver that misses an event falls back to expiry, so the mechanism shortens the interval between a decision and its effect without becoming load-bearing for security.
+A software statement carries a reviewer's decision about client software, bounded by an expiry the issuer chose. Ending that decision early has no standard mechanism, so how quickly a withdrawal takes effect is determined by how short the issuer made the statement's lifetime. This specification profiles the Shared Signals Framework for software statement lifecycle events, so that a statement issuer can tell the authorization servers that rely on its statements that a review, or a single statement carrying it, is withdrawn before it expires. Events can only reduce a client's standing, never create or extend it, and a receiver that misses an event falls back to the expiry and lifecycle controls it would have applied anyway, so the mechanism shortens the interval between a decision and its effect without becoming load-bearing for security.
 
 --- middle
 
@@ -113,7 +113,9 @@ A withdrawal event names a decision that ended. Its effect is durable, and a rec
 
 On applying a withdrawal, a consuming authorization server MUST create or update a Withdrawal Record holding the transmitting issuer, the subject, an effective time, and the withdrawn `jti` where the event named one.
 
-The effective time is the event's `event_timestamp`, so every receiver applies the same cutoff whatever its delivery latency; deriving it from arrival time would make a legitimate reissued statement acceptable at a prompt receiver and refused at a delayed one. The issuer is responsible for the cutoff being meaningful: it MUST NOT issue a statement for a subject with an `iat` at or before the `event_timestamp` of a withdrawal it has transmitted for that subject, and SHOULD suspend automated renewal for the subject before transmitting, so that a scheduled statement cannot land inside the window the withdrawal covers.
+The effective time is the event's `event_timestamp`, so every receiver applies the same cutoff whatever its delivery latency; deriving it from arrival time would make a legitimate reissued statement acceptable at a prompt receiver and refused at a delayed one.
+
+Two rules keep that cutoff honest. An issuer MUST set `event_timestamp` at or after the `iat` of the most recent statement it has issued for the subject, so the cutoff covers everything already minted, and MUST NOT afterwards issue a statement for that subject with an `iat` at or before it; it SHOULD suspend automated renewal for the subject before transmitting. A receiver MUST reject an event whose `event_timestamp` lies in the future beyond its clock-skew allowance, since a future-dated cutoff would refuse every statement the issuer could later mint and leave the subject unrecoverable at some receivers while others discarded the record and reopened it.
 
 While a Withdrawal Record is retained, the receiver MUST refuse a statement matching it:
 
@@ -161,7 +163,7 @@ A receiver MUST treat an event it has already applied as successfully delivered 
 Two constraints bound every event:
 
 * An event MUST NOT create standing, extend a statement's lifetime, restore a statement previously withdrawn, or otherwise increase what a client may do. A receiver MUST ignore any payload member that would have such an effect. Restoring standing requires a statement, presented or delivered as {{STATEMENT}} defines.
-* A receiver MUST continue to enforce statement expiry independently of this mechanism. Stream loss, transmitter unavailability, or delivery failure leaves standing to end at expiry, which remains the floor.
+* A receiver MUST continue to enforce statement expiry independently of this mechanism. Stream loss, transmitter unavailability, or delivery failure leaves standing to end at expiry where the registration-validity model of {{STATEMENT}} is in force, and otherwise at whatever the receiver's own client lifecycle provides; in both cases a missed event refuses later statements but does not reach standing already granted.
 
 Events may arrive out of order or be duplicated. A receiver MUST apply every withdrawal event it accepts, whatever its `event_timestamp` relative to events already applied, since withdrawals accumulate and an older one may name a statement a newer one does not. The ordering rule constrains reversal only: a receiver MUST NOT discard or narrow a Withdrawal Record, or discard standing-bearing state whose `iat` is after the effective time of the event in hand, on the basis of an event whose `event_timestamp` precedes the event that created it. A delayed or replayed withdrawal therefore cannot destroy an approval the tenant recorded after making it. Records are kept per subject and issuer, and per `jti` where an event named one, so that a later event never silently supersedes an earlier one of narrower scope.
 
