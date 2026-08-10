@@ -28,6 +28,10 @@ The repository also hosts "Shared Signals Events for CIMD Software Statements", 
 
 [Marketplace Listing and Enterprise Approval](deployment-model.md) sketches the end-to-end scenario the drafts are built for: a provider marketplace deciding which software may exist as a client, an enterprise deciding which of it may operate in its tenant, and the four layers that keep those decisions separate. Non-normative.
 
+## A Mobile App, End to End
+
+[Sketch: A Mobile App from Install to Third Party](mobile-app-sketch.md) walks one scenario through all three drafts: an app store install refused by an enterprise identity provider as unreviewed, a statement obtained and awaited while an administrator approves, sign-in, and then a third-party SaaS reached through an identity assertion. It stops at the point the family does not yet serve, where a public client holds a proven key the reviewed document does not carry. Non-normative.
+
 ## Composing with OpenID Federation
 
 [Composing with OpenID Federation](openid-federation-sketch.md) sketches how these drafts could take issuer trust from a federation rather than enrolling each reviewer, how a review could travel as a Trust Mark carrying `cimd_digest`, and the one place the two models cannot be reconciled: Federation derives an entity's metadata by policy, so it is not the octets a digest covers. Non-normative, and not a draft.
