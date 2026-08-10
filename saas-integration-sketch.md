@@ -44,6 +44,8 @@ The platform is already configured with this customer's enterprise root. Most pl
 
 An administrator approves the vendor at the customer's root. The root issues a trust mark whose type means permitted to act for this organization, with the vendor's entity identifier as `sub` and an expiry the customer chooses.
 
+The approval names the platform tenant it applies in, using the `aud_tenant` claim the Identity Assertion Authorization Grant registers, so a customer running production and sandbox tenants at one platform can approve a vendor in one and not the other. A decision naming a tenant cannot be spent in a different one.
+
 This is the whole of the customer's action, and it is the only artifact the customer has to reason about. It is not repeated per platform, which is the difference from consenting in each vendor's console.
 
 ### 3. The integration runs
@@ -53,6 +55,8 @@ The integrating SaaS makes a token request to the platform using client credenti
 The platform, for its own reasons, satisfies itself that this software is admissible: it validates the marketplace statement the client presents, resolves the document at `sub`, and compares the digest. None of that is the customer's concern.
 
 Then it answers the customer's question. It resolves which customer the request is for, asks that customer's root whether this vendor is permitted, querying by subject rather than enumerating the customer's vendors, and evaluates the request against the reviewed document, whose `scope` is the ceiling on what may be requested.
+
+One rule governs all of this and the statement draft now carries it: the tenant the platform decides against and the tenant that scopes what it issues must be the same, and neither may be selected by a value the client supplies. Everything else here is arrangement; that is the part that keeps a vendor from reaching one customer's data on another customer's approval.
 
 The platform pulls rather than having the client present the customer's trust mark. Presenting it would put two review artifacts from two authorities on one request, which is the arrangement this family rejected, and it would also make the customer's decision travel through the vendor it constrains.
 
@@ -105,7 +109,7 @@ sequenceDiagram
 
 ## Open questions
 
-* **Where does the tenant come from?** The platform resolves which customer a request is for by its own means, and nothing here makes that resolution verifiable. Asking the wrong customer's root is a cross-tenant failure, and the statement draft is explicit that it defines no tenant parameter. This is the sharpest weakness in the design.
+* **Tenant resolution is now a stated rule rather than a hole, but it is unenforceable from outside.** The statement draft carries the invariant and `aud_tenant` makes a tenant-scoped decision unspendable elsewhere, which is what closes the escalation. What neither does is let a customer or a vendor verify that a platform honoured it, since resolution stays the platform's own business and a client identifier URL is the same value in every tenant.
 * **Does the customer need the platform to hold a root at all?** The whole shape depends on the platform already trusting this customer's anchor. A customer whose platforms do not is back to per-console approval, and nothing here bootstraps that relationship.
 * **What does the customer see?** Nothing here gives the customer an inventory of which platforms have acted on its approvals, which is half of what an administrator wants from an approval record.
 * **Is a trust mark the right artifact for a customer's own governance decision**, or is it being borrowed because it is the nearest thing that exists? It carries an issuer, a subject, and an expiry, which is what is needed, but its intended meaning is conformance to a trust framework rather than commercial permission.
