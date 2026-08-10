@@ -2,7 +2,7 @@
 
 A non-normative walkthrough of one scenario end to end: an employee installs an app from an app store, the enterprise identity provider refuses it as unreviewed, the app obtains a software statement and waits for an administrator, signs the user in, and then reaches a third-party SaaS through an identity assertion. It exercises all three drafts in this repository plus the Identity Assertion Authorization Grant.
 
-It is the case the family serves least well, and this document does not smooth that over. What it still cannot give a mobile install is at the end.
+The family serves this case better than it did and still does not serve it fully. What it cannot give a mobile install is at the end, stated rather than smoothed over.
 
 ## The cast
 
@@ -16,7 +16,7 @@ It is the case the family serves least well, and this document does not smooth t
 
 ## Two reviews, and only one of them travels
 
-The app store already reviewed this app before listing it. That review is real, but it is not portable and the enterprise identity provider cannot consume it: there is no artifact, no digest, and no way to ask whether it still stands. The enterprise's question is a different one anyway, since it is deciding whether its own people may use this software against its own tenant. This is the same two-review distinction the deployment model opens with, arriving from the other end.
+The app store already reviewed this app before listing it. That review is real, but it is not portable and the enterprise identity provider cannot consume it: there is no artifact, no digest, and no way to ask whether it still stands. The enterprise's question is a different one anyway, since it is deciding whether its own people may use this software against its own tenant. This is the same two-review distinction [the deployment model](deployment-model.md#the-situation-being-addressed) opens with, arriving from the other end.
 
 ## Walkthrough
 
@@ -80,9 +80,9 @@ The app runs an ordinary authorization code flow, with PKCE and tokens bound to 
 
 The app needs data in a third-party SaaS. It exchanges its identity provider token for an Identity Assertion Authorization Grant assertion naming that SaaS, and presents the assertion at the SaaS authorization server for an access token.
 
-One act carries two decisions. The assertion says this user, at this enterprise, authorizes this client at this target, and the fact that it was issued at all says the enterprise permits this software. An application the administrator has not approved receives no assertion.
+One act carries two decisions, which [the deployment model](deployment-model.md#composition-with-id-jag) works through: an application the administrator has not approved receives no assertion at all.
 
-A proposed optional `cimd_digest` claim in that assertion would let the SaaS resolve the app's document, compare the digest, and provision just in time with no registration of its own. That is a proposal on an open issue, not settled work.
+A proposed optional `cimd_digest` claim in that assertion would let the SaaS resolve the app's document, compare the digest, and provision just in time with no registration of its own. That is a proposal on [an open issue](https://github.com/oauth-wg/oauth-identity-assertion-authz-grant/issues/121), not settled work.
 
 ### 10. Offboarding
 
@@ -133,11 +133,9 @@ Neither path above gives the installation a cryptographic identity. The device k
 
 **Endorsing the instance's own key** is what would supply that. The app already holds a device-generated key and platform attestation could vouch for it. The statement draft names this as an extension point: a client attestation, or an assertion from an issuer named by an `instance_issuers` delegation in the reviewed document, vouching for a key the document does not carry. With it the presenter proof means something about the device rather than only about continuity, which is what a deployment wants before it treats one install differently from another. It is not defined yet.
 
-The weaker binding is a deliberate trade rather than an oversight. The alternative for software distributed to end users is a key in every copy, which proves nothing about the installation holding it.
-
 ## Open questions
 
 * **The refusal needs a home outside PAR.** `statement_required` is not registered for the authorization endpoint, so an app that does not use pushed authorization requests cannot be told what it is missing. Either the family requires PAR for this interaction and says so, or it needs a way to signal the same thing to a plain authorization request.
-* **Nothing tells the app where to go after the refusal.** It has to already know that this authorization server issues statements and that it is the right reviewer for its own admission. An error carrying that pointer would close the loop, and the family deliberately withholds issuer-trust detail from unauthenticated requesters, so the two goals are in tension.
-* **What a copied statement is worth against a public client.** It opens a consent prompt wearing the reviewed software's branding, raised by a party that cannot receive what the user approves. Bounded, but not nothing, and rate limiting is the only control named.
+* **Nothing tells the app where to go after the refusal.** It has to already know that this authorization server issues statements and that it is the right reviewer for its own admission. An error carrying that pointer would close the loop, and the family deliberately withholds issuer-trust detail from unauthenticated requesters, so the two goals are in tension. This is the client-side face of the discovery gap [the deployment model](deployment-model.md#what-these-drafts-do-not-solve) names, where a federation is the in-band answer.
+* **What a copied statement is worth against a public client.** It opens a consent prompt wearing the reviewed software's branding, raised by a party that cannot receive what the user approves. The control that bounds it is the redirect binding itself, since the code reaches only a URI the reviewer looked at; audience, lifetime, status, and rate limiting narrow it further.
 * **Whether the enterprise identity provider should be the reviewer at all** in this scenario, or whether the app store's review should be the thing that travels, which would need an artifact no app store publishes today.

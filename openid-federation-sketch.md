@@ -2,7 +2,9 @@
 
 This is a non-normative sketch, not a draft. It describes how the specifications in this repository could compose with OpenID Federation 1.0 (Final, 17 February 2026), and marks the one place where they cannot. If it were adopted it would become a short profile, roughly one section of normative text per profile below, adding no endpoint and no artifact beyond a Trust Mark type. Section numbers refer to OpenID Federation 1.0.
 
-The summary is that the two compose on trust and stop at metadata. Federation supplies exactly what the statement draft declares out of scope, and the statement draft's metadata rule is incompatible with Resolved Metadata by construction.
+The summary is that the two compose on trust and stop at metadata. Federation supplies exactly what [the statement draft](draft-mcguinness-oauth-cimd-sw-stmt.md) declares out of scope, and the statement draft's metadata rule is incompatible with Resolved Metadata by construction.
+
+The reason the two meet at all is worth stating before the profiles. Federation's metadata travels inside signed JWTs, so it needs no digest to be authentic. A digest matters where metadata is an unsigned, mutable JSON document fetched over HTTPS, which is what a Client ID Metadata Document is. A federation whose members identify clients that way has no means today of saying which version of such a document a reviewer looked at, and that is the gap these profiles fill. It is the same gap outside a federation, which is why the statement draft exists at all.
 
 ## Profile A: Federation as the trust source for statement issuers
 
@@ -18,7 +20,7 @@ The statement draft says it "defines no in-band issuer discovery or trust decisi
 | Maximum statement lifetime honored | Local |
 | Policy on repeated and multiple registration | Local |
 
-The four that stay local are the consumer's own risk posture rather than facts about the issuer, so no discovery mechanism should supply them.
+Three of the seven come from the chain: the identifier, the key source, and the namespaces the issuer may attest. The four that stay local are the consumer's own risk posture rather than facts about the issuer, so no discovery mechanism should supply them.
 
 **Keys.** A software statement is signed with a protocol key, not a Federation Entity Key. Federation keeps these families apart and says Federation Entity Keys "SHOULD NOT be used in other protocols" (§3.1.1), so a consumer takes statement verification keys from the issuer's resolved `oauth_authorization_server` metadata, by `jwks`, `jwks_uri`, or `signed_jwks_uri`. The chain vouches for that metadata; it does not supply the signing key directly.
 
@@ -70,17 +72,13 @@ Stated plainly, because it narrows what these drafts are worth inside a federati
 * **Issuer trust at scale, key discovery, and rotation.** Only Trust Anchor keys are configured locally; everything else chains. The statement draft's issuer-trust section defines no mechanism at all.
 * **Central statements of who is accepted**, through `trust_mark_issuers` and metadata policy, rather than per-consumer configuration.
 
-## What this adds to a federation
-
-One thing, and it is narrow. Federation's metadata travels inside signed JWTs, so it needs no digest to be authentic. The digest matters where metadata is an unsigned, mutable JSON document fetched over HTTPS, which is what CIMD chose. A federation whose members identify clients by a Client ID Metadata Document URL, rather than by entity metadata, has no way today to say which version of that document a reviewer looked at. That is the gap these profiles fill, and it is the same gap outside a federation.
-
 ## When not to use this
 
 If a deployment is already operating a federation and is content for Resolved Metadata to define its clients, Federation's own registration serves it and neither profile is needed. These profiles are for a deployment that has chosen CIMD documents as the metadata source and wants a reviewer's decision bound to a specific version of one.
 
 ## Open questions
 
-* **The Trust Mark type identifier needs a namespace**, and the venue question is the same one the signals draft carries: the artifact and its digest are IETF work, Federation is OpenID Foundation work.
+* **The Trust Mark type identifier needs a namespace**, and the venue question is the same one [the signals draft](draft-mcguinness-oauth-cimd-sw-stmt-signals.md) carries: the artifact and its digest are IETF work, Federation is OpenID Foundation work.
 * **Whether one URL can serve both roles is unverified.** Federation Entity Identifiers permit a path and forbid query and fragment, and the Entity Configuration is a suffix beneath the identifier, so co-location looks available. This has not been checked against what CIMD requires of a client identifier URL, and that check should come before anything here is written up.
 * **Should the statement and the Trust Mark be interchangeable**, or is the Trust Mark the only Federation-native form? Carrying the same review in two artifacts reopens the question of which governs when they disagree.
 * **Federation 1.1 exists** and has not been diffed against 1.0 for anything above.

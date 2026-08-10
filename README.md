@@ -26,11 +26,11 @@ The repository also hosts "Shared Signals Events for CIMD Software Statements", 
 
 ## Deployment Model
 
-[Marketplace Listing and Enterprise Approval](deployment-model.md) sketches the end-to-end scenario the drafts are built for: a provider marketplace deciding which software may exist as a client, an enterprise deciding which of it may operate in its tenant, and the four layers that keep those decisions separate. Non-normative.
+[Deployment Model: Portable Review Across Many Authorization Servers](deployment-model.md) sketches the end-to-end scenario the drafts are built for: a provider marketplace deciding which software may exist as a client, an enterprise deciding which of it may operate in its tenant, and the four layers that keep those decisions separate. Non-normative.
 
 ## A Mobile App, End to End
 
-[Sketch: A Mobile App from Install to Third Party](mobile-app-sketch.md) walks one scenario through all three drafts: an app store install refused by an enterprise identity provider as unreviewed, a statement obtained and awaited while an administrator approves, sign-in, and then a third-party SaaS reached through an identity assertion. It stops at the point the family does not yet serve, where a public client holds a proven key the reviewed document does not carry. Non-normative.
+[Sketch: A Mobile App from Install to Third Party](mobile-app-sketch.md) walks one scenario through all three drafts: an app store install refused by an enterprise identity provider as unreviewed, a statement obtained and awaited while an administrator approves, sign-in, and then a third-party SaaS reached through an identity assertion. It stops at what the family still does not give a mobile install: the device key binds a grant to one phone, but nobody vouches for that key, so a server learns the same installation came back and never which one it is. Non-normative.
 
 ## Tenant Admin Consent
 

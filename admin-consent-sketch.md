@@ -51,7 +51,7 @@ That is the difference between a ceremony a person completes and a ceremony a pr
 
 An `oauth2PermissionGrant` is a row. It says a grant exists, not who decided, against what, when it lapses, or whether it still stands. A statement carries the issuer, an expiry the reviewer chose, and a digest naming the exact bytes of the document that was approved, so a later reader can tell whether the software still matches what was reviewed. Withdrawal is a published status any relying party can resolve rather than a deletion visible only to the directory that performed it.
 
-For an enterprise with more than one vendor, that last property is the point. The same decision is checkable at every provider that trusts the reviewer, which is the case the deployment model opens on.
+For an enterprise with more than one vendor, that last property is the point. The same decision is checkable at every provider that trusts the reviewer, which is the case [the deployment model](deployment-model.md#the-situation-being-addressed) opens on.
 
 ## The part with no generic form
 
@@ -74,6 +74,8 @@ The scope question needs no artifact either. The reviewed document's `scope` is 
 
 ## The flow
 
+The first exchange is a pushed authorization request rather than a plain one. `statement_required` has no authorization-endpoint form, so a client that skips PAR learns only that it is unauthorized ([the mobile sketch](mobile-app-sketch.md#open-questions) carries this as an open question).
+
 ```mermaid
 sequenceDiagram
     participant User as Employee
@@ -82,7 +84,7 @@ sequenceDiagram
     participant Admin as Administrator
     participant SaaS as Resource service
     User->>App: Opens the application
-    App->>IdP: Authorization request, client_id is the document URL
+    App->>IdP: Pushed authorization request, client_id is the document URL
     IdP-->>App: statement_required
     App->>IdP: Request a statement, completion_mode includes deferred
     IdP-->>App: Deferral code
@@ -99,12 +101,10 @@ sequenceDiagram
 
 * **Placing consent so users are not prompted.** That is what admin consent is usually bought for, and it stays local policy at the authorization server. Nothing here tells a server when to skip a consent screen.
 * **Assigning users and groups to an application.** Entra treats that as a separate control from consent, and it stays separate here, on the identity provider's side.
-* **Application permissions with no user.** An `appRoleAssignment` to a service principal is an app-only grant. The family admits the software and says nothing about what it may do without a user, which the deployment model already names as the case it serves least well.
+* **Application permissions with no user.** An `appRoleAssignment` to a service principal is an app-only grant. The family admits the software and says nothing about what it may do without a user, which [the deployment model](deployment-model.md#variants) already names as the case it serves least well.
 * **Anything retroactive.** Like Entra, withdrawal does not invalidate tokens already issued. Unlike Entra, the window is bounded by a status resolution interval rather than by whenever someone notices.
 
 ## Open questions
 
-* **Does an administrator approving software need a different artifact from a marketplace reviewing it?** This sketch says no, and treats the enterprise as a reviewer that happens to serve one tenant. The counter-argument is that a marketplace attests quality while an administrator accepts risk, and those may deserve different claims.
 * **Where does per-user assignment belong** when the identity provider is also the reviewer? Today the assertion carries it implicitly, and nothing makes the two decisions distinguishable in an audit.
 * **Should a denial be durable?** Entra's Block creates a disabled service principal and prevents future requests, while a plain Deny lets the requester ask again. The issuance draft's terminal denial binds one request only, which is deliberate, but an administrator who has said no may expect that to stick.
-* **Nothing here helps an enterprise migrate.** An organization with thousands of existing consent grants has no path from a directory of rows to a set of expiring decisions, and building one is not a protocol question.

@@ -17,17 +17,19 @@ Two review functions are at work, and they are routinely conflated:
 
 Neither substitutes for the other. **These drafts carry the first.** The second is answered on the customer's own clock, and where the customer's identity provider mediates the grant it is already answered continuously, by whether that provider issues an assertion at all. Trying to carry both in one artifact was the design this family started from and abandoned; the reasons are in [Composition with ID-JAG](#composition-with-id-jag).
 
+Whether an administrator accepting risk deserves a different claim from a marketplace attesting quality is an open question. These drafts answer no, and treat both as one reviewer role.
+
 ## What is actually new here
 
 Three capabilities have no incumbent answer, and all three are provider-side:
 
 * **Registrations whose metadata cannot be self-asserted.** A registration made with a statement takes its metadata from the reviewed document, not from the request. The redirect URIs, keys, and branding on the registration are the ones an issuer looked at.
 * **Registrations that expire when the decision behind them expires.** No provider offers this today, and no amount of customer-side automation creates it.
-* **Admission without registration.** A sender-constrained presentation establishes a client for one request and leaves no record, which is the only workable shape for client populations too numerous or too short-lived to register.
+* **Admission without registration.** A presentation establishes a client for the grant it opens and creates no registration, which is the only workable shape for client populations too numerous or too short-lived to register.
 
 The customer-side story is worth stating plainly: a determined enterprise can already hold one approval record and drive each provider's administrative API from it, unilaterally, today. What it cannot get that way is a decision the provider verifies rather than trusts, registration metadata bound to a review, or expiring registrations.
 
-A provider can adopt this in two rungs and needs no counterparty for the first. It issues statements from its own listing program, consumes them under the registration-validity model, and gets delistings that actually take effect. Then it accepts runtime presentation at the token endpoint for clients that need no redirect, which asks listed publishers only to host a metadata document.
+A provider can adopt this in two rungs and needs no counterparty for the first. It issues statements from its own listing program, consumes them under the registration-validity model, and gets delistings that actually take effect. Then it accepts runtime presentation: at the token endpoint for clients that need no redirect, and at the pushed authorization request endpoint for software distributed to end users, which can hold no key of its own to prove. Either rung asks listed publishers only to host a metadata document.
 
 ## Four layers
 
@@ -35,10 +37,10 @@ A provider can adopt this in two rungs and needs no counterparty for the first. 
 | --- | --- | --- | --- | --- |
 | Establishment | Which software may exist as a client here? | A reviewer the provider trusts | Software statement | Review and renewal |
 | Tenant permission | Which established software may operate in my tenant right now? | The customer | Whether its identity provider issues an assertion | Per grant |
-| Presenter proof | Which instance is making this request? | The reviewed document, which carries the key that must be proven | Client authentication or DPoP | Per request |
+| Presenter proof | Which instance is making this request? | The reviewed document, through a key it carries or the redirect URIs it names | Client authentication, DPoP, or PKCE to a reviewed redirect URI | Per request |
 | User grant | What may it access, for whom? | Resource owner and local policy | Access grant, or a cross-domain identity assertion | Grant and token lifetime |
 
-The drafts define the establishment layer. Presenter proof is ordinary OAuth client authentication against a key the reviewed document carries; tenant permission and the user grant belong to the customer's identity provider and to OAuth itself.
+The drafts define the establishment layer. Presenter proof is ordinary OAuth client authentication or DPoP against a key the reviewed document carries, and for software distributed to end users, which can hold no such key, the reviewed redirect URIs and PKCE stand in its place. Tenant permission and the user grant belong to the customer's identity provider and to OAuth itself.
 
 ## Actors
 
@@ -48,7 +50,7 @@ The drafts define the establishment layer. Presenter proof is ordinary OAuth cli
 | Reviewer | A review process: a marketplace listing program, an ecosystem directory, or an enterprise's own | Statements naming the software, the reviewed digest, and where they may be used |
 | Provider authorization server | Registrations, trust configuration | Validates statements, resolves documents, registers or establishes clients |
 | Enterprise customer | Its permission decision, and optionally a review process of its own | Assertions for permitted applications; statements where it wants a portable review record |
-| Client instance | A key the reviewed document carries | Proves that key at request time |
+| Client instance | A key the reviewed document carries, or one of its own where the software is distributed to end users | Proves that key at request time |
 
 ## End to end
 
@@ -64,7 +66,7 @@ The reviewer fetches the document, evaluates it, and signs a statement naming th
 
 Registering, the application presents the statement in an ordinary RFC 7591 request. The provider resolves the document at `sub`, verifies its digest against the statement, and registers the client with **that document's** metadata, taking nothing from the request. Where the provider implements the registration-validity model, it records the statement's identity and an effective expiry, the earlier of the statement's own and the maximum lifetime the provider honors for that issuer, and the registration is valid until then. One registration serves every tenant on the platform, so onboarding a customer requires no new registration.
 
-Not registering, an application identified by its metadata URL presents the statement in a token request or a pushed authorization request, proves a key the reviewed document carries, and is established for that request alone.
+Not registering, an application identified by its metadata URL presents the statement in a token request or a pushed authorization request and is established for the grant that opens, with no registration created. A confidential client proves a key the reviewed document carries. Software distributed to end users proves a key of its own instead, bound by the redirect URIs the reviewer looked at.
 
 ### 4. The customer decides which software may operate in its tenant
 
@@ -161,17 +163,11 @@ The customer-side decision above, which software may operate in this tenant, is 
 
 ## Composition with OpenID Federation
 
-Everything above has a provider configure each reviewer it accepts: the identifier, the key source, and which client identifiers that reviewer may vouch for. It is one act per reviewer and does not recur per application, but it is still enrollment, and an ecosystem with many providers and many reviewers pays it on every pair.
+Everything above has a provider configure each reviewer it accepts. That is one act per reviewer and does not recur per application, but it is still enrollment, and an ecosystem with many providers and many reviewers pays it on every pair. [OpenID Federation](https://openid.net/specs/openid-federation-1_0.html) removes that cost: a provider configures trust anchors and resolves each reviewer through a chain, and the review itself can travel as a Trust Mark carrying the `cimd_digest` claim.
 
-[OpenID Federation](https://openid.net/specs/openid-federation-1_0.html) removes that cost. A provider configures trust anchors and their keys, then resolves each reviewer through a trust chain rather than enrolling it. Three of the seven things a provider records per reviewer come from the chain: the identifier, the key source, and the namespaces the reviewer may attest. The other four stay local, because they are the provider's own risk posture rather than facts about the reviewer.
+What does not compose is metadata. Resolved metadata is derived, and parties other than the publisher can change it, so it is not the octets a digest covers. Registration metadata stays with the reviewed document.
 
-A review can travel there too. A Federation Trust Mark carrying the `cimd_digest` claim puts the reviewer's decision where a provider already looks, so one resolution returns the client, its metadata, and the review together, and withdrawal uses the trust mark status endpoint rather than a status list.
-
-One thing does not compose. Federation derives an entity's metadata by applying policy down the chain, and a superior can override values the publisher never asserted, so resolved metadata is by construction not the octets a digest covers. A provider takes registration metadata from the reviewed document or from Federation, and running both for one client means assuming they agree.
-
-Worth stating plainly for an enterprise that already runs a federation: it has expiring standing today, because a registration's validity may not exceed the lifetime of the trust chain behind it. The registration validity model above is for providers keeping a persistent registration outside a federation.
-
-[Composing with OpenID Federation](openid-federation-sketch.md) sketches both profiles and the boundary.
+[Composing with OpenID Federation](openid-federation-sketch.md) works through both profiles, the boundary, and the parts a federation already does better.
 
 ## What each draft supplies
 
@@ -206,12 +202,11 @@ Worth stating plainly for an enterprise that already runs a federation: it has e
 
 **Availability moves into the path.** Statements renew on a schedule, so a reviewer's outage longer than the remaining lifetime lapses every statement it maintains at once. Lifetimes of days rather than minutes, staggered expiries, and renewal ahead of the boundary keep that from being a self-inflicted outage. Registration and presentation also resolve the client's document, so the document host's availability matters at consumption time.
 
-**Coexisting with what exists.** Nothing requires a provider to remove its console. A provider consuming statements alongside its own toggles applies both, and the narrower answer governs. A practical migration runs the statement path in parallel, compares its decisions against the console for a cycle, and only then makes the console the exception path.
+**Coexisting with what exists.** Nothing requires a provider to remove its console. A provider consuming statements alongside its own toggles applies both, and the narrower answer governs. A practical migration runs the statement path in parallel, compares its decisions against the console for a cycle, and only then makes the console the exception path. Existing consent records are a separate problem: an organization holding thousands of them has no path from a directory of rows to a set of expiring decisions, and building one is not a protocol question.
 
 ## What these drafts do not solve
 
-* **Immediate revocation.** Enforcement is bounded by the provider's status resolution interval, the statement lifetime behind it, and the provider's own controls. Status resolution narrows the window to that interval; the signals profile narrows it to delivery latency. Neither reaches tokens already issued.
+* **Immediate revocation.** Bounded by the provider's status resolution interval and the statement lifetime behind it, on the cadence described above. Nothing here reaches tokens already issued.
 * **Software that cannot host metadata.** The family requires a Client ID Metadata Document. Software without one registers as it does today and gets none of this, which is a deliberate boundary.
 * **Discovery of policy.** There is no in-band way to learn which reviewers a provider accepts. Trust configuration is deliberately out of band here, and error responses guide the client. A deployment wanting it in band takes issuer trust from a federation instead; see [Composition with OpenID Federation](#composition-with-openid-federation).
 * **Delegation.** These drafts establish what the client is and whether a reviewer vouched for it. Which user or organization it acts for is separate work; see [Composition with ID-JAG](#composition-with-id-jag).
-* **Device posture.** Not addressed, and placed at the proof layer here only as guidance.
