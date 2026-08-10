@@ -71,6 +71,7 @@ Table of Contents
      3.1.  Metadata Digest
      3.2.  Validating a Statement
    4.  Issuer Trust Establishment
+     4.1.  Issuer and Consumer as One Server
    5.  Consumption at Registration
      5.1.  Registration Validity
      5.2.  Revalidation
@@ -81,6 +82,7 @@ Table of Contents
        6.1.2.  Token Endpoint
      6.2.  Presentation Processing
      6.3.  Sender Constraint
+       6.3.1.  Public Clients
      6.4.  Reviewed Metadata
      6.5.  Grant Lifecycle
        6.5.1.  Refresh
@@ -96,14 +98,15 @@ Table of Contents
    13. Extension Points
    14. Security Considerations
      14.1.  Statement Theft and Replay
-     14.2.  Renewal Authenticates the Credential
-     14.3.  External Retrieval and Resource Exhaustion
-     14.4.  Registration Fraud and Impersonation
-     14.5.  Enforcement Bounds
-     14.6.  Status Resolution
-     14.7.  Document Resolution
-     14.8.  Observable State
-     14.9.  Statement Handling
+     14.2.  Copied Statements and Public Clients
+     14.3.  Renewal Authenticates the Credential
+     14.4.  External Retrieval and Resource Exhaustion
+     14.5.  Registration Fraud and Impersonation
+     14.6.  Enforcement Bounds
+     14.7.  Status Resolution
+     14.8.  Document Resolution
+     14.9.  Observable State
+     14.10. Statement Handling
    15. Privacy Considerations
    16. IANA Considerations
      16.1.  OAuth Parameters Registry
@@ -159,7 +162,7 @@ Table of Contents
    current statement.  It does not revoke access tokens already issued,
    and continuation of runtime-established grants is subject to the
    refresh policy in Section 6.5.1.  These enforcement bounds are
-   detailed in Section 14.5.
+   detailed in Section 14.6.
 
    This separation lets one issuer curate approved software across many
    authorization servers without making the issuer the final policy
@@ -578,6 +581,27 @@ Table of Contents
    configured for rather than a single domain.  The rejection rule is
    the same.
 
+4.1.  Issuer and Consumer as One Server
+
+   An authorization server that issued a statement already holds the
+   decision that statement records.  Where it is also the trusting
+   authorization server, it MAY admit the client on that record rather
+   than require the statement to be presented back to it, at
+   registration or at runtime.
+
+   Holding the record does not relieve it of the checks.  Such a server
+   MUST apply the conditions it would apply to a presentation: the
+   recorded decision unexpired under Section 5.1 where that model is in
+   force, its status current where the server publishes status
+   (Section 3.2), the document at sub obtained, and its digest equal to
+   the one recorded (Section 3.1).  A decision the server made is not a
+   document it has re-read.
+
+   A statement's portability is therefore a property other servers need
+   rather than one its issuer needs.  A client dealing only with the
+   server that reviewed it presents nothing, and the aud of Section 3 is
+   what makes the same decision usable elsewhere.
+
 5.  Consumption at Registration
 
    The statement is consumed in the software_statement member of an
@@ -655,7 +679,7 @@ Table of Contents
       sound statement.
 
    The retrieval is client-controlled and reachable before any client is
-   registered, so the protections and bounds of Section 14.3 apply to it
+   registered, so the protections and bounds of Section 14.4 apply to it
    as they do to a presentation.
 
 5.1.  Registration Validity
@@ -687,7 +711,7 @@ Table of Contents
       exception.
 
    *  It SHOULD retain the expired record so that it can process a later
-      authenticated revalidation (Section 14.8), and MAY allow a grace
+      authenticated revalidation (Section 14.9), and MAY allow a grace
       period during which it accepts a replacement without treating the
       registration as expired.
 
@@ -697,7 +721,7 @@ Table of Contents
    the recovery path.  A server that does not resolve status is bounded
    by the effective expiry alone.
 
-   The disposition of outstanding grants is local policy (Section 14.5).
+   The disposition of outstanding grants is local policy (Section 14.6).
 
    Where [CIMD] defines an expiry the document asserts for its own
    client identifier, that value MAY only shorten the effective expiry
@@ -909,19 +933,21 @@ Table of Contents
    [RFC9449], and the proof MUST be bound to the current request and
    validated with the replay protections of that mechanism.
 
-   The proven key MUST appear in the jwks or at the jwks_uri of the
-   reviewed document (Section 6.4).  Where that document specifies a
-   client authentication method, the presenter MUST use it, and where
-   the grant type requires client authentication a DPoP proof does not
-   satisfy that requirement ([RFC9449]).  The authorization server MUST
-   reject a presentation without such a proof, or whose proven key the
-   reviewed document does not carry.
+   Except as Section 6.3.1 provides, the proven key MUST appear in the
+   jwks or at the jwks_uri of the reviewed document (Section 6.4).
+   Where that document specifies a client authentication method, the
+   presenter MUST use it, and where the grant type requires client
+   authentication a DPoP proof does not satisfy that requirement
+   ([RFC9449]).  The authorization server MUST reject a presentation
+   without such a proof, or whose proven key the reviewed document does
+   not carry.
 
-   A statement whose reviewed document carries no key material cannot be
-   presented at runtime and is consumable only through registration
-   (Section 5).  Endorsement of a key the statement does not name, by a
-   client attester or by an issuer the statement delegates to, is left
-   to extensions (Section 13).
+   A statement whose reviewed document carries no key material is
+   consumable through registration (Section 5) and, where the document
+   declares token_endpoint_auth_method of none, at the pushed
+   authorization request endpoint under Section 6.3.1.  Endorsement of a
+   key the statement does not name, by a client attester or by an issuer
+   the statement delegates to, is left to extensions (Section 13).
 
    Verifying a key at the document's jwks_uri is a retrieval at
    presentation time.  A fetch failure leaves the key unverified, and
@@ -929,7 +955,48 @@ Table of Contents
    MAY reuse a recently retrieved key set within ordinary HTTP caching
    bounds, subject to a maximum reuse period of its own choosing; it
    MUST NOT let the client's cache directives alone determine how long a
-   removed key continues to verify (Section 14.3).
+   removed key continues to verify (Section 14.4).
+
+6.3.1.  Public Clients
+
+   Software distributed to end users cannot hold a key its reviewed
+   document carries.  A key inside a distributed binary is in every
+   copy, so it identifies the software and not the installation, and
+   such a document declares token_endpoint_auth_method of none and
+   carries no key material.
+
+   A presentation at the pushed authorization request endpoint by a
+   client whose reviewed document declares token_endpoint_auth_method of
+   none is bound instead by the reviewed redirection URIs.  The
+   authorization server:
+
+   *  MUST reject the presentation unless every redirection URI in the
+      reviewed document uses the https scheme, and MUST reject a
+      document carrying a private-use scheme or loopback redirection
+      URI;
+
+   *  MUST require PKCE [RFC7636] with the S256 method;
+
+   *  MUST require the presenter to bind a key it holds, through the
+      dpop_jkt parameter [RFC9449], and records that key as the Proven
+      Key of the establishment (Section 6.5); and
+
+   *  MUST NOT require that key to appear in the reviewed document.
+
+   What admits the statement here is the reviewed document rather than
+   the proven key.  An authorization code opened by such a presentation
+   is delivered only to a redirection URI the issuer reviewed, so a
+   party holding a copied statement cannot receive it (Section 14.2).
+   The proven key answers the separate question of which installation
+   the grant belongs to, and nothing after establishment changes: code
+   redemption and refresh demonstrate possession of that same key
+   (Section 6.5, Section 6.5.1).
+
+   This binding exists at the pushed authorization request endpoint
+   alone.  A presentation at the token endpoint under Section 6.1 opens
+   no redirect and has nothing to bind it, so an authorization server
+   MUST reject one from a client whose reviewed document carries no key
+   material.
 
 6.4.  Reviewed Metadata
 
@@ -1018,7 +1085,7 @@ Table of Contents
    of the establishment's Proven Key under the same sender-constraint
    mechanism.  It MAY, by local policy, additionally require a current
    unexpired statement, and SHOULD require one once the establishment's
-   recorded statement has expired (Section 14.5).
+   recorded statement has expired (Section 14.6).
 
    Where the authorization server holds a refusal record for a
    statement, it MUST treat that statement as not current wherever this
@@ -1121,9 +1188,12 @@ Table of Contents
    Where the reviewed document carries jwks or jwks_uri, every
    registration derived from the statement uses that key material rather
    than an instance-supplied replacement, and the same key is what a
-   runtime presentation proves (Section 6.3).  Software whose instances
-   hold their own keys registers per instance, or waits on the
-   endorsement extension of Section 13.
+   runtime presentation proves (Section 6.3).  Software distributed to
+   end users presents at the pushed authorization request endpoint under
+   Section 6.3.1, which creates an establishment per grant rather than a
+   registration per installation.  Other software whose instances hold
+   their own keys registers per instance, or waits on the endorsement
+   extension of Section 13.
 
 8.  Deployment Model: Centrally Curated Software
 
@@ -1403,7 +1473,9 @@ Table of Contents
       pushed_authorization_request_endpoint, since Section 6.1.1 makes
       presentation there the only front-channel path.  A client also
       examines the ordinary client-authentication and DPoP metadata for
-      the proof it intends to use.
+      the proof it intends to use.  Whether the server admits a public
+      client's presentation at that endpoint (Section 6.3.1) is local
+      policy, and a refusal uses Section 10.
 
    software_statement_presentation_grant_types_supported:  OPTIONAL.  A
       JSON array of grant type identifiers on which the authorization
@@ -1471,7 +1543,33 @@ Table of Contents
    constraint, the grant bindings of Section 6.5, and the registration-
    validity model on top of them.
 
-14.2.  Renewal Authenticates the Credential
+14.2.  Copied Statements and Public Clients
+
+   A public client's presentation (Section 6.3.1) admits a statement
+   without proof of a key the reviewed document carries, so a party
+   holding a copied statement can open a pushed authorization request in
+   the reviewed software's name.  What it cannot do is complete the
+   grant.  The authorization code is delivered only to a redirection URI
+   the issuer reviewed, and requiring every such URI to use the https
+   scheme is what makes that binding hold: a private-use scheme or
+   loopback redirection URI can be claimed by other software on the same
+   device, and would deliver the code to the holder of the copy.
+
+   The residual exposure is a consent prompt carrying the reviewed
+   software's name and branding, raised by a party that cannot receive
+   what the user approves.  An authorization server SHOULD rate-limit
+   presentations per statement identity and per subject (Section 14.4),
+   and an issuer bounds the exposure through audience, lifetime, and
+   status (Section 3).
+
+   This is a weaker binding than a confidential client's, and
+   deliberately so.  The alternative for software distributed to end
+   users is a key in every copy, which proves nothing about the
+   installation presenting it.  An endorsement extension (Section 13)
+   closes the gap by giving the instance a key a third party vouches
+   for.
+
+14.3.  Renewal Authenticates the Credential
 
    Renewing a registration proves possession of the registration's own
    credential and the currency of a statement sharing the governing iss
@@ -1488,7 +1586,7 @@ Table of Contents
    does not share this gap, because the proof binds the presenter to the
    reviewed document at every presentation.
 
-14.3.  External Retrieval and Resource Exhaustion
+14.4.  External Retrieval and Resource Exhaustion
 
    Runtime presentation can cause the authorization server to retrieve
    the Client ID Metadata Document, a jwks_uri it names, or keys and
@@ -1519,7 +1617,7 @@ Table of Contents
    the authorization server MUST reject the request and MUST NOT fall
    back to a weaker proof.
 
-14.4.  Registration Fraud and Impersonation
+14.5.  Registration Fraud and Impersonation
 
    Open registration permits client_name, logo_uri, and client_uri
    values that imitate trusted software on consent screens.  Requiring a
@@ -1536,7 +1634,7 @@ Table of Contents
    misleads review can obtain a genuine statement for fraudulent
    metadata, so issuer verification depth remains decisive ([ISSUANCE]).
 
-14.5.  Enforcement Bounds
+14.6.  Enforcement Bounds
 
    Expiry is enforced at every presentation and every statement-governed
    registration, so a lapsed statement stops new runtime establishment
@@ -1568,7 +1666,7 @@ Table of Contents
    SHOULD stagger expiries or renew ahead of the boundary to avoid
    synchronized lapses.
 
-14.6.  Status Resolution
+14.7.  Status Resolution
 
    Resolving status adds a dependency on the issuer and a fetch the
    client does not control.  [STATUSLIST] aggregates many statements
@@ -1587,7 +1685,7 @@ Table of Contents
    tell an unpublished status from a withdrawn one, which is why
    [ISSUANCE] requires such an issuer to carry the claim throughout.
 
-14.7.  Document Resolution
+14.8.  Document Resolution
 
    Every presentation resolves the Client ID Metadata Document its
    statement names (Section 6.4), which inherits the resolution
@@ -1596,7 +1694,7 @@ Table of Contents
    document's caching directives; the digest is what tells it whether
    the bytes it holds are the reviewed ones, whatever their source.
 
-14.8.  Observable State
+14.9.  Observable State
 
    A retained expired registration is distinguishable from an unknown
    client, because recovery requires the server to authenticate the
@@ -1610,7 +1708,7 @@ Table of Contents
    issuer trust, subject scope, or attester policy, which Section 10
    keeps from unauthenticated requesters.
 
-14.9.  Statement Handling
+14.10.  Statement Handling
 
    A software statement remains a sensitive artifact in transit and at
    rest: possession alone does not enable presentation, but statements
@@ -1868,6 +1966,11 @@ Table of Contents
               P. Hunt, "OAuth 2.0 Dynamic Client Registration Protocol",
               RFC 7591, DOI 10.17487/RFC7591, July 2015,
               <https://www.rfc-editor.org/rfc/rfc7591>.
+
+   [RFC7636]  Sakimura, N., Ed., Bradley, J., and N. Agarwal, "Proof Key
+              for Code Exchange by OAuth Public Clients", RFC 7636,
+              DOI 10.17487/RFC7636, September 2015,
+              <https://www.rfc-editor.org/rfc/rfc7636>.
 
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
