@@ -26,6 +26,7 @@ author:
     email: public@karlmcguinness.com
 
 normative:
+  RFC6755:
   RFC8935:
   RFC8936:
   RFC8414:
@@ -120,6 +121,8 @@ Each event is a member of the SET `events` claim, whose value is the event paylo
 
 ## Status Changed {#status-changed}
 
+The event type identifier is `urn:ietf:params:oauth:event-type:software-statement-status-changed` ({{iana-event-type}}), used as a member name of the SET `events` claim.
+
 The issuer reports that it has changed the published status of one or more statements for the subject, for example on delisting software, on discovering that a statement was mis-issued, or on a compromise of the client's key.
 
 The event reports a change. It does not say what the new status is, and a receiver MUST NOT infer one from it. What the status now says is what {{STATUSLIST}} resolution returns, and a receiver that resolves a status of `VALID` after an event has correctly applied the event.
@@ -190,13 +193,25 @@ Because this specification defines no durable receiver-side record, it adds no n
 
 # IANA Considerations
 
-## Event Type Assignment
+## OAuth URI Registry {#iana-event-type}
 
-The event defined in {{events}} requires a URI identifier under a namespace this specification does not yet control. This version uses the placeholder base `https://schemas.openid.net/secevent/sw-stmt/event-type/` with the terminal segment `status-changed`. The final assignment depends on the venue in which this profile is published, since the Shared Signals Framework it profiles is maintained by the OpenID Foundation while the artifact and its status mechanism are IETF work. Assignment of the final base URI, and registration where the publishing body maintains a registry of security event types, is to be resolved before publication.
+{{RFC8417}} identifies an event type by a URI and establishes no registry of them, and IANA maintains none. This specification therefore takes its identifier from a namespace IETF controls, and requests registration of the following value in the IANA "OAuth URI" registry established by {{RFC6755}}:
+
+URN:
+: `urn:ietf:params:oauth:event-type:software-statement-status-changed`
+
+Common Name:
+: CIMD Software Statement Status Changed Event Type
+
+Change Controller:
+: IESG
+
+Specification Document(s):
+: This specification, {{status-changed}}
 
 ## SET Payload Claims
 
-The payload claim `software_statement_jti` is defined by this specification for use in the event payload of {{events}}. Registration in a registry of SET payload claims, where the publishing body maintains one, is to be resolved before publication. The `event_timestamp` and `reason_admin` members are used as {{CAEP}} defines them.
+The payload claim `software_statement_jti` is defined by this specification for use in the event payload of {{events}}. IANA maintains no registry of members appearing inside a SET event payload, so the claim is scoped to the event type that carries it and no registration is requested. The `event_timestamp` and `reason_admin` members are used as {{CAEP}} defines them.
 
 --- back
 

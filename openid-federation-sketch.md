@@ -36,7 +36,7 @@ Federation already has an artifact for a third party's signed assertion about an
 | --- | --- |
 | `iss` | The reviewer's Entity Identifier |
 | `sub` | The client's Entity Identifier, which is also its Client ID Metadata Document URL |
-| `trust_mark_type` | A type identifier for a CIMD review, to be assigned |
+| `trust_mark_type` | `urn:ietf:params:oauth:trust-mark-type:cimd-review`, registered in the IANA OAuth URI registry |
 | `iat`, `exp` | As Federation defines, with `exp` REQUIRED here |
 | `cimd_digest` | The digest of the exact octets the reviewer evaluated |
 
@@ -80,7 +80,8 @@ If a deployment is already operating a federation and is content for Resolved Me
 
 ## Open questions
 
-* **The Trust Mark type identifier needs a namespace**, and the venue question is the same one [the signals draft](draft-mcguinness-oauth-cimd-sw-stmt-signals.md) carries: the artifact and its digest are IETF work, Federation is OpenID Foundation work.
+* **The Trust Mark type is an IETF URN in an OpenID Foundation mechanism.** Federation requires only that the identifier be collision-resistant across federations, which a registered URN satisfies, and taking it from a namespace IETF controls keeps the review's vocabulary with the specification that defines the review. A federation operator may still expect its own namespace.
+
 * **Whether one URL can serve both roles is unverified.** Federation Entity Identifiers permit a path and forbid query and fragment, and the Entity Configuration is a suffix beneath the identifier, so co-location looks available. This has not been checked against what CIMD requires of a client identifier URL, and that check should come before anything here is written up.
 * **Should the statement and the Trust Mark be interchangeable**, or is the Trust Mark the only Federation-native form? Carrying the same review in two artifacts reopens the question of which governs when they disagree.
 * **Federation 1.1 exists** and has not been diffed against 1.0 for anything above.

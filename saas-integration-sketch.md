@@ -111,7 +111,7 @@ For a customer's commercial approvals that is the wrong way round. Which vendors
 
 **No user means no assertion.** Everything the deployment model says about the customer's identity provider conveying permission per grant is unavailable here. That is why this case needed a third path, and why it remains the weakest scenario in the set.
 
-**The trust mark type needs a namespace**, and the venue question is the one the signals draft and the Federation sketch both carry: the artifact and its digest are IETF work, Federation is OpenID Foundation work.
+**The trust mark type is an IETF URN**, `urn:ietf:params:oauth:trust-mark-type:` with a terminal segment naming the decision, registered in the IANA OAuth URI registry. Federation asks only that the identifier be collision-resistant across federations, so this satisfies it while keeping the vocabulary with the specifications that define the decisions.
 
 ## Open questions
 
