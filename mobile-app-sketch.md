@@ -28,7 +28,7 @@ The app ships with its client identifier, an HTTPS URL the publisher hosts. The 
 
 The app sends a pushed authorization request to the enterprise identity provider with its Client ID Metadata Document URL as `client_id`. The server resolves the document and finds no statement from a reviewer it trusts for this tenant. It answers `statement_required`.
 
-That error is the whole point of this step, and it only arrives if the app used a pushed authorization request. `statement_required` is registered for the token, pushed authorization request, and registration management responses. A plain authorization request has no code that says a statement is what is missing, so an app that skips PAR learns only that it is unauthorized. See the open questions.
+That error is the whole point of this step. `statement_required` now reaches a plain authorization request as well, returned through the redirection once the server has resolved the app's document and validated the redirect URI against it, so an app that has not adopted PAR still learns what it is missing rather than only that it is unauthorized.
 
 ### 3. Asking for a statement
 
@@ -135,7 +135,6 @@ Neither path above gives the installation a cryptographic identity. The device k
 
 ## Open questions
 
-* **The refusal needs a home outside PAR.** `statement_required` is not registered for the authorization endpoint, so an app that does not use pushed authorization requests cannot be told what it is missing. Either the family requires PAR for this interaction and says so, or it needs a way to signal the same thing to a plain authorization request.
 * **Nothing tells the app where to go after the refusal.** It has to already know that this authorization server issues statements and that it is the right reviewer for its own admission. An error carrying that pointer would close the loop, and the family deliberately withholds issuer-trust detail from unauthenticated requesters, so the two goals are in tension. This is the client-side face of the discovery gap [the deployment model](deployment-model.md#what-these-drafts-do-not-solve) names, where a federation is the in-band answer.
 * **What a copied statement is worth against a public client.** It opens a consent prompt wearing the reviewed software's branding, raised by a party that cannot receive what the user approves. The control that bounds it is the redirect binding itself, since the code reaches only a URI the reviewer looked at; audience, lifetime, status, and rate limiting narrow it further.
 * **Whether the enterprise identity provider should be the reviewer at all** in this scenario, or whether the app store's review should be the thing that travels, which would need an artifact no app store publishes today.

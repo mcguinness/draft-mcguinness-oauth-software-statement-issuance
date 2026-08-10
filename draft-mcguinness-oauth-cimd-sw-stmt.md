@@ -544,6 +544,10 @@ A registration management request ({{RFC7592}}) carrying a failing replacement u
 
 At the pushed authorization request endpoint these are carried in the error response {{RFC9126}} defines. On refresh-token use, {{refresh}} takes precedence: a missing or failing replacement statement is `statement_required`. Registration validity is reported differently, as `invalid_client` under {{revalidation}}, because the registration rather than the grant is what lapsed; neither rejection indicates refresh-token replay ({{RFC9700}}).
 
+A statement is never presented at the authorization endpoint ({{authorization-requests}}), so exactly one of these conditions arises there: a client for which this server requires a statement has none established. The authorization server MUST return `statement_required` in the authorization error response {{RFC6749}}, which tells the client to obtain a statement and return through the pushed authorization request endpoint. Without it a client learns only that it is unauthorized, and cannot tell a missing review from a policy it will never satisfy.
+
+The order matters. The authorization server resolves the client's Client ID Metadata Document, validates the request's `redirect_uri` against it, and only then returns the error through that redirection. Where it cannot resolve the document, and so cannot validate the redirection URI, it MUST NOT redirect and reports the error to the resource owner instead.
+
 Where the proof mechanism defines a recoverable error of its own, such as a DPoP nonce challenge {{RFC9449}}, that error takes precedence over the generic errors above.
 
 This surface is coarser than the registration codes and does not tell a client whether to seek a corrected statement or a different issuer. The authorization server MAY return non-sensitive diagnostics in `error_description` to a client it has authenticated, but MUST NOT reveal issuer-trust, subject-namespace, or attester-policy details to an unauthenticated requester. Where a statement is refused by a record rather than merely expired, and the client is authenticated, the authorization server SHOULD indicate that a statement issued more recently is required, since re-delivering the same statement can never succeed.
@@ -674,7 +678,7 @@ Every presentation resolves the Client ID Metadata Document its statement names 
 
 ## Observable State {#oracle-considerations}
 
-A retained expired registration is distinguishable from an unknown client, because recovery requires the server to authenticate the registration and evaluate a replacement before rejecting. That disclosure is deliberate and bounded: it is available only to a requester that authenticates as the registration, so it reveals to the legitimate client the state it must act on. Servers publishing `software_statement_registration_validity_supported` additionally disclose that statement-derived registrations expire there, which is configuration a client needs before registering. Neither discloses issuer trust, subject scope, or attester policy, which {{errors}} keeps from unauthenticated requesters.
+A retained expired registration is distinguishable from an unknown client, because recovery requires the server to authenticate the registration and evaluate a replacement before rejecting. That disclosure is deliberate and bounded: it is available only to a requester that authenticates as the registration, so it reveals to the legitimate client the state it must act on. A `statement_required` refusal at the authorization endpoint ({{errors}}) is a further disclosure, and a wider one, because it travels through the user agent: it tells anyone who can see the redirection that this client has no established standing at this server. That is more than `software_statement_presentation_supported` advertises, which is only that presentation is offered. It is accepted for the same reason as the paragraph above, since a client that cannot learn why it was refused cannot act, and it is bounded to the fact of the refusal, carrying no issuer, subject scope, or attester detail. Servers publishing `software_statement_registration_validity_supported` additionally disclose that statement-derived registrations expire there, which is configuration a client needs before registering. Neither discloses issuer trust, subject scope, or attester policy, which {{errors}} keeps from unauthenticated requesters.
 
 ## Statement Handling
 
@@ -787,7 +791,7 @@ Error Name:
 : `statement_required`
 
 Error Usage Location:
-: token error response, pushed authorization request error response, client registration management error response
+: authorization error response, token error response, pushed authorization request error response, client registration management error response
 
 Related Protocol Extension:
 : CIMD Software Statement

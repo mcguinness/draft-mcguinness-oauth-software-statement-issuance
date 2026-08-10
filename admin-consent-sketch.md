@@ -74,7 +74,7 @@ The scope question needs no artifact either. The reviewed document's `scope` is 
 
 ## The flow
 
-The first exchange is a pushed authorization request rather than a plain one. `statement_required` has no authorization-endpoint form, so a client that skips PAR learns only that it is unauthorized ([the mobile sketch](mobile-app-sketch.md#open-questions) carries this as an open question).
+The first exchange is shown as a pushed authorization request because that is where the client would later present a statement. The refusal itself also reaches a plain authorization request, returned through the redirection after the server validates the redirect URI against the resolved document.
 
 ```mermaid
 sequenceDiagram
