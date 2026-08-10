@@ -75,7 +75,7 @@ Table of Contents
      8.4.  Relationship to Scheduled Resolution
    9.  Privacy Considerations
    10. IANA Considerations
-     10.1.  Event Type Assignment
+     10.1.  OAuth URI Registry
      10.2.  SET Payload Claims
    11. References
      11.1.  Normative References
@@ -219,6 +219,10 @@ Table of Contents
       intended for an administrator, as [CAEP] defines the member.
 
 5.1.  Status Changed
+
+   The event type identifier is urn:ietf:params:oauth:event-
+   type:software-statement-status-changed (Section 10.1), used as a
+   member name of the SET events claim.
 
    The issuer reports that it has changed the published status of one or
    more statements for the subject, for example on delisting software,
@@ -399,27 +403,31 @@ Table of Contents
 
 10.  IANA Considerations
 
-10.1.  Event Type Assignment
+10.1.  OAuth URI Registry
 
-   The event defined in Section 5 requires a URI identifier under a
-   namespace this specification does not yet control.  This version uses
-   the placeholder base https://schemas.openid.net/secevent/sw-stmt/
-   event-type/ with the terminal segment status-changed.  The final
-   assignment depends on the venue in which this profile is published,
-   since the Shared Signals Framework it profiles is maintained by the
-   OpenID Foundation while the artifact and its status mechanism are
-   IETF work.  Assignment of the final base URI, and registration where
-   the publishing body maintains a registry of security event types, is
-   to be resolved before publication.
+   [RFC8417] identifies an event type by a URI and establishes no
+   registry of them, and IANA maintains none.  This specification
+   therefore takes its identifier from a namespace IETF controls, and
+   requests registration of the following value in the IANA "OAuth URI"
+   registry established by [RFC6755]:
+
+   URN:  urn:ietf:params:oauth:event-type:software-statement-status-
+      changed
+
+   Common Name:  CIMD Software Statement Status Changed Event Type
+
+   Change Controller:  IESG
+
+   Specification Document(s):  This specification, Section 5.1
 
 10.2.  SET Payload Claims
 
    The payload claim software_statement_jti is defined by this
-   specification for use in the event payload of Section 5.
-   Registration in a registry of SET payload claims, where the
-   publishing body maintains one, is to be resolved before publication.
-   The event_timestamp and reason_admin members are used as [CAEP]
-   defines them.
+   specification for use in the event payload of Section 5.  IANA
+   maintains no registry of members appearing inside a SET event
+   payload, so the claim is scoped to the event type that carries it and
+   no registration is requested.  The event_timestamp and reason_admin
+   members are used as [CAEP] defines them.
 
 11.  References
 
@@ -433,6 +441,10 @@ Table of Contents
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
               <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC6755]  Campbell, B. and H. Tschofenig, "An IETF URN Sub-Namespace
+              for OAuth", RFC 6755, DOI 10.17487/RFC6755, October 2012,
+              <https://www.rfc-editor.org/rfc/rfc6755>.
 
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
