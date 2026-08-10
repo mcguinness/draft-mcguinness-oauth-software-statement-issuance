@@ -155,6 +155,20 @@ Two properties keep this additive. **The event names no status.** It says look, 
 
 The consequence is that cadence and responsiveness stop being one dial. A reviewer picks a resolution interval that suits its consumers and still acts in seconds when it must.
 
+## Composition with OpenID Federation
+
+Everything above has a provider configure each reviewer it accepts: the identifier, the key source, and which client identifiers that reviewer may vouch for. It is one act per reviewer and does not recur per application, but it is still enrollment, and an ecosystem with many providers and many reviewers pays it on every pair.
+
+[OpenID Federation](https://openid.net/specs/openid-federation-1_0.html) removes that cost. A provider configures trust anchors and their keys, then resolves each reviewer through a trust chain rather than enrolling it. Three of the seven things a provider records per reviewer come from the chain: the identifier, the key source, and the namespaces the reviewer may attest. The other four stay local, because they are the provider's own risk posture rather than facts about the reviewer.
+
+A review can travel there too. A Federation Trust Mark carrying the `cimd_digest` claim puts the reviewer's decision where a provider already looks, so one resolution returns the client, its metadata, and the review together, and withdrawal uses the trust mark status endpoint rather than a status list.
+
+One thing does not compose. Federation derives an entity's metadata by applying policy down the chain, and a superior can override values the publisher never asserted, so resolved metadata is by construction not the octets a digest covers. A provider takes registration metadata from the reviewed document or from Federation, and running both for one client means assuming they agree.
+
+Worth stating plainly for an enterprise that already runs a federation: it has expiring standing today, because a registration's validity may not exceed the lifetime of the trust chain behind it. The registration validity model above is for providers keeping a persistent registration outside a federation.
+
+[Composing with OpenID Federation](openid-federation-sketch.md) sketches both profiles and the boundary.
+
 ## What each draft supplies
 
 | Capability | Draft | Section |
@@ -170,6 +184,7 @@ The consequence is that cadence and responsiveness stop being one dial. A review
 | Renewal from a prior statement | Issuance | Renewal |
 | Ending a review before expiry | Statement, Issuance | `status` claim, Status Publication |
 | Reducing withdrawal latency | Signals | Status Changed, Receiver Processing |
+| Issuer trust without per-reviewer enrollment | None yet | Sketched in the Federation companion |
 
 ## What changes, concretely
 
@@ -193,6 +208,6 @@ The consequence is that cadence and responsiveness stop being one dial. A review
 
 * **Immediate revocation.** Enforcement is bounded by the provider's status resolution interval, the statement lifetime behind it, and the provider's own controls. Status resolution narrows the window to that interval; the signals profile narrows it to delivery latency. Neither reaches tokens already issued.
 * **Software that cannot host metadata.** The family requires a Client ID Metadata Document. Software without one registers as it does today and gets none of this, which is a deliberate boundary.
-* **Discovery of policy.** There is no in-band way to learn which reviewers a provider accepts. Trust configuration is deliberately out of band, and error responses guide the client.
+* **Discovery of policy.** There is no in-band way to learn which reviewers a provider accepts. Trust configuration is deliberately out of band here, and error responses guide the client. A deployment wanting it in band takes issuer trust from a federation instead; see [Composition with OpenID Federation](#composition-with-openid-federation).
 * **Delegation.** These drafts establish what the client is and whether a reviewer vouched for it. Which user or organization it acts for is separate work; see [Composition with ID-JAG](#composition-with-id-jag).
 * **Device posture.** Not addressed, and placed at the proof layer here only as guidance.

@@ -28,10 +28,16 @@ The repository also hosts "Shared Signals Events for CIMD Software Statements", 
 
 [Marketplace Listing and Enterprise Approval](deployment-model.md) sketches the end-to-end scenario the drafts are built for: a provider marketplace deciding which software may exist as a client, an enterprise deciding which of it may operate in its tenant, and the four layers that keep those decisions separate. Non-normative.
 
+## Composing with OpenID Federation
+
+[Composing with OpenID Federation](openid-federation-sketch.md) sketches how these drafts could take issuer trust from a federation rather than enrolling each reviewer, how a review could travel as a Trust Mark carrying `cimd_digest`, and the one place the two models cannot be reconciled: Federation derives an entity's metadata by policy, so it is not the octets a digest covers. Non-normative, and not a draft.
+
 ## Related Drafts
 
 * [OAuth Client ID Metadata Document](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/) (normative dependency)
+* [Token Status List](https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list/) (normative dependency)
 * [Deferred Token Response](https://datatracker.ietf.org/doc/draft-gerber-oauth-deferred-token-response/) (normative dependency)
+* [OpenID Federation 1.0](https://openid.net/specs/openid-federation-1_0.html) (composition sketched above)
 * [OAuth 2.0 Client Instance Assertion](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-client-instance-assertion/) (instance layer; composes with this draft)
 * [OAuth Identity Assertion Trust Framework](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-assertion-framework/) (issuer trust generalization)
 
