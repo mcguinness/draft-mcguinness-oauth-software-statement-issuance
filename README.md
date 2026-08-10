@@ -32,6 +32,10 @@ The repository also hosts "Shared Signals Events for CIMD Software Statements", 
 
 [Sketch: A Mobile App from Install to Third Party](mobile-app-sketch.md) walks one scenario through all three drafts: an app store install refused by an enterprise identity provider as unreviewed, a statement obtained and awaited while an administrator approves, sign-in, and then a third-party SaaS reached through an identity assertion. It stops at the point the family does not yet serve, where a public client holds a proven key the reviewed document does not carry. Non-normative.
 
+## Tenant Admin Consent
+
+[Sketch: Tenant Admin Consent Without a Stored Grant](admin-consent-sketch.md) takes Microsoft Entra ID's tenant-wide admin consent as the reference and asks what each of its parts looks like built from open specifications. Three have generic forms already, one of them better than the original, since Entra's approval loop cannot be automated at all. The fourth, a consent that binds a population rather than a principal, has no form anywhere, and the sketch argues that is the right outcome. Non-normative.
+
 ## Composing with OpenID Federation
 
 [Composing with OpenID Federation](openid-federation-sketch.md) sketches how these drafts could take issuer trust from a federation rather than enrolling each reviewer, how a review could travel as a Trust Mark carrying `cimd_digest`, and the one place the two models cannot be reconciled: Federation derives an entity's metadata by policy, so it is not the octets a digest covers. Non-normative, and not a draft.

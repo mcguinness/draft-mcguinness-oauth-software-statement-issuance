@@ -155,6 +155,10 @@ Two properties keep this additive. **The event names no status.** It says look, 
 
 The consequence is that cadence and responsiveness stop being one dial. A reviewer picks a resolution interval that suits its consumers and still acts in seconds when it must.
 
+## Replacing tenant admin consent
+
+The customer-side decision above, which software may operate in this tenant, is the one most enterprises make today through a vendor's admin consent screen. [The admin consent sketch](admin-consent-sketch.md) works through what that ceremony contains and which parts have generic forms: the request and approval loop is the issuance flow and comes out ahead, since the proprietary version cannot be automated, while a consent recorded once for every user has no equivalent in any open specification and deliberately gains none here.
+
 ## Composition with OpenID Federation
 
 Everything above has a provider configure each reviewer it accepts: the identifier, the key source, and which client identifiers that reviewer may vouch for. It is one act per reviewer and does not recur per application, but it is still enrollment, and an ecosystem with many providers and many reviewers pays it on every pair.
