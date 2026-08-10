@@ -44,6 +44,8 @@ The platform is already configured with this customer's enterprise root. Most pl
 
 An administrator approves the vendor at the customer's root. The root issues a trust mark whose type means permitted to act for this organization, with the vendor's entity identifier as `sub` and an expiry the customer chooses.
 
+The mark stays at the customer's root. The vendor does not publish it in its own entity configuration, which would list every customer that had approved it, and which would also make the mark readable by anyone, since entity configurations are public and Federation's status endpoint asks only for a mark somebody already holds.
+
 The approval names the platform tenant it applies in, using the `aud_tenant` claim the Identity Assertion Authorization Grant registers, so a customer running production and sandbox tenants at one platform can approve a vendor in one and not the other. A decision naming a tenant cannot be spent in a different one.
 
 This is the whole of the customer's action, and it is the only artifact the customer has to reason about. It is not repeated per platform, which is the difference from consenting in each vendor's console.
@@ -54,7 +56,7 @@ The integrating SaaS makes a token request to the platform using client credenti
 
 The platform, for its own reasons, satisfies itself that this software is admissible: it validates the marketplace statement the client presents, resolves the document at `sub`, and compares the digest. None of that is the customer's concern.
 
-Then it answers the customer's question. It resolves which customer the request is for, asks that customer's root whether this vendor is permitted, querying by subject rather than enumerating the customer's vendors, and evaluates the request against the reviewed document, whose `scope` is the ceiling on what may be requested.
+Then it answers the customer's question. It resolves which customer the request is for, authenticates to that customer's root and asks whether this vendor is permitted, querying by subject rather than enumerating the customer's vendors, and evaluates the request against the reviewed document, whose `scope` is the ceiling on what may be requested.
 
 One rule governs all of this and the statement draft now carries it: the tenant the platform decides against and the tenant that scopes what it issues must be the same, and neither may be selected by a value the client supplies. Everything else here is arrangement; that is the part that keeps a vendor from reaching one customer's data on another customer's approval.
 
@@ -101,7 +103,11 @@ sequenceDiagram
 
 ## What is still missing
 
-**The pull may not be a supported query.** Federation describes its trust mark endpoints as serving marks to their subjects, and does not state who else may query them or whether authentication is required. A platform asking a customer's root about a third party is the shape this sketch needs, and it is the first thing to check before any of this is written up. The listing endpoint would answer the question but returns every entity holding the mark type, which discloses the customer's whole approved-vendor list to anyone who asks.
+**The pull is supported, and the specification names this use case.** Federation's Trust Mark endpoint takes a subject as a required parameter and says a deployment "MAY choose to allow authenticated requests from clients that are not the Trust Mark subject," offering as its example a federation entity retrieving the trust mark for another entity. That is this scenario. The Trust Marked Entities Listing endpoint answers the same question when given a subject, and client authentication may be required at either through `private_key_jwt`, with the trust mark endpoint as the specification's own worked example of declaring it.
+
+**What is wrong is the default and the privacy posture, not the mechanism.** Client authentication is not used at federation endpoints by default, and the specification defines no authorization model for them at all: authentication establishes who is asking, and nothing establishes who may ask about whom. Federation also treats trust-mark holdership as public federation infrastructure data. Its privacy considerations protect the verifier from being tracked by the issuer, and the mitigation they recommend is to fetch the whole list of entities holding a mark type instead of asking per subject.
+
+For a customer's commercial approvals that is the wrong way round. Which vendors an enterprise has approved is competitively sensitive and useful to an attacker mapping its estate. A root carrying these approvals therefore has to require client authentication at its trust mark endpoint, decline to publish a listing endpoint at all, and enforce a query-authorization policy the specification does not describe. All three are permitted, none is the default, and the last has no interoperable form, so two roots will do it differently.
 
 **No user means no assertion.** Everything the deployment model says about the customer's identity provider conveying permission per grant is unavailable here. That is why this case needed a third path, and why it remains the weakest scenario in the set.
 

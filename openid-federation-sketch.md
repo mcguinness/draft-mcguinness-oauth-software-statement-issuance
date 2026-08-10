@@ -50,6 +50,8 @@ Federation already has an artifact for a third party's signed assertion about an
 
 **Withdrawal uses the Trust Mark Status endpoint.** A POST carrying the mark returns a signed response whose `status` is `active`, `expired`, `revoked`, or `invalid` (§8.4). Within a federation this replaces Token Status List for the same purpose. The properties the signals draft depends on hold either way: the answer comes from the issuer, the consumer resolves it, and expiry remains the floor.
 
+**One default to change.** Client authentication is not used at federation endpoints unless a federation requires it (§8.8), and Federation treats trust-mark holdership as public infrastructure data: §19.2 protects the verifier from being tracked by the issuer and recommends bulk-fetching the list of trust-marked entities to that end. A review that is a commercial fact about a publisher survives that posture. A review that records which organizations approved a vendor does not, and a deployment carrying those has to require `private_key_jwt` at the trust mark endpoint and not publish a listing endpoint. Federation supplies the authentication primitives and no authorization model to go with them.
+
 ## The metadata boundary
 
 A consuming server under either profile takes the client's registration metadata from the Client ID Metadata Document, digest-verified, and not from Federation's Resolved Metadata. This is a boundary rather than a precedence rule, because no precedence rule would help.
