@@ -72,6 +72,7 @@ Table of Contents
      3.2.  Validating a Statement
    4.  Issuer Trust Establishment
      4.1.  Issuer and Consumer as One Server
+     4.2.  Multi-Tenant Issuers
    5.  Consumption at Registration
      5.1.  Registration Validity
      5.2.  Revalidation
@@ -99,23 +100,25 @@ Table of Contents
    14. Security Considerations
      14.1.  Statement Theft and Replay
      14.2.  Copied Statements and Public Clients
-     14.3.  Renewal Authenticates the Credential
-     14.4.  External Retrieval and Resource Exhaustion
-     14.5.  Registration Fraud and Impersonation
-     14.6.  Enforcement Bounds
-     14.7.  Status Resolution
-     14.8.  Document Resolution
-     14.9.  Observable State
-     14.10. Statement Handling
+     14.3.  Tenant Confusion at a Multi-Tenant Consumer
+     14.4.  Renewal Authenticates the Credential
+     14.5.  External Retrieval and Resource Exhaustion
+     14.6.  Registration Fraud and Impersonation
+     14.7.  Enforcement Bounds
+     14.8.  Status Resolution
+     14.9.  Document Resolution
+     14.10. Observable State
+     14.11. Statement Handling
    15. Privacy Considerations
    16. IANA Considerations
      16.1.  OAuth Parameters Registry
      16.2.  Media Type Registration
-     16.3.  JSON Web Token Claims Registry
-     16.4.  OAuth Extensions Error Registry
-     16.5.  OAuth Dynamic Client Registration Metadata Registry
-     16.6.  OAuth Parameters Registry
-     16.7.  OAuth Authorization Server Metadata Registry
+     16.3.  Claims Defined Elsewhere
+     16.4.  JSON Web Token Claims Registry
+     16.5.  OAuth Extensions Error Registry
+     16.6.  OAuth Dynamic Client Registration Metadata Registry
+     16.7.  OAuth Parameters Registry
+     16.8.  OAuth Authorization Server Metadata Registry
    17. References
      17.1.  Normative References
      17.2.  Informative References
@@ -162,7 +165,7 @@ Table of Contents
    current statement.  It does not revoke access tokens already issued,
    and continuation of runtime-established grants is subject to the
    refresh policy in Section 6.5.1.  These enforcement bounds are
-   detailed in Section 14.6.
+   detailed in Section 14.7.
 
    This separation lets one issuer curate approved software across many
    authorization servers without making the issuer the final policy
@@ -343,6 +346,16 @@ Table of Contents
    sub:  REQUIRED.  The exact client identifier URL presented in the
       request that produced the statement.
 
+   tenant:  OPTIONAL.  A tenant identifier at the issuing authorization
+      server, where that server serves more than one tenant under a
+      single iss.  The value MUST be opaque to consumers and unique
+      within the issuer.  The reserved values [OIDC-ENTERPRISE] defines
+      for describing how an account is managed MUST NOT be used here,
+      because they name a kind of tenant rather than a particular one,
+      and a rule keyed on such a value would treat unrelated tenants as
+      one.  Where the claim is present, the deciding party is iss and
+      tenant together rather than iss alone (Section 4.2).
+
    aud:  OPTIONAL.  One or more audience identifiers restricting which
       authorization servers may accept the statement, each an
       authorization server issuer identifier as defined by [RFC8414].
@@ -362,15 +375,30 @@ Table of Contents
       omit it only where it accepts that any server trusting it may
       register the software on the strength of a copy (Section 14.1).
 
+   aud_tenant:  OPTIONAL.  A tenant identifier at a trusting
+      authorization server, as [IDJAG] defines the claim, naming the
+      tenant in which this statement's decision applies.  A statement
+      whose decision is confined to one tenant MUST carry it, and a
+      trusting authorization server MUST reject a statement carrying it
+      unless the value identifies the tenant the request belongs to.  A
+      consumer MUST NOT read its absence as meaning the statement
+      applies in every tenant, since an issuer also omits it where the
+      consumer is single-tenant or where the issuer does not know the
+      identifier; a consumer that requires a tenant-scoped decision and
+      finds no aud_tenant rejects the statement rather than choosing
+      between those readings.  A listing review that applies wherever
+      its aud reaches carries neither this claim nor tenant.
+
    iat:  REQUIRED.  A NumericDate value representing the time at which
       the software statement was issued.  An issuer MUST NOT issue two
-      statements for a given iss and sub pair with the same iat, and
-      MUST ensure the value increases strictly across its signing nodes,
-      so that the order in which it made its decisions is recoverable
-      from the statements themselves.  Consumers rely on that order when
-      one statement replaces another (Section 5.2, Section 6.5.1).
-      Back-dating a statement to allow for clock skew makes it unusable
-      as a replacement.
+      statements for a given iss and sub pair, and for a given tenant
+      where it carries one, with the same iat, and MUST ensure the value
+      increases strictly across its signing nodes, so that the order in
+      which it made its decisions is recoverable from the statements
+      themselves.  Consumers rely on that order when one statement
+      replaces another (Section 5.2, Section 6.5.1).  Back-dating a
+      statement to allow for clock skew makes it unusable as a
+      replacement.
 
    exp:  REQUIRED.  A NumericDate value representing the expiration
       time.  A trusting authorization server MUST reject an expired
@@ -475,6 +503,11 @@ Table of Contents
 
    *  where the statement carries aud, verify that one of its own
       audience identifiers appears in it;
+
+   *  where the statement carries aud_tenant, verify that its value
+      identifies the tenant this request belongs to, resolved before the
+      statement is evaluated rather than from anything the request
+      supplies;
 
    *  verify that sub is a client identifier URL conforming to [CIMD],
       and that it falls within the identifier scope for which this
@@ -602,6 +635,35 @@ Table of Contents
    server that reviewed it presents nothing, and the aud of Section 3 is
    what makes the same decision usable elsewhere.
 
+4.2.  Multi-Tenant Issuers
+
+   A reviewer serving several customers is one service with several
+   deciding parties inside it, and how it identifies itself decides
+   whether their decisions can be told apart.  Such a reviewer SHOULD
+   issue under a distinct iss per tenant, which is what [RFC8414]
+   discovery and the trust configuration above already assume and which
+   needs nothing further.
+
+   An issuer that instead serves several tenants under one iss MUST
+   carry tenant in every statement it issues (Section 3).  Wherever this
+   specification keys a rule on iss and sub, that key includes tenant
+   for such an issuer: the iat uniqueness requirement of Section 3, the
+   watermark and derivation bound of Section 7, and the matching of a
+   replacement to the statement it replaces (Section 5.2,
+   Section 6.5.1).
+
+   Omitting it makes two customers indistinguishable.  Both review the
+   same software, so their statements share iss and sub, and the
+   watermark treats the later as superseding the earlier: one customer's
+   renewal invalidates another customer's review, and the second
+   customer sees a review that expired early for no reason it can
+   observe.
+
+   Trust configuration for such an issuer records the tenants it may
+   attest for, alongside the identifier namespaces of Section 4.  A
+   statement whose tenant falls outside that set MUST be rejected, as
+   one whose sub falls outside the issuer's namespace scope is.
+
 5.  Consumption at Registration
 
    The statement is consumed in the software_statement member of an
@@ -679,7 +741,7 @@ Table of Contents
       sound statement.
 
    The retrieval is client-controlled and reachable before any client is
-   registered, so the protections and bounds of Section 14.4 apply to it
+   registered, so the protections and bounds of Section 14.5 apply to it
    as they do to a presentation.
 
 5.1.  Registration Validity
@@ -711,7 +773,7 @@ Table of Contents
       exception.
 
    *  It SHOULD retain the expired record so that it can process a later
-      authenticated revalidation (Section 14.9), and MAY allow a grace
+      authenticated revalidation (Section 14.10), and MAY allow a grace
       period during which it accepts a replacement without treating the
       registration as expired.
 
@@ -721,7 +783,7 @@ Table of Contents
    the recovery path.  A server that does not resolve status is bounded
    by the effective expiry alone.
 
-   The disposition of outstanding grants is local policy (Section 14.6).
+   The disposition of outstanding grants is local policy (Section 14.7).
 
    Where [CIMD] defines an expiry the document asserts for its own
    client identifier, that value MAY only shorten the effective expiry
@@ -778,7 +840,8 @@ Table of Contents
 
    *  validate under Section 3.2 with this server in its audience;
 
-   *  carry the governing statement's iss and sub;
+   *  carry the governing statement's iss and sub, and its tenant where
+      the governing statement carried one;
 
    *  be unexpired; and
 
@@ -955,7 +1018,7 @@ Table of Contents
    MAY reuse a recently retrieved key set within ordinary HTTP caching
    bounds, subject to a maximum reuse period of its own choosing; it
    MUST NOT let the client's cache directives alone determine how long a
-   removed key continues to verify (Section 14.4).
+   removed key continues to verify (Section 14.5).
 
 6.3.1.  Public Clients
 
@@ -1085,7 +1148,7 @@ Table of Contents
    of the establishment's Proven Key under the same sender-constraint
    mechanism.  It MAY, by local policy, additionally require a current
    unexpired statement, and SHOULD require one once the establishment's
-   recorded statement has expired (Section 14.6).
+   recorded statement has expired (Section 14.7).
 
    Where the authorization server holds a refusal record for a
    statement, it MUST treat that statement as not current wherever this
@@ -1099,7 +1162,8 @@ Table of Contents
    *  MUST validate under Section 3.2, including its audience where it
       carries one;
 
-   *  MUST have the establishment's iss and sub;
+   *  MUST have the establishment's iss and sub, and its tenant where
+      the establishment recorded one;
 
    *  MUST have an iat later than the recorded statement's iat; and
 
@@ -1165,25 +1229,26 @@ Table of Contents
    authorization server treats as one deployment, which at a multi-
    tenant server is one tenant.
 
-   A trusting authorization server MUST retain, per iss and sub, the iat
-   of the most recent statement it has accepted, and MUST reject a
-   statement whose iat is earlier, whether it arrives as a replacement,
-   a new registration, or a new presentation.  Without a floor that
-   spans records rather than sitting inside one, a client holding a
-   superseded broader statement defers a narrowing by opening a fresh
-   registration or establishment with it.  The watermark is retained at
-   least as long as the maximum statement lifetime the server honors for
-   that issuer.
+   A trusting authorization server MUST retain, per iss and sub and per
+   tenant where the issuer carries one (Section 4.2), the iat of the
+   most recent statement it has accepted, and MUST reject a statement
+   whose iat is earlier, whether it arrives as a replacement, a new
+   registration, or a new presentation.  Without a floor that spans
+   records rather than sitting inside one, a client holding a superseded
+   broader statement defers a narrowing by opening a fresh registration
+   or establishment with it.  The watermark is retained at least as long
+   as the maximum statement lifetime the server honors for that issuer.
 
    A trusting authorization server SHOULD use the statement's sub and
    iss to inventory the registrations and establishments derived from
    that issuer's statements about that software, and SHOULD bound their
-   number.  The safe default is one registration per (iss, sub) at one
-   authorization server, counted across replacements, since a
-   replacement statement carries a new jti and a bound keyed on it would
-   reset at every renewal.  On repeated consumption, local policy can
-   reject the request, treat it as idempotent, or create another
-   registration; [RFC7591] defines no duplicate-registration protocol.
+   number.  The safe default is one registration per (iss, sub), and per
+   tenant where the issuer carries one, at one authorization server,
+   counted across replacements, since a replacement statement carries a
+   new jti and a bound keyed on it would reset at every renewal.  On
+   repeated consumption, local policy can reject the request, treat it
+   as idempotent, or create another registration; [RFC7591] defines no
+   duplicate-registration protocol.
 
    Where the reviewed document carries jwks or jwks_uri, every
    registration derived from the statement uses that key material rather
@@ -1558,7 +1623,7 @@ Table of Contents
    The residual exposure is a consent prompt carrying the reviewed
    software's name and branding, raised by a party that cannot receive
    what the user approves.  An authorization server SHOULD rate-limit
-   presentations per statement identity and per subject (Section 14.4),
+   presentations per statement identity and per subject (Section 14.5),
    and an issuer bounds the exposure through audience, lifetime, and
    status (Section 3).
 
@@ -1569,7 +1634,25 @@ Table of Contents
    closes the gap by giving the instance a key a third party vouches
    for.
 
-14.3.  Renewal Authenticates the Credential
+14.3.  Tenant Confusion at a Multi-Tenant Consumer
+
+   Where a trusting authorization server serves several tenants and
+   evaluates anything tenant-specific, the tenant it decides against and
+   the tenant that scopes what it issues MUST be the same, and neither
+   may be selected by a value the client supplies.  A server that
+   derives the tenant one way to check a decision and another way to
+   scope a token lets a client reach one tenant's resources on another
+   tenant's decision, which is the failure aud_tenant exists to make
+   detectable: a statement naming a tenant cannot be spent in a
+   different one.
+
+   Resolution itself remains the server's own responsibility.  This
+   specification defines no tenant parameter, and a client identifier
+   URL is the same value in every tenant (Section 7), so nothing a
+   client or an issuer can check tells either of them that a server
+   honored this rule.
+
+14.4.  Renewal Authenticates the Credential
 
    Renewing a registration proves possession of the registration's own
    credential and the currency of a statement sharing the governing iss
@@ -1586,7 +1669,7 @@ Table of Contents
    does not share this gap, because the proof binds the presenter to the
    reviewed document at every presentation.
 
-14.4.  External Retrieval and Resource Exhaustion
+14.5.  External Retrieval and Resource Exhaustion
 
    Runtime presentation can cause the authorization server to retrieve
    the Client ID Metadata Document, a jwks_uri it names, or keys and
@@ -1617,7 +1700,7 @@ Table of Contents
    the authorization server MUST reject the request and MUST NOT fall
    back to a weaker proof.
 
-14.5.  Registration Fraud and Impersonation
+14.6.  Registration Fraud and Impersonation
 
    Open registration permits client_name, logo_uri, and client_uri
    values that imitate trusted software on consent screens.  Requiring a
@@ -1634,7 +1717,7 @@ Table of Contents
    misleads review can obtain a genuine statement for fraudulent
    metadata, so issuer verification depth remains decisive ([ISSUANCE]).
 
-14.6.  Enforcement Bounds
+14.7.  Enforcement Bounds
 
    Expiry is enforced at every presentation and every statement-governed
    registration, so a lapsed statement stops new runtime establishment
@@ -1666,7 +1749,7 @@ Table of Contents
    SHOULD stagger expiries or renew ahead of the boundary to avoid
    synchronized lapses.
 
-14.7.  Status Resolution
+14.8.  Status Resolution
 
    Resolving status adds a dependency on the issuer and a fetch the
    client does not control.  [STATUSLIST] aggregates many statements
@@ -1685,7 +1768,7 @@ Table of Contents
    tell an unpublished status from a withdrawn one, which is why
    [ISSUANCE] requires such an issuer to carry the claim throughout.
 
-14.8.  Document Resolution
+14.9.  Document Resolution
 
    Every presentation resolves the Client ID Metadata Document its
    statement names (Section 6.4), which inherits the resolution
@@ -1694,7 +1777,7 @@ Table of Contents
    document's caching directives; the digest is what tells it whether
    the bytes it holds are the reviewed ones, whatever their source.
 
-14.9.  Observable State
+14.10.  Observable State
 
    A retained expired registration is distinguishable from an unknown
    client, because recovery requires the server to authenticate the
@@ -1708,7 +1791,7 @@ Table of Contents
    issuer trust, subject scope, or attester policy, which Section 10
    keeps from unauthenticated requesters.
 
-14.10.  Statement Handling
+14.11.  Statement Handling
 
    A software statement remains a sensitive artifact in transit and at
    rest: possession alone does not enable presentation, but statements
@@ -1806,7 +1889,16 @@ Table of Contents
 
    Change controller:  IETF
 
-16.3.  JSON Web Token Claims Registry
+16.3.  Claims Defined Elsewhere
+
+   This specification uses two claims it does not define. aud_tenant is
+   defined and registered by [IDJAG]. tenant is defined by
+   [OIDC-ENTERPRISE] and is registered by neither that document nor
+   [IDJAG]; this specification constrains its value (Section 3) but does
+   not request its registration, and the gap is recorded here because a
+   consumer cannot resolve the claim through the registry.
+
+16.4.  JSON Web Token Claims Registry
 
    This specification requests registration of the following value in
    the IANA "JSON Web Token Claims" registry established by [RFC7519]:
@@ -1821,7 +1913,7 @@ Table of Contents
 
    Specification Document(s):  This specification, Section 3
 
-16.4.  OAuth Extensions Error Registry
+16.5.  OAuth Extensions Error Registry
 
    This specification requests registration of the following error codes
    in the IANA "OAuth Extensions Error Registry" established by
@@ -1852,7 +1944,7 @@ Table of Contents
    Specification Document(s):  [RFC6749], this specification
       (Section 10)
 
-16.5.  OAuth Dynamic Client Registration Metadata Registry
+16.6.  OAuth Dynamic Client Registration Metadata Registry
 
    This specification requests registration of the following client
    metadata member, returned by an authorization server in a
@@ -1871,7 +1963,7 @@ Table of Contents
 
    Specification Document(s):  This specification, Section 5.1
 
-16.6.  OAuth Parameters Registry
+16.7.  OAuth Parameters Registry
 
    This specification requests registration of the following parameter
    in the IANA "OAuth Parameters" registry established by [RFC6749], for
@@ -1886,7 +1978,7 @@ Table of Contents
 
    Specification Document(s):  This specification, Section 5.1
 
-16.7.  OAuth Authorization Server Metadata Registry
+16.8.  OAuth Authorization Server Metadata Registry
 
    This specification requests registration of the following values in
    the IANA "OAuth Authorization Server Metadata" registry established
@@ -1929,6 +2021,10 @@ Table of Contents
    [CIMD]     "OAuth Client ID Metadata Document", n.d.,
               <https://datatracker.ietf.org/doc/draft-ietf-oauth-client-
               id-metadata-document>.
+
+   [IDJAG]    "Identity Assertion Authorization Grant", n.d.,
+              <https://datatracker.ietf.org/doc/draft-ietf-oauth-
+              identity-assertion-authz-grant>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -2020,6 +2116,11 @@ Table of Contents
    [ISSUANCE] "CIMD Software Statement Issuance", n.d.,
               <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
               cimd-sw-stmt-issuance>.
+
+   [OIDC-ENTERPRISE]
+              "OpenID Connect Enterprise Extensions 1.0", n.d.,
+              <https://openid.net/specs/openid-connect-enterprise-
+              extensions-1_0.html>.
 
    [RFC7592]  Richer, J., Ed., Jones, M., Bradley, J., and M. Machulak,
               "OAuth 2.0 Dynamic Client Registration Management
