@@ -32,6 +32,10 @@ The repository also hosts "Shared Signals Events for CIMD Software Statements", 
 
 [Sketch: A Mobile App from Install to Third Party](mobile-app-sketch.md) walks one scenario through all three drafts: an app store install refused by an enterprise identity provider as unreviewed, a statement obtained and awaited while an administrator approves, sign-in, and then a third-party SaaS reached through an identity assertion. It stops at what the family still does not give a mobile install: the device key binds a grant to one phone, but nobody vouches for that key, so a server learns the same installation came back and never which one it is. Non-normative.
 
+## A Customer Approving a Vendor Integration
+
+[Sketch: A Customer Approving a Vendor Integration at Their Own Root](saas-integration-sketch.md) takes the case these drafts serve least well, a vendor-to-vendor integration with no user present while it runs. The customer approves the vendor once at the enterprise root their organization already operates, and every platform configured with that root honours it. Whether a platform's own marketplace listed the integration is that platform's business and not the customer's. The prize is one revocation, performed once by the customer, that every platform sees. Non-normative.
+
 ## Tenant Admin Consent
 
 [Sketch: Tenant Admin Consent Without a Stored Grant](admin-consent-sketch.md) takes Microsoft Entra ID's tenant-wide admin consent as the reference and asks what each of its parts looks like built from open specifications. Three have generic forms already, one of them better than the original, since Entra's approval loop cannot be automated at all. The fourth, a consent that binds a population rather than a principal, has no form anywhere, and the sketch argues that is the right outcome. Non-normative.
