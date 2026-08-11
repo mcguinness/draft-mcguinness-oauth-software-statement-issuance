@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          10 August 2026
-Expires: 11 February 2027
+Intended status: Standards Track                          11 August 2026
+Expires: 12 February 2027
 
 
            Shared Signals Events for CIMD Software Statements
@@ -42,7 +42,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 11 February 2027.
+   This Internet-Draft will expire on 12 February 2027.
 
 Copyright Notice
 
@@ -406,10 +406,14 @@ Table of Contents
 10.1.  OAuth URI Registry
 
    [RFC8417] identifies an event type by a URI and establishes no
-   registry of them, and IANA maintains none.  This specification
-   therefore takes its identifier from a namespace IETF controls, and
-   requests registration of the following value in the IANA "OAuth URI"
-   registry established by [RFC6755]:
+   registry of them, and IANA maintains none.  No
+   urn:ietf:params:secevent sub-namespace exists either, so this
+   specification takes its identifier from the oauth sub-namespace
+   [RFC6755], whose index values are suggested to carry a class and an
+   identifier within that class.  [RFC9967] is the IETF precedent for
+   typing security events this way, under urn:ietf:params:scim:event,
+   with a registry of its own; a single event type does not warrant a
+   registry, so this registration goes in the flat "OAuth URI" registry:
 
    URN:  urn:ietf:params:oauth:event-type:software-statement-status-
       changed
@@ -423,11 +427,13 @@ Table of Contents
 10.2.  SET Payload Claims
 
    The payload claim software_statement_jti is defined by this
-   specification for use in the event payload of Section 5.  IANA
-   maintains no registry of members appearing inside a SET event
-   payload, so the claim is scoped to the event type that carries it and
-   no registration is requested.  The event_timestamp and reason_admin
-   members are used as [CAEP] defines them.
+   specification for use in the event payload of Section 5.  Section 2
+   of [RFC8417] provides that payload claims need not be registered as
+   JWT claims and are defined by the profiling specification defining
+   the event, and IANA maintains no registry of them, so no registration
+   is requested and the claim is scoped to the event type that carries
+   it.  The event_timestamp and reason_admin members are used as [CAEP]
+   defines them.
 
 11.  References
 
@@ -474,6 +480,12 @@ Table of Contents
               Identifiers for Security Event Tokens", RFC 9493,
               DOI 10.17487/RFC9493, December 2023,
               <https://www.rfc-editor.org/rfc/rfc9493>.
+
+   [RFC9967]  Hunt, P., Ed., Cam-Winget, N., Kiser, M., and J.
+              Schreiber, "System for Cross-Domain Identity Management
+              (SCIM) Profile for Security Event Tokens (SETs)",
+              RFC 9967, DOI 10.17487/RFC9967, May 2026,
+              <https://www.rfc-editor.org/rfc/rfc9967>.
 
    [SSF]      "OpenID Shared Signals Framework Specification 1.0", n.d.,
               <https://openid.net/specs/openid-sharedsignals-framework-
