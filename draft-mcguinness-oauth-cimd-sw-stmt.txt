@@ -169,9 +169,21 @@ Table of Contents
       the registration's validity (Section 5.1).
 
    *  *At runtime* (Section 6): the client presents the statement in an
-      authorization or token request, proves a key the statement
-      attests, and is established for the resulting grant without
-      creating a persistent registration (Section 6.1 and Section 6.5).
+      authorization or token request, proves possession of a key, and is
+      established for the resulting grant without creating a persistent
+      registration (Section 6.1 and Section 6.5).  A confidential client
+      proves a key the reviewed document carries; software distributed
+      to end users, which can hold no such key, is bound by the reviewed
+      redirection URIs instead (Section 6.3).
+
+   The two are independent, and a server may implement either without
+   the other.  Both rest on the same three sections: the artifact
+   (Section 3), its validation (Section 3.2), and the issuer trust a
+   consumer configures (Section 4).  Past those, a deployment that wants
+   reviewed registrations to expire needs only Section 5, and a
+   deployment that wants to admit clients it will never register needs
+   only Section 6.  Neither implies the other, and Section 12 is where a
+   server states which it offers.
 
    Establishment is one layer of the decision to let a client act, and
    this specification defines only that layer.  It sits above the
