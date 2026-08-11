@@ -27,6 +27,7 @@ author:
 
 normative:
   RFC6755:
+  RFC9967:
   RFC8935:
   RFC8936:
   RFC8414:
@@ -195,7 +196,7 @@ Because this specification defines no durable receiver-side record, it adds no n
 
 ## OAuth URI Registry {#iana-event-type}
 
-{{RFC8417}} identifies an event type by a URI and establishes no registry of them, and IANA maintains none. This specification therefore takes its identifier from a namespace IETF controls, and requests registration of the following value in the IANA "OAuth URI" registry established by {{RFC6755}}:
+{{RFC8417}} identifies an event type by a URI and establishes no registry of them, and IANA maintains none. No `urn:ietf:params:secevent` sub-namespace exists either, so this specification takes its identifier from the `oauth` sub-namespace {{RFC6755}}, whose index values are suggested to carry a class and an identifier within that class. {{RFC9967}} is the IETF precedent for typing security events this way, under `urn:ietf:params:scim:event`, with a registry of its own; a single event type does not warrant a registry, so this registration goes in the flat "OAuth URI" registry:
 
 URN:
 : `urn:ietf:params:oauth:event-type:software-statement-status-changed`
@@ -211,7 +212,7 @@ Specification Document(s):
 
 ## SET Payload Claims
 
-The payload claim `software_statement_jti` is defined by this specification for use in the event payload of {{events}}. IANA maintains no registry of members appearing inside a SET event payload, so the claim is scoped to the event type that carries it and no registration is requested. The `event_timestamp` and `reason_admin` members are used as {{CAEP}} defines them.
+The payload claim `software_statement_jti` is defined by this specification for use in the event payload of {{events}}. Section 2 of {{RFC8417}} provides that payload claims need not be registered as JWT claims and are defined by the profiling specification defining the event, and IANA maintains no registry of them, so no registration is requested and the claim is scoped to the event type that carries it. The `event_timestamp` and `reason_admin` members are used as {{CAEP}} defines them.
 
 --- back
 

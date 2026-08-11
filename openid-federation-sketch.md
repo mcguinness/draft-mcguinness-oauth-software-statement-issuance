@@ -80,7 +80,7 @@ If a deployment is already operating a federation and is content for Resolved Me
 
 ## Open questions
 
-* **The Trust Mark type is an IETF URN in an OpenID Foundation mechanism.** Federation requires only that the identifier be collision-resistant across federations, which a registered URN satisfies, and taking it from a namespace IETF controls keeps the review's vocabulary with the specification that defines the review. A federation operator may still expect its own namespace.
+* **The Trust Mark type is an IETF URN in an OpenID Foundation mechanism.** Federation's only requirement on the identifier is that it be collision-resistant across federations; a URL is recommended rather than required, and a registered URN satisfies the requirement by construction. Federation maintains no registry of trust mark types, so there is nothing for an IANA registration to collide with, and taking the identifier from a namespace IETF controls keeps the review's vocabulary with the specification that defines the review. A federation operator may still expect its own namespace, and Federation 1.1 has not been checked for whether it changes the identifier's form.
 
 * **Whether one URL can serve both roles is unverified.** Federation Entity Identifiers permit a path and forbid query and fragment, and the Entity Configuration is a suffix beneath the identifier, so co-location looks available. This has not been checked against what CIMD requires of a client identifier URL, and that check should come before anything here is written up.
 * **Should the statement and the Trust Mark be interchangeable**, or is the Trust Mark the only Federation-native form? Carrying the same review in two artifacts reopens the question of which governs when they disagree.
