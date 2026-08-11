@@ -55,6 +55,15 @@ informative:
     target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-issuance
     title: "CIMD Software Statement Issuance"
   RFC7592:
+  OPENID-FED:
+    target: https://openid.net/specs/openid-federation-1_0.html
+    title: "OpenID Federation 1.0"
+  UK-OPEN-BANKING:
+    target: https://openbankinguk.github.io/dcr-docs-pub/v3.3/dynamic-client-registration.html
+    title: "Open Banking UK Dynamic Client Registration Specification v3.3"
+  AU-CDR:
+    target: https://consumerdatastandardsaustralia.github.io/standards/
+    title: "Consumer Data Standards (Australia)"
   ABCA:
     target: https://datatracker.ietf.org/doc/draft-ietf-oauth-attestation-based-client-auth
     title: "OAuth 2.0 Attestation-Based Client Authentication"
@@ -77,6 +86,10 @@ RFC 7591 defines the software statement as input to dynamic client registration 
 # Introduction
 
 {{RFC7591}} defines no standard expiry or renewal procedure for a dynamic client registration. A software statement ({{RFC7591}}, Section 2.3) can carry a reviewer's approval into a registration request, but the registration can outlive the statement and the review it represents. An organization that reviews client software therefore has no interoperable way to keep that review current at the authorization servers that relied on it.
+
+Two regulated ecosystems already run this shape. The UK Open Banking Directory and the Australian Consumer Data Right Register each operate a central issuer whose statements many unrelated authorization servers consume through the same {{RFC7591}} `software_statement` member ({{UK-OPEN-BANKING}}, {{AU-CDR}}). Neither binds a statement to a specific version of a document the consumer retrieves, and both carry client metadata in the statement itself, so neither is conformant to this specification as written; what they establish is that a reviewer's decision consumed by servers that did not make it is a deployed pattern rather than a hypothetical one.
+
+{{OPENID-FED}} answers the adjacent question and answers it differently. It conveys attested metadata through trust chains, so a consumer resolves an entity to a trust anchor rather than configuring the issuer that vouched for it, and the metadata a consumer applies is derived by policy along that chain. This specification keeps the reviewed document as the metadata, binds a review to its exact octets, and leaves issuer trust to local configuration ({{issuer-trust}}). The two compose where a deployment wants both: a federation can supply the issuer trust this specification declares out of scope, and can carry a review as a trust mark, but resolved metadata is by construction not the octets a digest covers, so registration metadata comes from one source or the other and not both. Ecosystems already operating a federation should weigh its own registration mechanisms first.
 
 This specification defines the trust configuration a consuming server keeps ({{issuer-trust}}) and two points at which it consumes it:
 

@@ -162,7 +162,7 @@ This specification uses the following building blocks:
 
 {{CLIENT-INSTANCE}} carries per-instance identity into tokens for runtime instances behind one `client_id`. This specification carries the trust decision about the client software to the trusting authorization server. {{STATEMENT}} describes their composition.
 
-OpenID Federation {{OPENID-FED}} conveys attested metadata through trust chains, suiting ecosystems prepared to operate federation infrastructure. This specification instead issues the existing {{RFC7591}} artifact under explicit issuer trust. Federation standardizes trust resolution, not enrollment, approval, or deferred completion; it relocates rather than replaces the issuance ceremony defined here.
+OpenID Federation {{OPENID-FED}} conveys attested metadata through trust chains. {{STATEMENT}} compares the two trust models; what matters here is narrower. Federation standardizes trust resolution, not enrollment, approval, or deferred completion, so it relocates rather than replaces the issuance ceremony defined in this document.
 
 The OAuth Identity Assertion Trust Framework {{TRUST-FRAMEWORK}} could generalize pairwise configuration by evaluating issuers against published conditions, including authority over the client's identifier namespace. Such a profile is out of scope.
 
