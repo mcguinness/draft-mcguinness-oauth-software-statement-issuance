@@ -174,7 +174,7 @@ The residual exposure is resource cost. An attacker holding the issuer's key, or
 
 ## Status Remains the Authority
 
-Because a receiver resolves status independently, an attacker who suppresses events, by disrupting delivery or the transmitter, delays a withdrawal at most until the receiver's next scheduled resolution, and in no case beyond the affected statements' expiry. Deployments therefore choose a resolution schedule and statement lifetimes they would accept with no event stream at all, and treat delivery as an accelerator.
+Because a receiver resolves status independently, an attacker who suppresses events, by disrupting delivery or the transmitter, delays a withdrawal at most until the receiver's next scheduled resolution, and in no case beyond the affected statements' expiry for new presentations; grants already open continue as the refresh policy of {{STATEMENT}} allows. Deployments therefore choose a resolution schedule and statement lifetimes they would accept with no event stream at all, and treat delivery as an accelerator.
 
 A receiver SHOULD alert on stream loss rather than assume quiescence, since a healthy stream and a suppressed one are indistinguishable from the absence of events. Periodic stream verification ({{configuration}}) is what makes the difference observable.
 
