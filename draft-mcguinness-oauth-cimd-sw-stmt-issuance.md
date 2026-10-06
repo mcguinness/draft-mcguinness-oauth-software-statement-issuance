@@ -613,7 +613,7 @@ An issuer that publishes status:
 
 * MUST publish it for every statement it issues under a given `iss` from the point it begins publishing, rather than for a subset, so that a consumer may read an absent claim as meaning this issuer publishes no status at all. Statements issued before that point carry no claim and cannot be located in the list, so the inference holds once those have expired;
 * MUST assign each statement its own index and MUST NOT reuse an index across statements. Withdrawing a statement sets that statement's index and affects no other. A replacement obtained through {{renewal}} occupies its own index, so withdrawing a superseded statement does not withdraw its replacement, and withdrawing a replacement does not restore its predecessor; and
-* MUST sign the Status List Token with a key a consumer obtains the way it obtains statement signing keys, through the issuer's authorization server metadata {{RFC8414}}.
+* MUST sign the Status List Token with a key a consumer obtains the way it obtains statement signing keys, through the issuer's authorization server metadata {{RFC8414}}. A consumer accepts any key in that set for statements, so the key that signs the list is in effect a statement signing key and is protected as one ({{STATEMENT}}).
 
 Status does not replace lifetime. A consumer is not obliged to resolve status, so an issuer chooses `exp` on the assumption that none does, and treats status as what shortens a decision rather than what bounds it.
 
