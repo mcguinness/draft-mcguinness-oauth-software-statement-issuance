@@ -782,7 +782,7 @@ Specification Document(s):
 
 This specification requests that IANA add this specification, {{authorization-request}} and {{token-exchange-profile}}, as an additional reference for the existing `audience` parameter registered by {{RFC8693}} and extend its usage location to include authorization requests. The parameter name and change controller are unchanged.
 
-This specification likewise requests that IANA add it as an additional reference for the `completion_mode` parameter, and extend that parameter's usage location to include authorization requests ({{authorization-request}}). The parameter is defined by {{DTR}}; the name and change controller are unchanged.
+This specification likewise requests that IANA add it as an additional reference for the `completion_mode` parameter ({{authorization-request}}). The parameter is defined by {{DTR}}, whose registration already includes authorization requests; the name, usage location, and change controller are unchanged.
 
 This specification also requests registration of the following value in the IANA "OAuth Parameters" registry established by {{RFC6749}}:
 
