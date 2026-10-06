@@ -79,7 +79,7 @@ This specification defines the subject identification, the event, its payload cl
 
 {::boilerplate bcp14-tagged}
 
-Transmitter, Receiver, Stream, and the delivery and configuration mechanisms are defined by {{SSF}}. Security Event Token, or SET, is defined by {{RFC8417}}. Subject identifier formats are defined by {{RFC9493}}. Status List Token, status reference, and status resolution are defined by {{STATUSLIST}}. The software statement, its claims, its validation, its `status` claim, issuer trust configuration, registration validity, and runtime presentation are defined by {{STATEMENT}}.
+Transmitter, Receiver, Stream, and the delivery and configuration mechanisms are defined by {{SSF}}. Security Event Token, or SET, is defined by {{RFC8417}}. Subject identifier formats are defined by {{RFC9493}}. Status List Token, and the validation that resolves a status, are defined by {{STATUSLIST}}. The software statement, its claims, its validation, its `status` claim, issuer trust configuration, registration validity, and runtime presentation are defined by {{STATEMENT}}.
 
 This specification additionally defines the following terms:
 
@@ -112,7 +112,7 @@ A consuming authorization server MUST match the subject by exact comparison of t
 Each event is a member of the SET `events` claim, whose value is the event payload object. All payloads share these claims:
 
 `event_timestamp`:
-: REQUIRED. A NumericDate value giving the time the issuer changed the status the event reports. It is informational, for logging and audit. A receiver does not use it to order, bound, or scope anything, since the event carries no decision and the resolved status is what governs ({{processing}}).
+: REQUIRED. A NumericDate value giving the time the issuer changed the status the event reports. {{CAEP}} defines the member as OPTIONAL and as the time the event occurred; this specification requires it and narrows it to the status change. It is informational, for logging and audit. A receiver does not use it to order, bound, or scope anything, since the event carries no decision and the resolved status is what governs ({{processing}}).
 
 `software_statement_jti`:
 : OPTIONAL. The `jti` of a single statement whose status changed. Where absent, the event reports that the status of one or more statements for the subject changed without naming them, and the receiver resolves the subject's statements it holds.
@@ -212,7 +212,7 @@ Specification Document(s):
 
 ## SET Payload Claims
 
-The payload claim `software_statement_jti` is defined by this specification for use in the event payload of {{events}}. Section 2 of {{RFC8417}} provides that payload claims need not be registered as JWT claims and are defined by the profiling specification defining the event, and IANA maintains no registry of them, so no registration is requested and the claim is scoped to the event type that carries it. The `event_timestamp` and `reason_admin` members are used as {{CAEP}} defines them.
+The payload claim `software_statement_jti` is defined by this specification for use in the event payload of {{events}}. Section 2 of {{RFC8417}} provides that payload claims need not be registered as JWT claims and are defined by the profiling specification defining the event, and IANA maintains no registry of them, so no registration is requested and the claim is scoped to the event type that carries it. The `reason_admin` member is used as {{CAEP}} defines it, and `event_timestamp` as {{events}} narrows it.
 
 --- back
 
