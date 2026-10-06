@@ -150,13 +150,15 @@ This specification defines no new attestation format and no new attester role. T
 
 {::boilerplate bcp14-tagged}
 
-OAuth terminology is defined by {{RFC6749}}. Client metadata and software statement terminology is defined by {{RFC7591}}. Client ID Metadata Document terminology is defined by {{CIMD}}. Issuing Authorization Server:
+OAuth terminology is defined by {{RFC6749}}. Client metadata and software statement terminology is defined by {{RFC7591}}. Client ID Metadata Document terminology is defined by {{CIMD}}.
+
+This specification defines the following terms.
+
+Issuing Authorization Server:
 : The authorization server that makes the issuance decision and signs the software statement.
 
 Trusting Authorization Server:
 : An authorization server that consumes a software statement, at registration or at runtime.
-
-This specification additionally defines the following terms.
 
 Runtime Presentation:
 : The consumption of a validated software statement inside an authorization or token request, applying the metadata of the document it vouches for without creating a persistent client registration.
