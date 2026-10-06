@@ -522,7 +522,7 @@ The authorization server MUST validate the subject token before retrieving clien
 
 ## Renewal {#renewal}
 
-A client renews by presenting its current or most recent software statement as the subject token. The authorization server MUST verify that it issued the statement, that the statement's `sub` equals the request's `client_id`, and that the client authenticated with a key carried by the Client ID Metadata Document the statement vouches for. That authentication is the holder binding: a statement is otherwise a bearer artifact, and without it whoever held a copy could renew. A public client holds no such key and cannot renew this way; it obtains a replacement through the redirect flow.
+A client renews by presenting its current or most recent software statement as the subject token. The authorization server MUST verify that it issued the statement, that the statement's `sub` equals the request's `client_id`, and that the client authenticated with a key carried both by the document the statement's `cimd_digest` names and by the current document. A key the publisher has removed since review cannot renew, and neither can one added since; a client rotating keys inline renews while its document carries the old key and the new one. For a document naming `jwks_uri`, both carry the same location, so the binding is to whatever that location serves ({{STATEMENT}}). An issuer offering renewal therefore retains the octets of each document it issues a statement over. That authentication is the holder binding: a statement is otherwise a bearer artifact, and without it whoever held a copy could renew. A public client holds no such key and cannot renew this way; it obtains a replacement through the redirect flow.
 
 An issuer that publishes status MUST NOT accept as subject token a statement whose own published status is other than `VALID`. Renewing a statement it has withdrawn would reissue the decision that withdrawal ended.
 
@@ -704,7 +704,7 @@ No response parameter transits a browser, but there is also no in-band evidence 
 
 ## Renewal by Prior Statement
 
-A statement is a bearer artifact, so accepting one as a subject token is safe only alongside the holder binding {{renewal}} requires: the client authenticates with a key the reviewed document carries, which a party holding only a stolen copy cannot do. Binding renewal to that key also keeps automated renewal from needing a long-lived reusable initial access token, which would be a standing credential to mint statements ({{te-considerations}}).
+A statement is a bearer artifact, so accepting one as a subject token is safe only alongside the holder binding {{renewal}} requires: the client authenticates with a key both the reviewed document and the current one carry, which a party holding only a stolen copy cannot do, and which a party able to change the current document cannot supply either. Binding renewal to that key also keeps automated renewal from needing a long-lived reusable initial access token, which would be a standing credential to mint statements ({{te-considerations}}).
 
 An issuer accepting expired statements SHOULD bound how long after expiry it will do so. Without a bound, a client absent long enough for its review to be meaningless can still renew rather than being re-established.
 
