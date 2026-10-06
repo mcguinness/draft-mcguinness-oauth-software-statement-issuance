@@ -276,7 +276,7 @@ In the redirect flow, the authorization server MUST compare the `redirect_uri` i
 The client authenticates to the token endpoint using the `token_endpoint_auth_method` and related key metadata in its Client ID Metadata Document. The authorization server classifies the client from that member:
 
 * `none` (explicit) establishes a public client.
-* Any other value establishes a confidential client, and the authorization server MUST require exactly that method, as required by {{CIMD}}; a declared method the authorization server does not support MUST cause rejection rather than treatment as public.
+* Any other value establishes a confidential client, and the authorization server MUST require exactly that method, as required by {{CIMD}}; a declared method the authorization server does not support MUST cause rejection with `unauthorized_client` rather than treatment as public.
 * An omitted value establishes neither, and any request identifying such a client MUST be rejected with `invalid_request`, returned to the redirection URI validated against the document.
 
 Classification uses the singular `token_endpoint_auth_method`; a list of declared supported methods is not interpreted.
@@ -429,7 +429,7 @@ The client redeems a software statement code by sending an HTTP `POST` request t
 : REQUIRED. The PKCE verifier corresponding to the `code_challenge` in the authorization request.
 
 `completion_mode`:
-: REQUIRED when the authorization server advertises `deferred_token_response_supported` ({{authorization-server-metadata}}); otherwise not used, and a synchronous issuer ignores it ({{deferred-processing}}). When present, the value MUST include `deferred`. A client that cannot poll cannot redeem at a deferral-capable issuer, which is deliberate: such an issuer cannot promise a synchronous answer.
+: REQUIRED when the authorization server advertises `deferred_token_response_supported` ({{authorization-server-metadata}}); otherwise not used, and a synchronous issuer ignores it ({{deferred-processing}}). When present, the value MUST include `deferred`. A client that cannot poll cannot redeem at a deferral-capable issuer, which is deliberate: such an issuer cannot promise a synchronous answer. Such an issuer rejects a redemption that omits it with `invalid_request`.
 
 The request MUST NOT contain `audience`, which was bound at the authorization endpoint; a request containing it is rejected with `invalid_request`. The client authenticates according to {{client-identity}}, and when `dpop_jkt` was included in the authorization request, the client MUST send a DPoP proof for the token endpoint using the same key.
 
@@ -537,7 +537,7 @@ An authorization server MAY answer an originating request, a software statement 
 An authorization server that does so implements {{DTR}} and advertises `deferred_token_response_supported` ({{authorization-server-metadata}}); one that does not, does neither. Everything about the deferral, the `completion_mode` opt-in, the polling grant and its parameters, pending and denied and expired behavior, polling rate, sender constraint across polls, and cancellation, is as {{DTR}} specifies, and clients and authorization servers MUST follow it. This document adds only two constraints and one recommendation:
 
 * A client redeeming at a deferral-capable issuer accepts deferral by including `completion_mode`; the parameter records that acceptance rather than negotiating it.
-* A deferral created under this specification MUST be delivered by polling. A client MUST NOT send the `client_notification_token` parameter of {{DTR}}, and an authorization server MUST NOT deliver a callback, whatever the client's metadata says. Callback delivery is a deferred capability ({{design-rationale}}).
+* A deferral created under this specification MUST be delivered by polling. A client MUST NOT send the `client_notification_token` parameter of {{DTR}}; an authorization server rejects a request carrying it with `invalid_request` and MUST NOT deliver a callback, whatever the client's metadata says. Callback delivery is a deferred capability ({{design-rationale}}).
 * A successful polling response is the software statement token response of {{software-statement-response}}, not an access token response.
 * Issuers SHOULD set deferral code lifetimes that reflect their actual approval latency, which for a review involving human judgment can be hours or days.
 
