@@ -327,7 +327,7 @@ The retrieval is client-controlled and reachable before any client is registered
 
 An authorization server that advertises `software_statement_registration_validity_supported` as `true` MUST apply this model to every registration it creates from a validated software statement, whichever issuer signed it, so that a client can rely on the signal before it registers:
 
-* It MUST record the governing statement's `iss`, `jti`, `sub`, and `iat` with the registration, and the registration's effective expiry: the earlier of the statement's `exp` and its `iat` plus the maximum statement lifetime the server records for that issuer ({{issuer-trust}}). The effective expiry is what bounds the registration, what a renewal extends, and what `registration_expires_at` reports. It is an upper bound rather than a guarantee: a status resolved as other than `VALID` ends the registration earlier, and a client learns of that only from the rejection, since the withdrawal is a decision it was not party to.
+* It MUST record the governing statement's `iss`, `jti`, `sub`, and `iat`, and its `tenant` and `status` claims where it carries them, with the registration, and the registration's effective expiry: the earlier of the statement's `exp` and its `iat` plus the maximum statement lifetime the server records for that issuer ({{issuer-trust}}). The effective expiry is what bounds the registration, what a renewal extends, and what `registration_expires_at` reports. It is an upper bound rather than a guarantee: a status resolved as other than `VALID` ends the registration earlier, and a client learns of that only from the rejection, since the withdrawal is a decision it was not party to.
 * The registration is valid until that effective expiry.
 * Once that time passes without a replacement ({{revalidation}}), it MUST reject requests under the registration: `invalid_client` at the token and pushed authorization request endpoints, and `statement_required` at the authorization endpoint ({{errors}}). The revalidation requests {{revalidation}} permits are the exception.
 * It SHOULD retain the expired record so that it can process a later authenticated revalidation ({{oracle-considerations}}), and MAY allow a grace period during which it accepts a replacement without treating the registration as expired.
@@ -446,8 +446,8 @@ A presentation refused because a bound of {{multi-instance}} is reached is rejec
 A successful presentation creates an establishment comprising the following, which is the state a server persists for the grant:
 
 * the validated `sub`;
-* the statement identity, its `iss`, `jti`, `iat`, and expiry;
-* the tenant the grant was opened for, where the authorization server hosts more than one;
+* the statement identity, its `iss`, `jti`, `iat`, and expiry, and its `tenant` and `status` claims where it carries them;
+* the authorization server's own tenant the grant was opened for, where it hosts more than one;
 * the reviewed metadata and the digest it matched ({{effective-metadata}});
 * the issuer trust decision; and
 * the sender-constraint mechanism and Proven Key.
@@ -475,7 +475,7 @@ Where the authorization server holds a refusal record for a statement, it MUST t
 When policy requires one, the client presents the replacement in the `software_statement` parameter of the refresh request. The replacement:
 
 * MUST validate under {{validation}}, including its audience where it carries one;
-* MUST have the establishment's `iss` and `sub`, and its `tenant` where the establishment recorded one;
+* MUST have the recorded statement's `iss` and `sub`, and its `tenant` claim where the recorded statement carried one;
 * MUST have an `iat` later than the recorded statement's `iat`; and
 * MUST authorize the establishment's Proven Key ({{sender-constraint}}).
 
