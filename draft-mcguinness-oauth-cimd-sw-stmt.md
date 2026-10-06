@@ -350,7 +350,7 @@ The client renews a statement-governed registration by delivering a replacement 
 
 The replacement MUST:
 
-* validate under {{validation}} with this server in its audience;
+* validate under {{validation}}, including its audience where it carries one;
 * carry the governing statement's `iss` and `sub`, and its `tenant` where the governing statement carried one;
 * be unexpired; and
 * have an `iat` later than the recorded statement's `iat`.
