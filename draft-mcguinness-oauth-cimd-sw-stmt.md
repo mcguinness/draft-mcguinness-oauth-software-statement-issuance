@@ -563,7 +563,7 @@ At the pushed authorization request endpoint these are carried in the error resp
 
 A statement is never presented at the authorization endpoint ({{authorization-requests}}), so two conditions arise there, and they share one answer: a client for which this server requires a statement has none established, or its statement-governed registration has expired without a replacement ({{revalidation}}). The authorization server MUST return `statement_required` in the authorization error response {{RFC6749}}, which tells the client to obtain a statement and return through the pushed authorization request endpoint. Without it a client learns only that it is unauthorized, and cannot tell a missing review from a policy it will never satisfy.
 
-The order matters. The authorization server resolves the client's Client ID Metadata Document, validates the request's `redirect_uri` against it, and only then returns the error through that redirection. Where it cannot resolve the document, and so cannot validate the redirection URI, it MUST NOT redirect and reports the error to the resource owner instead.
+The order matters. The authorization server resolves the client's Client ID Metadata Document, or for an expired registration consults the retained registration ({{revalidation}}), validates the request's `redirect_uri` against it, and only then returns the error through that redirection. Where it cannot resolve either, and so cannot validate the redirection URI, it MUST NOT redirect and reports the error to the resource owner instead.
 
 Where the proof mechanism defines a recoverable error of its own, such as a DPoP nonce challenge {{RFC9449}}, that error takes precedence over the generic errors above.
 
