@@ -141,9 +141,9 @@ A consuming authorization server that receives an event defined here MUST:
 
 Where the event names a `software_statement_jti`, the affected statements are that statement. Where it does not, they are the statements for that subject and issuer the receiver holds or has cached a status for.
 
-A receiver MUST invalidate any cached Status List Token for the affected statements before resolving, since a cached copy is what the event exists to correct.
+A receiver MUST fetch the Status List Token for the affected statements afresh rather than answer from a cached copy, since a cached copy is what the event exists to correct. Until the fetch succeeds, the copy it holds remains in effect within its validity.
 
-Pending resolution, a receiver MAY refuse the affected statements. A receiver that does so MUST apply the result of its next successful resolution, including where that result is `VALID`, and where resolution does not complete MUST fall back to the rules of {{STATEMENT}} rather than hold the refusal indefinitely. Refusal pending resolution is a provisional measure, never a durable record: this specification defines no receiver-side state that outlives a resolution, and a receiver MUST NOT retain a refusal that a later resolution does not support.
+An event is never grounds for refusal. Pending resolution, a receiver applies the status it last resolved, and where resolution does not complete it applies the rules of {{STATEMENT}} as it would had no event arrived. This specification defines no receiver-side state that outlives a resolution.
 
 A receiver MUST treat an event it has already applied as successfully delivered and acknowledge it as {{RFC8935}} or {{RFC8936}} requires, rather than reporting a delivery error; duplicate delivery is ordinary retry behavior and rejecting it can stall or disable a stream carrying later events. Duplicate detection is per transmitting issuer, since SET `jti` values are unique only within an issuer.
 
