@@ -91,7 +91,7 @@ RFC 7591 standardizes how a client presents a software statement and how a regis
 
 In the redirect flow, the authorization endpoint returns a short-lived `software_statement_code`, which the client redeems using a new token endpoint grant. A completed decision returns a statement; a pending decision uses Deferred Token Response and polling. The statement never appears in an authorization response URL.
 
-A client that holds an initial access token authorizing issuance instead uses OAuth 2.0 Token Exchange (RFC 8693), without a redirect.
+A client that holds an initial access token authorizing issuance, or a statement to renew, instead uses OAuth 2.0 Token Exchange (RFC 8693), without a redirect.
 
 The issued statement is consumed through RFC 7591 dynamic client registration; the companion specification defines the artifact, its validation, and its consumption.
 
@@ -114,7 +114,7 @@ This specification supplies the missing issuance protocol. The artifact itself, 
 A client identified by its {{CIMD}} URL obtains a statement through either:
 
 * a redirect flow, using `response_type=software_statement_code` and the `urn:ietf:params:oauth:grant-type:software-statement` redemption grant; or
-* OAuth token exchange, when it already holds an initial access token authorizing issuance ({{token-exchange-profile}}).
+* OAuth token exchange, when it already holds an initial access token authorizing issuance or a statement to renew ({{token-exchange-profile}}).
 
 The flow concerns client establishment, not authorization to access a protected resource. Consequently, a software statement request cannot be combined with `scope`, `resource`, `authorization_details`, or an access-token-producing response type.
 
@@ -597,7 +597,7 @@ The client consumes the issued statement, the value of `access_token`, as descri
 
 The `access_token` member is a security-token container ({{RFC8693}}), not an OAuth access token: the software statement is consumed only as a software statement ({{STATEMENT}}), MUST NOT be attached to a request as an `Authorization: Bearer` credential, and is not subject to refresh. Implementations that cache issued tokens by type SHOULD key this artifact on its `issued_token_type` so that generic access-token handling does not apply to it, and SHOULD treat it as a sensitive credential in logs.
 
-A client obtains a replacement for an expiring or expired software statement by performing a new software statement request, or, if it holds an initial access token, through an exchange under {{token-exchange-profile}}. Whether replacement requires new approval is determined by issuer policy. This document defines how a client obtains a replacement; {{STATEMENT}} defines how it delivers one to a trusting authorization server, and orders replacements by `iat` ({{STATEMENT}}).
+A client obtains a replacement for an expiring or expired software statement by renewal ({{renewal}}), exchanging the statement it holds; by a new software statement request; or, if it holds an initial access token, through an exchange under {{token-exchange-profile}}. Whether replacement requires new approval is determined by issuer policy. This document defines how a client obtains a replacement; {{STATEMENT}} defines how it delivers one to a trusting authorization server, and orders replacements by `iat` ({{STATEMENT}}).
 
 ## Terminal Denial {#terminal-denial}
 
