@@ -808,7 +808,7 @@ Error Name:
 : `statement_required`
 
 Error Usage Location:
-: authorization error response, token error response, pushed authorization request error response, client registration management error response
+: authorization error response, token error response, pushed authorization request error response
 
 Related Protocol Extension:
 : CIMD Software Statement
