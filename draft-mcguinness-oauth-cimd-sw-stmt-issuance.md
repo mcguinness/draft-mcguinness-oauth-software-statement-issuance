@@ -335,7 +335,7 @@ The client sends an authorization request as described in Section 4.1.1 of {{RFC
 `audience`:
 : OPTIONAL. A target service at which the client intends to use the statement, with the semantics defined in Section 2.1 of {{RFC8693}}, and repeatable to request several. Each value MUST be an authorization server issuer identifier as defined by {{RFC8414}}; values MUST NOT be repeated, and order is insignificant.
 
-The authorization server selects the final audience according to policy, and MUST NOT place in the statement's `aud` claim any value the request did not carry: an issuer narrows a requested audience and never widens it. Where no requested audience is acceptable the authorization server MUST reject the request with `invalid_target` {{RFC8693}}, following the authorization-request precedent of {{RFC8707}}. These semantics apply only to software statement requests and do not affect proprietary uses of `audience` for access-token targeting.
+The authorization server selects the final audience according to policy, and MUST NOT place in the statement's `aud` claim any value the request did not carry: an issuer narrows a requested audience and never widens it. Where no requested audience is acceptable the authorization server MUST reject the request with `invalid_target` {{RFC8693}}, following the authorization-request precedent of {{RFC8707}}. An authorization server whose policy requires a restricted audience rejects a request carrying none with the same error, which {{RFC8707}} defines for a target that is missing as well as one that is invalid. These semantics apply only to software statement requests and do not affect proprietary uses of `audience` for access-token targeting.
 
 `completion_mode`:
 : OPTIONAL. A value that includes `deferred`, sent as the advance hint {{DTR}} defines for an endpoint preceding a token request. It lets the authorization server choose a review path suited to out-of-band completion before it begins work, and does not replace the opt-in required at redemption ({{deferred-processing}}).
@@ -509,7 +509,7 @@ Issuance policy determines whether an initial access token authorizes only the r
 : REQUIRED. The client identifier URL described in {{client-identity}}.
 
 `audience`:
-: OPTIONAL. The requested audience described in {{authorization-request}}. The same syntax, validation, and narrowing rules apply.
+: OPTIONAL. The requested audience described in {{authorization-request}}. The same syntax, validation, and narrowing rules apply. On renewal ({{renewal}}), the subject statement's `aud` stands in for the requested audience where the request carries none, and bounds it where it does, so a replacement is never broader than the statement it replaces.
 
 `completion_mode`:
 : As described in {{software-statement-code-redemption}}.
@@ -729,7 +729,7 @@ The authorization server learns the client identifier URL, the canonical metadat
 
 A statement names the software a reviewer evaluated, and where it carries an `aud` claim it also reveals which authorization servers the client plans to establish relationships with. Omitting the claim discloses nothing beyond the review itself.
 
-* Issuers SHOULD restrict the audience only where they mean to limit reach, since naming one discloses the client's intended relationships.
+* Naming an audience discloses the client's intended relationships, and omitting one lets any holder of a copy register the software wherever the issuer is trusted; {{STATEMENT}} weighs the two and has an issuer name an audience by default.
 * Clients SHOULD NOT present statements outside their intended deployment context, and a redirect-flow client SHOULD use Pushed Authorization Requests {{RFC9126}} where the relationship is sensitive.
 * Authorization servers SHOULD avoid logging issued statements.
 
