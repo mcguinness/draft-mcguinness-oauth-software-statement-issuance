@@ -656,8 +656,9 @@ When an approval interface is shown, it SHOULD clearly describe that the decisio
 An erroneous approval affects every authorization server in the statement's audience until expiry. The approval interface therefore SHOULD present:
 
 * the client identifier URL;
-* the document content it will vouch for, identified by its digest; and
-* the audience the issuer intends to place in the statement.
+* the document content it will vouch for, identified by its digest;
+* the audience the issuer intends to place in the statement; and
+* the tenant the decision is confined to, where the statement will carry `aud_tenant` ({{STATEMENT}}).
 
 It SHOULD present the intended lifetime, and SHOULD make narrowing visible when the client requested a different or broader audience. A document naming instance-attestation authorities, as {{CLIENT-INSTANCE}} defines, endorses those authorities for the software under review and deserves particular scrutiny.
 
@@ -718,7 +719,7 @@ Compromise of a software-statement signing key enables an attacker to mint state
 
 The software statement attests to metadata; it does not identify the human or system that approved issuance. Deployments that require approver attribution retain it in an authorization server audit record or define an explicit statement claim and its privacy semantics. Approver identity cannot be inferred from the signature alone.
 
-Approval authority is a policy decision with audience-wide effect: an approved statement is accepted at every authorization server in its audience, not only within the approver's own scope. The policy governing who may approve issuance MUST be at least as restrictive as the policy governing manual client establishment at the issuing authorization server, and approval by a party authorized only for a personal or organizational scope MUST NOT produce a statement whose audience exceeds that scope.
+Approval authority is a policy decision with audience-wide effect: an approved statement is accepted at every authorization server in its audience, not only within the approver's own scope. The policy governing who may approve issuance MUST be at least as restrictive as the policy governing manual client establishment at the issuing authorization server, and approval by a party authorized only for a personal or organizational scope MUST NOT produce a statement whose audience exceeds that scope, or whose `aud_tenant` names a tenant outside it.
 
 An audit record SHOULD bind each decision, whether approval or denial, to the metadata digest ({{metadata-snapshot}}) of the document the deciding party evaluated, the policy under which the decision was made, the identity of that party, and the time of decision. A recorded denial carrying its grounds has the same audit value as a recorded approval. Portable, independently verifiable decision records are out of scope for this specification.
 
