@@ -160,7 +160,7 @@ Applying an event does not revoke access tokens already issued. A receiver appli
 
 A statement issuer supporting this specification publishes Transmitter configuration metadata as {{SSF}} defines, discoverable from the issuer identifier the consuming authorization server has already configured. Stream creation, subject management, verification, and delivery follow {{SSF}}; this specification adds no configuration mechanism.
 
-A consuming authorization server SHOULD create one stream per configured issuer, covering every subject that issuer attests rather than an enumerated set. A receiver cannot enumerate subjects: in the runtime profile it holds no state for software until first presentation, which is exactly when an unenumerated event would already have been missed. A transmitter supporting this specification MUST therefore advertise `default_subjects` as `ALL` in its transmitter configuration {{SSF}}, so that a stream carries every subject appropriate to it without the receiver adding any. The subjects appropriate to a stream are those within the identifier scope for which the receiver accepts that issuer ({{STATEMENT}}).
+A consuming authorization server SHOULD create one stream per configured issuer, covering every subject that issuer attests rather than an enumerated set. A receiver cannot enumerate subjects: in the runtime profile it holds no state for software until first presentation, which is exactly when an unenumerated event would already have been missed. A transmitter supporting this specification MUST therefore advertise `default_subjects` as `ALL` in its transmitter configuration {{SSF}}, so that a stream carries every subject appropriate to it without the receiver adding any. The subjects appropriate to a stream are those of the issuer's statements whose `aud` is absent or names the receiving authorization server; a receiver discards events for subjects outside the identifier scope for which it accepts that issuer ({{STATEMENT}}).
 
 A receiver SHOULD request the event this specification defines, and SHOULD use the stream verification facility of {{SSF}} on a schedule, since a stream delivering nothing because it was misconfigured is otherwise indistinguishable from an issuer with nothing to report.
 
@@ -188,7 +188,7 @@ A receiver accepts any key in the issuer's authorization server JWK Set as a sta
 
 # Privacy Considerations
 
-Subject identifiers in these events name software an issuer has reviewed and, in aggregate, describe an organization's approved software estate. A transmitter SHOULD scope each stream to the subjects the receiving authorization server can act on, and a receiver SHOULD apply to event logs the handling it applies to statements ({{STATEMENT}}).
+Subject identifiers in these events name software an issuer has reviewed and, in aggregate, describe an organization's approved software estate. A transmitter SHOULD scope each stream to the subjects of statements whose `aud` is absent or names the receiving authorization server ({{configuration}}), and a receiver SHOULD apply to event logs the handling it applies to statements ({{STATEMENT}}).
 
 Because this specification defines no durable receiver-side record, it adds no negative state about a client identifier that outlives the issuer's own published status. A receiver that logs events retains that record instead, and SHOULD bound its retention accordingly.
 
