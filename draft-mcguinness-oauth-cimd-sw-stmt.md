@@ -79,7 +79,7 @@ informative:
 
 --- abstract
 
-RFC 7591 defines the software statement as input to dynamic client registration but does not define how long the resulting registration remains valid or how a client renews the statement on which it was based. This specification profiles the software statement of RFC 7591 for clients identified by a Client ID Metadata Document, and defines everything a trusting authorization server does with one: which issuers it trusts, how it validates and applies one, and the two points at which it consumes one. Consumed in a registration request, a statement governs that registration until it expires and a replacement renews it. Presented in an authorization or token request, it establishes an otherwise unregistered client for that request and the grant state derived from it, on proof of a key the reviewed document carries, so possession of the statement alone is insufficient. Together these let an issuer curate approved client software across the authorization servers in a statement's audience while each server keeps control of trust, grants, and token lifetime.
+RFC 7591 defines the software statement as input to dynamic client registration but does not define how long the resulting registration remains valid or how a client renews the statement on which it was based. This specification profiles the software statement of RFC 7591 for clients identified by a Client ID Metadata Document, and defines everything a trusting authorization server does with one: which issuers it trusts, how it validates and applies one, and the two points at which it consumes one. Consumed in a registration request, a statement governs that registration until it expires and a replacement renews it. Presented in an authorization or token request, it establishes an otherwise unregistered client for that request and the grant state derived from it, on proof of a key the reviewed document carries or, for software distributed to end users, on delivery to a redirection URI the document lists, so possession of the statement alone does not complete a grant. Together these let an issuer curate approved client software across the authorization servers in a statement's audience while each server keeps control of trust, grants, and token lifetime.
 
 --- middle
 
@@ -142,7 +142,7 @@ Lifetime and audience:
 Effect:
 : A software statement supplies establishment: which client this is, and what metadata a named reviewer stands behind. A client attestation supplies presenter proof: that the party sending this request holds a key someone vouches for. Neither grants access, and neither substitutes for the other.
 
-The two therefore compose. A deployment holding only a client attestation knows what is running but not whether anyone approved it; a deployment holding only a software statement knows the software was reviewed but not that this sender is running it. Runtime presentation always requires both halves: the statement carries the review, and possession of a key the statement attests carries the presenter ({{sender-constraint}}).
+The two therefore compose. A deployment holding only a client attestation knows what is running but not whether anyone approved it; a deployment holding only a software statement knows the software was reviewed but not that this sender is running it. Runtime presentation always requires both halves: the statement carries the review, and the presenter is carried by possession of a key the statement attests or, for software distributed to end users, by delivery to a redirection URI the issuer reviewed ({{sender-constraint}}).
 
 This specification defines no new attestation format and no new attester role. The presenter proves a key the reviewed document carries, using ordinary client authentication or DPoP; binding a presenter attestation defined elsewhere is an extension ({{extensions}}).
 
@@ -477,7 +477,7 @@ When policy requires one, the client presents the replacement in the `software_s
 * MUST validate under {{validation}}, including its audience where it carries one;
 * MUST have the recorded statement's `iss` and `sub`, and its `tenant` claim where the recorded statement carried one;
 * MUST have an `iat` later than the recorded statement's `iat`; and
-* MUST authorize the establishment's Proven Key ({{sender-constraint}}).
+* MUST authorize the establishment's Proven Key ({{sender-constraint}}) or, for an establishment created under {{public-client-presentation}}, name a document that still satisfies that section.
 
 The refreshed access MUST fall within the metadata of the document the replacement names.
 
@@ -657,7 +657,7 @@ Resolution itself remains the server's own responsibility. This specification de
 
 Renewing a registration proves possession of the registration's own credential and the currency of a statement sharing the governing `iss` and `sub`. It does not prove that the renewing party is the reviewed software: an attacker holding a stolen client credential can renew indefinitely with any current statement for that software, which circulates by design to every deployment of it. Renewal keeps the review current, not the credential honest.
 
-Deployments SHOULD pair statement-governed registrations with credential rotation, sender-constrained client authentication, and the limits of {{multi-instance}}, and SHOULD treat a credential compromise as requiring re-registration rather than renewal. Runtime presentation does not share this gap, because the proof binds the presenter to the reviewed document at every presentation.
+Deployments SHOULD pair statement-governed registrations with credential rotation, sender-constrained client authentication, and the limits of {{multi-instance}}, and SHOULD treat a credential compromise as requiring re-registration rather than renewal. Runtime presentation does not share this gap, because every presentation binds the presenter to the reviewed document, by a key it carries or, for a public client, by the redirection URIs it lists.
 
 ## External Retrieval and Resource Exhaustion {#external-retrieval}
 
