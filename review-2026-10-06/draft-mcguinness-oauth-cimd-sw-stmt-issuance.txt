@@ -436,12 +436,15 @@ Table of Contents
    *  Any other value establishes a confidential client, and the
       authorization server MUST require exactly that method, as required
       by [CIMD]; a declared method the authorization server does not
-      support MUST cause rejection with unauthorized_client rather than
-      treatment as public.
+      support MUST cause rejection rather than treatment as public: with
+      unauthorized_client at the authorization endpoint, and with
+      invalid_client at the token endpoint, which Section 5.2 of
+      [RFC6749] assigns to an unsupported authentication method.
 
    *  An omitted value establishes neither, and any request identifying
-      such a client MUST be rejected with invalid_request, returned to
-      the redirection URI validated against the document.
+      such a client MUST be rejected with invalid_request, returned at
+      the authorization endpoint to the redirection URI validated
+      against the document.
 
    Classification uses the singular token_endpoint_auth_method; a list
    of declared supported methods is not interpreted.
@@ -575,17 +578,17 @@ Table of Contents
 
    The authorization server selects the final audience according to
    policy, and MUST NOT place in the statement's aud claim any value the
-   request did not carry, where on renewal the subject statement's aud
-   counts as carried (Section 8): an issuer narrows a requested audience
-   and never widens it.  Where no requested audience is acceptable the
-   authorization server MUST reject the request with invalid_target
-   [RFC8693], following the authorization-request precedent of
-   [RFC8707].  An authorization server whose policy requires a
-   restricted audience rejects a request carrying none with the same
-   error, which [RFC8707] defines for a target that is missing as well
-   as one that is invalid.  These semantics apply only to software
-   statement requests and do not affect proprietary uses of audience for
-   access-token targeting.
+   request did not carry, except that a renewal request carrying no
+   audience counts as carrying the subject statement's aud (Section 8):
+   an issuer narrows a requested audience and never widens it.  Where no
+   requested audience is acceptable the authorization server MUST reject
+   the request with invalid_target [RFC8693], following the
+   authorization-request precedent of [RFC8707].  An authorization
+   server whose policy requires a restricted audience rejects a request
+   carrying none with the same error, which [RFC8707] defines for a
+   target that is missing as well as one that is invalid.  These
+   semantics apply only to software statement requests and do not affect
+   proprietary uses of audience for access-token targeting.
 
    completion_mode:  OPTIONAL.  A value that includes deferred, sent as
       the advance hint [DTR] defines for an endpoint preceding a token
