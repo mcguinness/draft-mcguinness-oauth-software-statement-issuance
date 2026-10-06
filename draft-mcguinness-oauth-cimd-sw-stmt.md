@@ -547,7 +547,7 @@ A statement consumed at registration is rejected with the {{RFC7591}} error code
 
 Which code applies where:
 
-| Condition | Registration ({{RFC7591}}) | Pushed authorization request | Token, including refresh |
+| Condition | Registration (RFC 7591) | Pushed authorization request | Token, including refresh |
 | --- | --- | --- | --- |
 | Malformed, or failing signature or claim validation | `invalid_software_statement` | `invalid_client` | `invalid_client` |
 | Valid but not acceptable here: issuer not configured, `aud` excludes this server, `sub` or `tenant` outside the issuer's scope, `aud_tenant` not this request's tenant or absent where required | `unapproved_software_statement` | `invalid_client` | `invalid_client` |
