@@ -545,16 +545,19 @@ An authorization server that does so implements {{DTR}} and advertises `deferred
 
 {{DTR}} specifies the binding between a deferral and the requests that poll it; this document neither relaxes nor restates it.
 
-The following is a non-normative first polling request for a deferral created by a token exchange, using the polling grant of {{DTR}} with the origination sender constraint:
+The following is a non-normative first polling request from a confidential client for a deferral created by a token exchange, using the polling grant of {{DTR}} and authenticating with the same `private_key_jwt` method as the exchange:
 
 ~~~ http
 POST /token HTTP/1.1
 Host: issuer.example
 Content-Type: application/x-www-form-urlencoded
-Authorization: Basic czZCaGRSa3F0Mzo3RmpmcDBaQnIxS3REUmJuZlZkbUl3
 
 grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adeferred
 &deferral_code=8xLOxBtZp8
+&client_id=https%3A%2F%2Fclient.example.org%2Fmetadata.json
+&client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3A
+client-assertion-type%3Ajwt-bearer
+&client_assertion=eyJhbGciOiJFUzI1NiIsImtpZCI6ImNsaWVudC0xIn0...
 ~~~
 
 # Software Statement Token Response {#software-statement-response}
