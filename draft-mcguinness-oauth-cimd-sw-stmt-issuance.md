@@ -285,7 +285,7 @@ Sender constraint is established per flow:
 
 * A public client using the redirect flow MUST include `dpop_jkt` in the authorization request and MUST present a DPoP proof signed with the corresponding key at redemption and on every polling request.
 * A public client using the token exchange profile ({{token-exchange-profile}}) MUST instead include a DPoP proof on the exchange request. The authorization server MUST bind any resulting deferral state to that proof's key, and the client MUST use the same key on every polling request.
-* A confidential client MAY use DPoP in addition to its client authentication method.
+* A confidential client MAY use DPoP in addition to its client authentication method, and does so wherever {{authorization-request}} requires `dpop_jkt`.
 
 All uses of DPoP MUST follow {{RFC9449}} and {{DTR}}.
 
@@ -393,7 +393,7 @@ The authorization server returns the following parameters to the client's redire
 `iss`:
 : REQUIRED. The authorization server issuer identification parameter defined by {{RFC9207}}.
 
-A software statement code is not an authorization code and MUST NOT be redeemable as one. Redemption requires the PKCE verifier and, for a public client, a DPoP proof with the `dpop_jkt` key.
+A software statement code is not an authorization code and MUST NOT be redeemable as one. Redemption requires the PKCE verifier and, where the request carried `dpop_jkt`, a DPoP proof with that key.
 
 The fragment response mode SHOULD NOT be used, because scripts at the redirection endpoint can access it. A client MAY request `form_post` {{FORM-POST}} to keep the code out of URLs, browser history, and Referer headers.
 
@@ -695,7 +695,7 @@ A public client therefore MUST use an HTTPS redirection URI ({{authorization-req
 
 A confidential client's authentication protects redemption, so it MAY use a loopback or private-use redirection URI. An authorization server SHOULD additionally relate the redirection URI's origin to the client identifier URL or the metadata document's `client_uri` according to policy. Endpoint or key control informs issuance policy but does not determine issuance.
 
-A software statement code in a URL is visible to browser history, referrer fields, logs, and other observers. It is short lived, single use, and unredeemable without the PKCE verifier and, for a public client, the `dpop_jkt` key.
+A software statement code in a URL is visible to browser history, referrer fields, logs, and other observers. It is short lived, single use, and unredeemable without the PKCE verifier and, where one was bound, the `dpop_jkt` key.
 
 Deferral codes travel only over a direct TLS connection and are protected by sender-constrained polling and cancellation ({{deferred-processing}}). Deployments sensitive to URL disclosure can use `form_post` {{FORM-POST}}; the fragment response mode SHOULD NOT be used.
 
