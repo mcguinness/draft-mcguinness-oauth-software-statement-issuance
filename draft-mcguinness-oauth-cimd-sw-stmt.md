@@ -651,6 +651,8 @@ Where a trusting authorization server serves several tenants and evaluates anyth
 
 Resolution itself remains the server's own responsibility. This specification defines no tenant parameter, and a client identifier URL is the same value in every tenant ({{multi-instance}}), so nothing a client or an issuer can check tells either of them that a server honored this rule.
 
+`aud_tenant` confines a decision to a tenant at the consumer. It says nothing about which of the client's own customers is asking. Software that acts for many customers under one client identifier and one key presents the same statement and proves the same key for each of them, so a statement naming a tenant admits the software there on behalf of every customer it serves, and one of those customers can direct it at another's tenant. A statement attests software and cannot close this. A deployment that needs that binding records it at the consumer or carries the customer as instance identity ({{CLIENT-INSTANCE}}).
+
 ## Renewal Authenticates the Credential
 
 Renewing a registration proves possession of the registration's own credential and the currency of a statement sharing the governing `iss` and `sub`. It does not prove that the renewing party is the reviewed software: an attacker holding a stolen client credential can renew indefinitely with any current statement for that software, which circulates by design to every deployment of it. Renewal keeps the review current, not the credential honest.
