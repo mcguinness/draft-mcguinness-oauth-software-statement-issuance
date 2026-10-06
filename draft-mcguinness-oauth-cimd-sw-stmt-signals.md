@@ -112,7 +112,7 @@ A consuming authorization server MUST match the subject by exact comparison of t
 Each event is a member of the SET `events` claim, whose value is the event payload object. All payloads share these claims:
 
 `event_timestamp`:
-: REQUIRED. A NumericDate value giving the time the issuer changed the status the event reports. {{CAEP}} defines the member as OPTIONAL and as the time the event occurred; this specification requires it and narrows it to the status change. It is informational, for logging and audit. A receiver does not use it to order, bound, or scope anything, since the event carries no decision and the resolved status is what governs ({{processing}}).
+: REQUIRED. A NumericDate value giving the time the issuer changed the status the event reports. {{CAEP}} defines the member as optional and as the time the event occurred; this specification requires it and narrows it to the status change. It is informational, for logging and audit. A receiver does not use it to order, bound, or scope anything, since the event carries no decision and the resolved status is what governs ({{processing}}).
 
 `software_statement_jti`:
 : OPTIONAL. The `jti` of a single statement whose status changed. Where absent, the event reports that the status of one or more statements for the subject changed without naming them, and the receiver resolves the subject's statements it holds.
