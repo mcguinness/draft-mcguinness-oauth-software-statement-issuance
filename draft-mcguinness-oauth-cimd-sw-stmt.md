@@ -526,7 +526,7 @@ This specification is for the durable question. A statement is worth its lifecyc
 A statement consumed at registration is rejected with the {{RFC7591}} error codes {{validation}} names. A rejected presentation or delivery uses the error responses of {{RFC6749}} for the endpoint at which it was presented. At the token endpoint:
 
 `invalid_client`:
-: the statement or its proof fails to establish the client, including failed statement requirements ({{profiles}}) or sender constraint ({{sender-constraint}}); also any request under an expired statement-governed registration that does not restore it ({{revalidation}}), at the token endpoint, including the refresh-token grant, and at the pushed authorization request endpoint.
+: the statement or its proof fails to establish the client, including failed statement requirements other than expiry ({{profiles}}) or sender constraint ({{sender-constraint}}); also any request under an expired statement-governed registration that does not restore it ({{revalidation}}), at the token endpoint, including the refresh-token grant, and at the pushed authorization request endpoint.
 
 `statement_required`:
 : a current statement is required and none was supplied, or the one supplied is expired or refused. A client recovers by obtaining a newer statement and retrying; re-sending the same one cannot succeed. This code is returned in place of `invalid_grant` wherever this specification requires a current statement on a refresh-token request, so that a client does not read the rejection as a dead refresh token ({{RFC9700}}).
@@ -547,9 +547,9 @@ Which code applies where:
 
 | Condition | Registration ({{RFC7591}}) | Pushed authorization request | Token, including refresh |
 | --- | --- | --- | --- |
-| Malformed, expired, or failing signature or claim validation | `invalid_software_statement` | `invalid_client` | `invalid_client` |
+| Malformed, or failing signature or claim validation | `invalid_software_statement` | `invalid_client` | `invalid_client` |
 | Valid but not acceptable here: issuer not configured, `aud` excludes this server, `sub` outside the issuer's scope | `unapproved_software_statement` | `invalid_client` | `invalid_client` |
-| Refused by a refusal record, including a status resolved as other than `VALID`, or superseded under the `iat` floor of {{multi-instance}} | `invalid_software_statement` | `statement_required` | `statement_required` |
+| Expired, or refused by a refusal record, including a status resolved as other than `VALID`, or superseded under the `iat` floor of {{multi-instance}} | `invalid_software_statement` | `statement_required` | `statement_required` |
 | Required statement absent | `unapproved_software_statement` | `statement_required` | `statement_required` |
 | Digest does not match the retrieved document | `invalid_software_statement` | see {{effective-metadata}} | see {{effective-metadata}} |
 | Document carries metadata this server's policy refuses | `invalid_client_metadata` | `unauthorized_client` or `invalid_scope` | `unauthorized_client` or `invalid_scope` |
