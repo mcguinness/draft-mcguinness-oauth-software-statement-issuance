@@ -120,7 +120,7 @@ Registration governed by a statement:
 Runtime presentation:
 
 1. The client includes the `software_statement` parameter in a token request, or in a pushed authorization request for a redirect flow, with its Client ID Metadata Document URL as `client_id`.
-2. The authorization server validates the statement ({{profiles}}), verifies the sender constraint ({{sender-constraint}}), and resolves the reviewed document ({{effective-metadata}}).
+2. The authorization server validates the statement ({{profiles}}), resolves the reviewed document ({{effective-metadata}}), and verifies the sender constraint against it ({{sender-constraint}}).
 3. The request proceeds under that document's metadata. No persistent registration is created.
 4. The state the rest of the grant depends on persists as an establishment ({{grant-lifecycle}}).
 
@@ -435,7 +435,7 @@ This binding exists at the pushed authorization request endpoint alone. A presen
 
 A statement vouches for a document, not for a set of claims ({{profiles}}), so the client's metadata for the request is the document the statement names.
 
-Having validated the statement and its proof, the authorization server MUST obtain the Client ID Metadata Document at the statement's `sub`, by retrieval or from octets it has already digested for that identifier, and compare its digest with `cimd_digest`. A match means the served document is the reviewed one, and its members are the client's metadata for the request. A mismatch means the document changed after review; the authorization server applies the change policy of {{version-changes}}, which MAY accept the current document, reject the presentation, or apply a narrower policy to it, and MUST NOT treat the changed document as reviewed.
+Having validated the statement, and before verifying the proof ({{processing}}), the authorization server MUST obtain the Client ID Metadata Document at the statement's `sub`, by retrieval or from octets it has already digested for that identifier, and compare its digest with `cimd_digest`. A match means the served document is the reviewed one, and its members are the client's metadata for the request. A mismatch means the document changed after review; the authorization server applies the change policy of {{version-changes}}, which MAY accept the current document, reject the presentation, or apply a narrower policy to it, and MUST NOT treat the changed document as reviewed.
 
 The request is evaluated against that metadata: a `redirect_uri` MUST match a redirection URI in the document, and any requested grant type, response type, or scope MUST fall within it. A grant or response type the authorization server supports but the document does not authorize fails with `unauthorized_client`; a scope outside it fails with `invalid_scope`.
 
