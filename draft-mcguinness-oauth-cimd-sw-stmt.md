@@ -693,7 +693,7 @@ A status list is signed by the issuer, and a server MUST obtain its verification
 
 ## Document Resolution
 
-Every presentation resolves the Client ID Metadata Document its statement names ({{effective-metadata}}), which inherits the resolution considerations of {{CIMD}}, including server-side request forgery and availability. A server MAY cache resolution results within the document's caching directives; the digest is what tells it whether the bytes it holds are the reviewed ones, whatever their source.
+Every presentation resolves the Client ID Metadata Document its statement names ({{effective-metadata}}), which inherits the resolution considerations of {{CIMD}}, including server-side request forgery and availability. A server MAY cache resolution results within the document's caching directives; the digest is what tells it whether the bytes it holds are the reviewed ones, whether it retrieved them itself or retained them ({{metadata-digest}}, {{dcr-presentation}}).
 
 ## Observable State {#oracle-considerations}
 
