@@ -124,7 +124,7 @@ Each event is a member of the SET `events` claim, whose value is the event paylo
 
 The event type identifier is `urn:ietf:params:oauth:event-type:software-statement-status-changed` ({{iana-event-type}}), used as a member name of the SET `events` claim.
 
-The issuer reports that it has changed the published status of one or more statements for the subject, for example on delisting software, on discovering that a statement was mis-issued, or on a compromise of the client's key.
+The issuer reports that it has changed the published status of one or more statements for the subject, for example on delisting software, on discovering that a statement was mis-issued, or on a compromise of the client's key. A transmitter MUST NOT transmit the event until a Status List Token reflecting the change is retrievable at the status list URI, including through any caching layer it operates, since a receiver resolving earlier would fetch the state the event exists to correct.
 
 The event reports a change. It does not say what the new status is, and a receiver MUST NOT infer one from it. What the status now says is what {{STATUSLIST}} resolution returns, and a receiver that resolves a status of `VALID` after an event has correctly applied the event.
 
