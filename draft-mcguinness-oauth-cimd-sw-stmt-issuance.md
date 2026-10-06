@@ -477,7 +477,7 @@ The client sends a token exchange request as defined in Section 2.1 of {{RFC8693
 `subject_token` and `subject_token_type`:
 : REQUIRED. One of two subject tokens, according to what the client is asking for:
 
-  * **First issuance.** An initial access token: an authorization credential issued out of band by this authorization server that pre-authorizes software statement issuance, analogous to the initial access token of {{RFC7591}}, presented with a `subject_token_type` of `urn:ietf:params:oauth:token-type:access_token`. The credential MUST be bound to the `client_id` of the request. It is deployment-defined: this profile standardizes the exchange, not the credential, and `software_statement_subject_token_types_supported` ({{authorization-server-metadata}}) is what tells a client which types an issuer accepts.
+  * **First issuance.** An initial access token: an authorization credential issued out of band by this authorization server that pre-authorizes software statement issuance, analogous to the initial access token of {{RFC7591}}, presented with a `subject_token_type` of `urn:ietf:params:oauth:token-type:access_token`. The credential MUST be bound to the request's `client_id`, exactly or through a client identifier namespace, as below. It is deployment-defined: this profile standardizes the exchange, not the credential, and `software_statement_subject_token_types_supported` ({{authorization-server-metadata}}) is what tells a client which types an issuer accepts.
   * **Renewal.** A software statement this authorization server previously issued for the same `sub`, presented with a `subject_token_type` of `urn:ietf:params:oauth:token-type:software-statement` ({{renewal}}).
 
 An initial access token presented under this profile MUST be:
@@ -489,7 +489,7 @@ An initial access token presented under this profile MUST be:
 
 The initial access token is subject to the following:
 
-* A reusable one MUST be sender-constrained, for example bound to a client key through DPoP or mTLS; a bearer one MUST be single-use.
+* A reusable one MUST be sender-constrained to a client key, for example through DPoP or mTLS, and the authorization server MUST verify that binding against the key the exchange request proves; a bearer one MUST be single-use.
 * It SHOULD be integrity protected and kept confidential in transit and at rest, and MAY further restrict audiences or metadata.
 * The authorization server MUST enforce every restriction the credential carries and MUST prevent replay beyond its permitted number of uses.
 
