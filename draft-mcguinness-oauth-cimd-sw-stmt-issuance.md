@@ -92,7 +92,7 @@ informative:
 
 RFC 7591 standardizes how a client presents a software statement and how a registration endpoint consumes it, but not how the client obtains one. This specification defines OAuth 2.0 issuance flows for that artifact, in which a Client ID Metadata Document identifies a client that has not been registered with the authorization server.
 
-A client that holds an initial access token authorizing issuance, or a statement to renew, obtains a statement through OAuth 2.0 Token Exchange (RFC 8693), without a redirect. A client without one uses a redirect flow, in which the authorization endpoint returns a short-lived `software_statement_code` that the client redeems using a new token endpoint grant. Either way, a completed decision returns a statement and a pending decision uses Deferred Token Response and polling. The statement never appears in an authorization response URL.
+A client that holds an initial access token authorizing issuance, or a statement it can renew by authenticating with a key its reviewed document carries, obtains a statement through OAuth 2.0 Token Exchange (RFC 8693), without a redirect. Any client can instead use a redirect flow, in which the authorization endpoint returns a short-lived `software_statement_code` that the client redeems using a new token endpoint grant. Either way, a completed decision returns a statement and a pending decision uses Deferred Token Response and polling. The statement never appears in an authorization response URL.
 
 The issued statement is presented at registration or at runtime, or published for servers to pull; the companion specification defines the artifact, its validation, and its consumption.
 
@@ -114,8 +114,8 @@ This specification supplies the missing issuance protocol. The artifact itself, 
 
 A client identified by its {{CIMD}} URL obtains a statement through either:
 
-* OAuth token exchange, when it already holds an initial access token authorizing issuance or a statement to renew ({{token-exchange-profile}}); or
-* a redirect flow, using `response_type=software_statement_code` and the `urn:ietf:params:oauth:grant-type:software-statement` redemption grant, when it holds neither.
+* OAuth token exchange, when it meets that profile's authentication and subject-token requirements: it holds an initial access token authorizing issuance, or a statement it renews by authenticating with a key its reviewed document carries ({{token-exchange-profile}}); or
+* a redirect flow, using `response_type=software_statement_code` and the `urn:ietf:params:oauth:grant-type:software-statement` redemption grant, available to any client, including one that cannot meet token exchange's requirements, such as a public client holding a statement it cannot renew by exchange.
 
 The flow concerns client establishment, not authorization to access a protected resource. Consequently, a software statement request cannot be combined with `scope`, `resource`, `authorization_details`, or an access-token-producing response type.
 
@@ -196,7 +196,7 @@ Metadata Digest:
 
 # Protocol Overview
 
-A client that already holds an initial access token authorizing issuance, or a statement to renew, uses token exchange at the token endpoint, without a user agent ({{token-exchange-profile}}). Renewal by prior statement authenticates the reviewed client itself, with a key its reviewed document carries ({{renewal}}): a public client, which holds no such key, cannot renew this way, and a publisher's backend acting for a client is not a party this specification authenticates, so issuance it authorizes on a client's behalf would need a protocol of its own. A client without such a credential initiates the redirect flow at the authorization endpoint and redeems the resulting software statement code at the token endpoint. Either way, the issuer completes the decision synchronously or defers it under {{DTR}}.
+A client that meets the token exchange profile's authentication and subject-token requirements uses token exchange at the token endpoint, without a user agent ({{token-exchange-profile}}): it holds an initial access token authorizing issuance, or a statement it renews by authenticating with a key its reviewed document carries. Renewal by prior statement authenticates the reviewed client itself, with a key its reviewed document carries ({{renewal}}): a public client, which holds no such key, cannot renew this way, and a publisher's backend acting for a client is not a party this specification authenticates, so issuance it authorizes on a client's behalf would need a protocol of its own. Any client, including one that cannot meet those requirements, can instead initiate the redirect flow at the authorization endpoint and redeem the resulting software statement code at the token endpoint. Either way, the issuer completes the decision synchronously or defers it under {{DTR}}.
 
 The flow has four elements:
 
