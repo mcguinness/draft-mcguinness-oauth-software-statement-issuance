@@ -1,6 +1,6 @@
 # Sketch: A Mobile App from Install to Third Party
 
-A non-normative walkthrough of one scenario end to end: an employee installs an app from an app store, the enterprise identity provider refuses it as unreviewed, the app obtains a software statement and waits for an administrator, signs the user in, and then reaches a third-party SaaS through an identity assertion. It exercises all three drafts in this repository plus the Identity Assertion Authorization Grant.
+A non-normative walkthrough of one scenario end to end: an employee installs an app from an app store, the enterprise identity provider refuses it as unreviewed, the app obtains a software statement and waits for an administrator, signs the user in, and then reaches a third-party SaaS through an identity assertion. It exercises the statement and issuance drafts plus the Identity Assertion Authorization Grant.
 
 The family serves this case better than it did and still does not serve it fully. What it cannot give a mobile install is at the end, stated rather than smoothed over.
 
@@ -28,7 +28,7 @@ The app ships with its client identifier, an HTTPS URL the publisher hosts. The 
 
 The app sends a pushed authorization request to the enterprise identity provider with its Client ID Metadata Document URL as `client_id`. The server resolves the document and finds no statement from a reviewer it trusts for this tenant. It answers `statement_required`.
 
-That error is the whole point of this step. `statement_required` now reaches a plain authorization request as well, returned through the redirection once the server has resolved the app's document and validated the redirect URI against it, so an app that has not adopted PAR still learns what it is missing rather than only that it is unauthorized.
+That error is the whole point of this step. It also reaches a plain authorization request, returned through the redirection once the server has resolved the app's document and validated the redirect URI against it, so an app that has not adopted PAR still learns what it is missing rather than only that it is unauthorized.
 
 ### 3. Asking for a statement
 
@@ -48,7 +48,7 @@ Two constraints bite here. A public client must use an HTTPS redirection URI in 
 
 ### 4. Approval happens out of band
 
-The employee authenticates and the identity provider returns a `software_statement_code` to the redirect. The app redeems it at the token endpoint under `grant_type=urn:ietf:params:oauth:grant-type:software-statement`, with its PKCE verifier and a DPoP proof.
+The employee authenticates and the identity provider returns a `software_statement_code` to the redirect. The app redeems it at the token endpoint under `grant_type=urn:ietf:params:oauth:grant-type:software-statement`, with its PKCE verifier, a DPoP proof, and `completion_mode` including `deferred`, which an issuer that may defer requires at redemption.
 
 Nobody has approved this software yet, so the identity provider answers with a Deferred Token Response carrying a deferral code, and the app polls. The administrator approves in the console minutes or days later.
 
@@ -66,11 +66,11 @@ No registration is created. The app's `client_id` stays its Client ID Metadata D
 
 ### 7. If the reviewer were somebody else
 
-Had the review come from an app marketplace rather than from the enterprise, the identity provider would hold no record and the app would have to present the statement. A public client cannot prove a key its document carries, so the binding is the reviewed document's redirection URIs together with PKCE: an authorization code opened by the presentation is delivered only to a URI the reviewer looked at. That is why every such URI must use `https`, since a private-use scheme or loopback address can be claimed by other software on the same device.
+Had the review come from an app marketplace rather than from the enterprise, the identity provider would hold no record, and the app would present the statement in a pushed authorization request or publish it where its document points for the identity provider to pull. A public client cannot prove a key its document carries, so the binding is the reviewed document's redirection URIs together with PKCE: an authorization code opened by the presentation is delivered only to a URI the reviewer looked at. That is why every such URI must use `https` on a host no other application can claim: one private-use scheme or loopback address in the document makes the statement review-only, recorded but admitting nothing.
 
-The app's own device key, the one `dpop_jkt` already required during issuance, becomes the Proven Key of the establishment. Code redemption and refresh re-prove it. Software identity comes from the statement and the document, instance binding comes from the app's key, and the two no longer have to be the same key.
+The app's own device key, the one `dpop_jkt` already required during issuance, becomes the proven key of the establishment. Code redemption and refresh re-prove it. Software identity comes from the statement and the document, instance binding comes from the app's key, and the two no longer have to be the same key.
 
-This path exists at the pushed authorization request endpoint only. At the token endpoint there is no redirect to bind, so a public client's statement is refused there.
+This path exists only where a redirect follows: at the pushed authorization request endpoint, or at the authorization endpoint with a pulled statement. At the token endpoint there is no redirect to bind, so a public client's presented statement is refused there and a pulled one is review-only.
 
 ### 8. Sign-in succeeds
 
@@ -86,7 +86,7 @@ A proposed optional `cimd_digest` claim in that assertion would let the SaaS res
 
 ### 10. Offboarding
 
-The administrator withdraws approval. The identity provider sets the statement's status and stops renewing. No further establishment is admitted, and open grants end at their next currency check where refresh requires a current decision. New assertions stop at once, so third-party access ends at the next grant. Access tokens already issued run out on their own clock.
+The administrator withdraws approval. The identity provider sets the statement's status and stops renewing. No new admission follows, and because the identity provider issued the statement it already holds the withdrawal, so it refuses each open grant's next refresh unless a replacement accompanies it. New assertions stop at once, so third-party access ends at the next grant. Access tokens already issued run out on their own clock.
 
 ## The flow
 
@@ -124,6 +124,7 @@ sequenceDiagram
 | Admission without presentation | Statement | Issuer and Consumer as One Server |
 | Presenting as a public client | Statement | Public Clients |
 | Binding the grant to one install | Statement | Grant Lifecycle |
+| Ending open grants on withdrawal | Statement | Refresh |
 | Withdrawal before expiry | Statement, Issuance | `status` claim, Status Publication |
 | Reaching the third party | Not in this family | Identity Assertion Authorization Grant |
 
