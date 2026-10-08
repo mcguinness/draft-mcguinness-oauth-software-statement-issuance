@@ -161,7 +161,7 @@ Trusting Authorization Server:
 : An authorization server that consumes a software statement, at registration or at runtime.
 
 Runtime Presentation:
-: The consumption of a validated software statement inside an authorization or token request, applying the metadata of the document it vouches for without creating a persistent client registration.
+: The consumption of a validated software statement presented in an authorization or token request, or pulled from where the client's document points ({{pulled-statements}}), applying the metadata of the document it vouches for without creating a persistent client registration.
 
 Statement-Governed Registration:
 : An {{RFC7591}} client registration, at a server advertising `software_statement_registration_validity_supported`, whose validity is bound to a software statement's `exp` and renewed by replacement statements ({{registration-validity}}).
@@ -596,7 +596,7 @@ A registration management request ({{RFC7592}}) carrying a failing replacement u
 
 At the pushed authorization request endpoint these are carried in the error response {{RFC9126}} defines. On refresh-token use, {{refresh}} takes precedence: a missing or failing replacement statement is `statement_required`. Registration validity is reported differently at the token and pushed authorization request endpoints, as `invalid_client` under {{revalidation}}, because the registration rather than the grant is what lapsed; neither rejection indicates refresh-token replay ({{RFC9700}}).
 
-A statement is never presented at the authorization endpoint ({{authorization-requests}}), so two conditions arise there, and they share one answer: a client for which this server requires a statement has none established, or its statement-governed registration has expired without a replacement ({{revalidation}}). The authorization server MUST return `statement_required` in the authorization error response {{RFC6749}}, which tells the client to obtain a statement and return through the pushed authorization request endpoint. Without it a client learns only that it is unauthorized, and cannot tell a missing review from a policy it will never satisfy.
+A statement is never presented at the authorization endpoint ({{authorization-requests}}), though one may be pulled there ({{pulled-statements}}). Two conditions arise there, and they share one answer: a client for which this server requires a statement has none established, or its statement-governed registration has expired without a replacement ({{revalidation}}). The authorization server MUST return `statement_required` in the authorization error response {{RFC6749}}, which tells the client to obtain a statement and return through the pushed authorization request endpoint. Without it a client learns only that it is unauthorized, and cannot tell a missing review from a policy it will never satisfy.
 
 The order matters. The authorization server resolves the client's Client ID Metadata Document, or for an expired registration consults the retained registration ({{revalidation}}), validates the request's `redirect_uri` against it, and only then returns the error through that redirection. Where it cannot resolve either, and so cannot validate the redirection URI, it MUST NOT redirect and reports the error to the resource owner instead.
 
@@ -644,6 +644,33 @@ client-assertion-type%3Ajwt-bearer
 ~~~
 
 The authorization server validates the statement, retrieves the document its digest names, verifies the client assertion against a key from that document's `jwks_uri`, and evaluates the request against it: the requested `scope` falls within the document's `scope`, and the request authenticates as the client the statement vouches for. It keeps no registration; the effective `client_id` is the statement's `sub`.
+
+## Publishing a Statement for Servers to Pull
+
+The client's document names where its statements are published:
+
+~~~ json
+{
+  "client_id": "https://client.example/app",
+  "redirect_uris": ["https://client.example/cb"],
+  "token_endpoint_auth_method": "private_key_jwt",
+  "jwks_uri": "https://client.example/jwks.json",
+  "software_statements_uri":
+    "https://client.example/statements.json"
+}
+~~~
+
+A request to that URL returns the statements, here one:
+
+~~~ json
+{
+  "software_statements": [
+    "eyJ0eXAiOiJzb2Z0d2FyZS1zdGF0ZW1lbnQrand0Iiwi..."
+  ]
+}
+~~~
+
+An authorization server receiving an ordinary authorization request with this `client_id` resolves the document, retrieves the statements, keeps the one from an issuer it trusts whose `cimd_digest` matches the document it just fetched, and completes the binding when the client authenticates with `private_key_jwt` at code redemption ({{pulled-statements}}).
 
 # Authorization Server Metadata {#authorization-server-metadata}
 
