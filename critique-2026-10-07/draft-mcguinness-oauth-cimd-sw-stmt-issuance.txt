@@ -1149,7 +1149,10 @@ Table of Contents
       jwks_uri of its authorization server metadata [RFC8414], never
       with a statement signing key ([STATEMENT]), and MUST include exp
       in every Status List Token it publishes, so that an older token
-      cannot stand in for a newer one indefinitely.
+      cannot stand in for a newer one indefinitely, and MUST give each
+      token it publishes at a given list URI an iat later than that of
+      any token it published there before, so that a consumer can tell
+      the newer of two apart.
 
    An issuer that issues a replacement over a document that no longer
    carries a key, redirection URI, or scope the earlier document carried

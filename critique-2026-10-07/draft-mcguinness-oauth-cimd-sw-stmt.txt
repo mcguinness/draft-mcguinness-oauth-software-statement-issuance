@@ -586,11 +586,14 @@ Table of Contents
    to reject where the referenced index lies outside the list, so a
    server MAY decide from a Status List Token it already holds within
    that token's validity.  A server MUST NOT replace a Status List Token
-   it holds with one whose iat is earlier, since a host serving an older
-   token could otherwise restore a status the issuer has withdrawn.  A
-   rejection on status uses the refusal-record row of Section 10,
-   because re-presenting the same statement cannot succeed while that
-   status stands.
+   it holds with one whose iat is earlier, and MUST treat one whose iat
+   is equal but whose contents differ as a resolution failure, since a
+   host serving an older token could otherwise restore a status the
+   issuer has withdrawn.  An issuer gives each token it publishes at a
+   list URI a later iat than the last ([ISSUANCE]).  A rejection on
+   status uses the refusal-record row of Section 10, because re-
+   presenting the same statement cannot succeed while that status
+   stands.
 
    Status constrains and never relaxes.  Expiry is the floor: a
    statement carrying no status, or whose status the server cannot
@@ -1361,20 +1364,22 @@ Table of Contents
    A trusting authorization server SHOULD use the statement's sub and
    iss to inventory the registrations and establishments derived from
    that issuer's statements about that software, and SHOULD bound their
-   number.  An establishment counts toward a bound only once a grant has
-   been issued from it: state that a pushed authorization request
-   created and no grant has used does not count, since anyone holding a
-   copy of a public client's statement can create it.  The safe default
-   is one registration per (iss, sub), and per tenant where the issuer
-   carries one, at one authorization server, counted across
-   replacements, since a replacement statement carries a new jti and a
-   bound keyed on it would reset at every renewal.  On repeated
-   consumption, local policy can reject the request, treat it as
-   idempotent, or create another registration; [RFC7591] defines no
-   duplicate-registration protocol.  An idempotent response MUST NOT
-   return the existing registration's credentials, such as its
-   registration_access_token, since a repeated request may come from any
-   holder of a copy of the statement.
+   number.  An establishment counts toward a bound only once the
+   authorization server has issued an access token from it, which in a
+   redirect flow means its authorization code has been redeemed.  State
+   that a pushed authorization request created does not count, including
+   state whose code was issued but never redeemed, since anyone holding
+   a copy of a public client's statement can create it and approve it
+   with an account of their own.  The safe default is one registration
+   per (iss, sub), and per tenant where the issuer carries one, at one
+   authorization server, counted across replacements, since a
+   replacement statement carries a new jti and a bound keyed on it would
+   reset at every renewal.  On repeated consumption, local policy can
+   reject the request, treat it as idempotent, or create another
+   registration; [RFC7591] defines no duplicate-registration protocol.
+   An idempotent response MUST NOT return the existing registration's
+   credentials, such as its registration_access_token, since a repeated
+   request may come from any holder of a copy of the statement.
 
    Where the reviewed document carries jwks or jwks_uri, every
    registration derived from the statement uses that key material rather
@@ -1686,13 +1691,16 @@ Table of Contents
    software_statement_jwks_uri:  REQUIRED for an authorization server
       that issues software statements.  URL of a JWK Set containing the
       keys with which it signs software statements and no other keys.
-      The keys in it MUST NOT appear in the JWK Set at the server's
-      jwks_uri, and the server MUST NOT sign anything other than
-      software statements with them.  A trusting authorization server
-      verifies statements only against this set (Section 4), so a key
-      that signs another artifact, such as a Status List Token, cannot
-      be taken for a statement signing key.  This member describes the
-      issuing role.
+      The URL MUST use the https scheme, as [RFC8414] requires of
+      jwks_uri, and a trusting authorization server MUST validate the
+      server's certificate when retrieving it, since a substituted key
+      set would let a network attacker sign statements.  The keys in it
+      MUST NOT appear in the JWK Set at the server's jwks_uri, and the
+      server MUST NOT sign anything other than software statements with
+      them.  A trusting authorization server verifies statements only
+      against this set (Section 4), so a key that signs another
+      artifact, such as a Status List Token, cannot be taken for a
+      statement signing key.  This member describes the issuing role.
 
    software_statement_presentation_supported:  OPTIONAL.  A JSON array
       naming the endpoints at which the authorization server accepts a

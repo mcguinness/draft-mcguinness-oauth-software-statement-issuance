@@ -169,10 +169,12 @@ Table of Contents
    issuer it has not configured.  It MUST verify the SET using keys from
    the jwks_uri of the issuer's Transmitter configuration [SSF],
    discovered from the issuer identifier it has configured.  That
-   jwks_uri MUST differ from the issuer's software_statement_jwks_uri
-   ([STATEMENT]), and a receiver MUST NOT create or keep a stream whose
-   Transmitter configuration names the same location.  A receiver MUST
-   NOT use SET keys to verify statements, and MUST NOT derive event
+   jwks_uri MUST differ both from the issuer's
+   software_statement_jwks_uri ([STATEMENT]) and from the jwks_uri in
+   its authorization server metadata [RFC8414], whose keys verify its
+   Status List Tokens, and a receiver MUST NOT create or keep a stream
+   whose Transmitter configuration names either location.  A receiver
+   MUST NOT use SET keys to verify statements, and MUST NOT derive event
    trust from any key-location value carried in the event.  The SET's
    iss is that issuer identifier, the iss of the statements the event
    concerns.
@@ -381,16 +383,17 @@ Table of Contents
 8.3.  Key Separation and Compromise
 
    A receiver verifies statements only against the issuer's statement
-   key set ([STATEMENT]) and SETs only against the Transmitter
-   configuration's jwks_uri, which Section 3 requires to be a different
-   location.  That separation is what keeps SET keys in their own
-   compartment, and it holds only while the transmitter does not also
-   publish a SET key in its statement key set.  Compromise of a SET key
-   then lets an attacker drive resolutions and nothing more, while
-   compromise of a statement signing key is the serious event, because
-   statements grant standing and events cannot; a receiver responding to
-   such a compromise removes trust in the issuer or its scope as
-   [STATEMENT] describes, which also ends event acceptance.
+   key set ([STATEMENT]), Status List Tokens only against the issuer's
+   jwks_uri, and SETs only against the Transmitter configuration's
+   jwks_uri, which Section 3 requires to differ from both.  That
+   separation is what keeps SET keys in their own compartment, and it
+   holds only while the transmitter publishes no SET key in either of
+   the other sets.  Compromise of a SET key then lets an attacker drive
+   resolutions and nothing more, while compromise of a statement signing
+   key is the serious event, because statements grant standing and
+   events cannot; a receiver responding to such a compromise removes
+   trust in the issuer or its scope as [STATEMENT] describes, which also
+   ends event acceptance.
 
 8.4.  Relationship to Scheduled Resolution
 
