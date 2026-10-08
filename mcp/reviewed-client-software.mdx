@@ -4,13 +4,15 @@ title: Reviewed Client Software
 
 <Info>**Status**: Draft</Info>
 
+<Note>This extension depends on draft-mcguinness-oauth-cimd-sw-stmt, cited here by its editor's copy until -00 is submitted. Its references will be pinned to that revision and to draft-ietf-oauth-client-id-metadata-document-02, and it will be proposed through the MCP SEP process.</Note>
+
 ## 1. Introduction
 
 ### 1.1 Purpose and Scope
 
 This document defines an application of "[CIMD Software Statement](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt.html)" for the Model Context Protocol (MCP). It lets an MCP authorization server admit an MCP client on the strength of a review by a party the server trusts, bound to the exact Client ID Metadata Document that party reviewed, without the client registering and, in the common case, without the client sending anything new.
 
-MCP identifies clients by [Client ID Metadata Document](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/) and has deprecated Dynamic Client Registration. A metadata document says what a client claims about itself. This profile adds who reviewed those claims, and lets a server tell whether the document it fetched today is the one that was reviewed.
+MCP identifies clients by [Client ID Metadata Document](https://www.ietf.org/archive/id/draft-ietf-oauth-client-id-metadata-document-02.html) and has deprecated Dynamic Client Registration. A metadata document says what a client claims about itself. This profile adds who reviewed those claims, and lets a server tell whether the document it fetched today is the one that was reviewed.
 
 A review answers a question about software: who vouched for this client, and against which bytes. It does not answer whether a particular user or organization may use the client right now. Where an enterprise identity provider mediates access, [Enterprise-Managed Authorization](https://github.com/modelcontextprotocol/ext-auth/blob/main/specification/stable/enterprise-managed-authorization.mdx) answers that second question, and this profile composes with it (Section 5).
 
@@ -186,7 +188,7 @@ The response from `software_statements_uri`:
 }
 ```
 
-The decoded payload of that statement. It names no `aud` because it is a catalog listing, honoured wherever the catalog is trusted, and its `consumable_at` keeps a copy from being used to register the software elsewhere:
+The decoded payload of that statement. It names no `aud` because it is a catalog listing, honoured wherever the catalog is trusted, and it carries no `consumable_at`, so it is usable only by presentation and a copy cannot register the software elsewhere:
 
 ```json
 {
@@ -196,7 +198,6 @@ The decoded payload of that statement. It names no `aud` because it is a catalog
   "exp": 1793865600,
   "jti": "b8f3c0d2-4a1e-4c5e-9a77-2f0d6c1e5b10",
   "cimd_digest": "y2Wl0H4k7dE5tq3m3nB4mJ8pCq9sV1rT6uX0aZbC2dE",
-  "consumable_at": ["presentation"],
   "status": {
     "status_list": {
       "idx": 4117,
@@ -204,6 +205,36 @@ The decoded payload of that statement. It names no `aud` because it is a catalog
     }
   }
 }
+```
+
+### 7.3 Authorization Request
+
+A public client with an `https` redirection URI, binding a DPoP key (line breaks for display only):
+
+```
+GET /authorize?response_type=code
+  &client_id=https%3A%2F%2Fapp.example.com%2Foauth%2Fclient.json
+  &redirect_uri=https%3A%2F%2Fapp.example.com%2Foauth%2Fcallback
+  &code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
+  &code_challenge_method=S256
+  &dpop_jkt=NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs
+  &resource=https%3A%2F%2Fmcp.example.com%2F
+  &state=af0ifjsldkj HTTP/1.1
+Host: as.example.com
+```
+
+The server resolves the metadata document, retrieves its statements, and completes the binding when redemption proves the `dpop_jkt` key. It issues a Bearer access token and binds the refresh token to that key (Section 4.3).
+
+### 7.4 Error Response
+
+A review-only desktop client where the server requires reviewed software:
+
+```
+HTTP/1.1 302 Found
+Location: http://127.0.0.1:33418/callback?error=unauthorized_client
+  &error_description=This%20client%20cannot%20be%20reviewed%20here
+  &state=af0ifjsldkj
+  &iss=https%3A%2F%2Fas.example.com
 ```
 
 ## 8. Security Considerations
@@ -223,6 +254,8 @@ A statement binds the exact bytes of the metadata document. Any change, includin
 ### 8.4 The Publication Location
 
 Whoever controls `software_statements_uri` can withhold statements, which leaves the client unreviewed, but cannot forge them, since every statement is signed by a Statement Issuer and names the document's digest. Serving an expired or withdrawn statement gains nothing, since the server checks expiry and, where it resolves it, status.
+
+Withdrawal is not a denylist. A publisher that stops serving a withdrawn statement leaves its client unreviewed, and where the server's policy admits unreviewed clients the withdrawal changes nothing there. A server that must keep withdrawn software out requires reviewed software, or a customer's own issuer for the tenant (Section 4.5).
 
 ### 8.5 Further Considerations
 
