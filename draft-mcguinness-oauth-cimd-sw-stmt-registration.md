@@ -82,7 +82,7 @@ OAuth terminology is defined by {{RFC6749}}. Client metadata and software statem
 This specification defines the following term.
 
 Statement-Governed Registration:
-: An {{RFC7591}} client registration, at a server advertising `software_statement_registration_validity_supported`, whose validity is bound to a software statement's `exp` and renewed by replacement statements ({{registration-validity}}).
+: An {{RFC7591}} client registration, at a server advertising `software_statement_registration_validity_supported` with a value of `true`, whose validity is bound to a software statement's `exp` and renewed by replacement statements ({{registration-validity}}).
 
 # Consumption at Registration {#dcr-presentation}
 
@@ -194,7 +194,7 @@ Rejections at a registration endpoint use the error response of Section 3.2.2 of
 | Digest does not match the retrieved document | `invalid_software_statement` |
 | Document carries metadata this server's policy refuses | `invalid_client_metadata` |
 | Retrieval did not complete | `temporarily_unavailable` |
-| Review-only client where reviewed software is required ({{STATEMENT}}) | `invalid_client_metadata` ({{dcr-presentation}}) |
+| Document with a redirection URI another application could claim ({{dcr-presentation}}) | `invalid_client_metadata` |
 
 A registration management request ({{RFC7592}}) carrying a failing replacement uses the same codes. An authorization server SHOULD use HTTP status code 503 with `temporarily_unavailable` and 400 with the others.
 
@@ -246,7 +246,7 @@ Requiring a statement for registration also means each new client identity needs
 
 ## Enforcement Bounds {#enforcement-bounds}
 
-A lapsed statement makes requests under a statement-governed registration fail at the recorded `exp`. Grants under the registration remain subject to the server's grant policy after it expires, and a registration at a server that does not advertise the validity model is not bounded by the statement.
+A lapsed statement makes requests under a statement-governed registration fail at the registration's effective expiry ({{registration-validity}}). Grants under the registration remain subject to the server's grant policy after it expires, and a registration at a server that does not advertise the validity model is not bounded by the statement.
 
 ## Observable State {#oracle-considerations}
 

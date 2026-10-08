@@ -145,7 +145,7 @@ This specification builds on the following:
 
 * {{RFC7591}} defines the software statement; {{STATEMENT}} profiles it for clients identified by a Client ID Metadata Document.
 * {{CIMD}} defines the client identifier, canonical metadata source, pre-registration, and metadata-change handling; the metadata digest ({{metadata-snapshot}}) makes changes precisely detectable.
-* {{DTR}} defines client opt-in, token endpoint deferral, polling, cancellation, and sender constraint; this specification uses it unchanged for asynchronous issuance, adding only a delivery restriction ({{deferred-processing}}).
+* {{DTR}} defines client opt-in, token endpoint deferral, polling, cancellation, and sender constraint; this specification uses it unchanged for asynchronous issuance, adding the constraints of {{deferred-processing}}.
 * {{RFC8693}} defines the response convention for non-access security tokens and the exchange profiled in {{token-exchange-profile}}.
 
 {{APPROVAL-DCR}} creates an authorization-server-specific `client_id`, and client credentials where applicable, after approval; this specification issues a portable statement for later {{RFC7591}} registration. The two compose.
@@ -290,7 +290,7 @@ The metadata digest, defined in {{STATEMENT}}, is computed over the retrieved re
 
 Byte identity detects serialization-only changes by design. A digest mismatch is fatal at registration ({{REGISTRATION}}) and an input to policy at runtime ({{STATEMENT}}). A document rendered dynamically or served through content negotiation can change digest without any metadata change, and a statement over it then stops matching. This is a consequence of binding to octets, not a requirement on what a publisher may serve.
 
-An issuance source SHOULD publish keys by reference through `jwks_uri` rather than inline through `jwks`. Rotation behind a stable URI leaves the document and digest unchanged; inline rotation changes both and requires a new statement. Because the digest of a document naming `jwks_uri` binds only the key location, key-host compromise is equally invisible to it, and where that key is the runtime proof under {{STATEMENT}}, the compromise also substitutes the presenter; {{STATEMENT}} weighs the trade-off, and an issuer serving theft-sensitive deployments attests `jwks` inline instead.
+A client SHOULD publish its keys in its document by reference through `jwks_uri` rather than inline through `jwks`. Rotation behind a stable URI leaves the document and digest unchanged; inline rotation changes both and requires a new statement. Because the digest of a document naming `jwks_uri` binds only the key location, key-host compromise is equally invisible to it, and where that key is the runtime proof under {{STATEMENT}}, the compromise also substitutes the presenter; {{STATEMENT}} weighs the trade-off, and an issuer serving theft-sensitive deployments can require `jwks` inline instead.
 
 {{CIMD}} permits a document to carry a `software_statement` member, and this specification neither requires nor forbids it. An issuing authorization server evaluates the document as served and MUST NOT refuse a document because it carries the member. A consumer ignores any statement embedded in the reviewed document, and refusing to issue over such a document would leave a client that published its statement unable to renew it for the life of the identifier.
 
@@ -500,7 +500,7 @@ The client redeems a software statement code by sending an HTTP `POST` request t
 : REQUIRED. The PKCE verifier corresponding to the `code_challenge` in the authorization request.
 
 `completion_mode`:
-: REQUIRED when the authorization server advertises `deferred_token_response_supported` ({{authorization-server-metadata}}); otherwise not used, and a synchronous issuer ignores it ({{deferred-processing}}). When present, the value MUST include `deferred`. A deferral-capable issuer rejects a redemption that omits it with `invalid_request`. A client that cannot poll therefore cannot redeem at such an issuer, which cannot promise a synchronous answer.
+: REQUIRED when the authorization server advertises `deferred_token_response_supported` ({{authorization-server-metadata}}); otherwise not used, and an authorization server that does not defer ignores it. When present, the value MUST include `deferred`. A deferral-capable issuer rejects a redemption that omits it with `invalid_request`. A client that cannot poll therefore cannot redeem at such an issuer, which cannot promise a synchronous answer.
 
 The request MUST NOT contain `audience`, which was bound at the authorization endpoint; a request containing it is rejected with `invalid_request`. The client authenticates according to {{client-identity}}. When `dpop_jkt` was included in the authorization request, the client MUST send a DPoP proof for the token endpoint using the same key.
 
@@ -516,7 +516,7 @@ For a valid, unconsumed code, the result depends on the issuance decision:
 * **Denied:** it returns the terminal denial of {{terminal-denial}}.
 * **Pending:** it returns the deferred token response of {{DTR}}, binding the deferral to the code's metadata snapshot and audience in addition to the bindings {{DTR}} requires; the client then polls ({{deferred-processing}}).
 
-A synchronous issuer never reaches the pending branch, having decided before it returned the code ({{deferred-processing}}).
+An authorization server that does not defer ({{deferred-processing}}) never reaches the pending branch: it completes the decision before responding to the redemption.
 
 The following is a non-normative example of a redemption request from a confidential client at a deferred issuer (line breaks are for display purposes only):
 
@@ -738,7 +738,7 @@ An audit record SHOULD bind each decision, whether approval or denial, to the me
 
 The authorization server learns the client identifier URL, the canonical metadata document, and information about the party interacting with the authorization endpoint. It SHOULD collect and retain only the information required for issuance, security monitoring, and audit obligations.
 
-A statement names the software a reviewer evaluated, and an `aud` claim also reveals which authorization servers the client plans to establish relationships with. Omitting the claim avoids that disclosure but lets any holder of a copy register the software wherever the issuer is trusted; {{STATEMENT}} weighs the two and has an issuer name an audience by default.
+A statement names the software a reviewer evaluated, and an `aud` claim also reveals which authorization servers the client plans to establish relationships with. Omitting the claim avoids that disclosure but lets any holder of a copy register the software wherever the issuer is trusted; {{STATEMENT}} weighs the two and recommends that an issuer name an audience, which an issuer following it does by requiring one in the request ({{authorization-request}}).
 
 Clients SHOULD NOT present statements outside their intended deployment context, and a redirect-flow client SHOULD use Pushed Authorization Requests {{RFC9126}} where the relationship is sensitive. Authorization servers SHOULD avoid logging issued statements.
 
