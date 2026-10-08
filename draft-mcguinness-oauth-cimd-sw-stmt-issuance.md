@@ -104,7 +104,7 @@ Section 2.3 of {{RFC7591}} defines a software statement: a JWT asserting client 
 
 Issuance today relies on manual provisioning, deployment-specific portals, or proprietary federation processes. The UK Open Banking Directory {{UK-OPEN-BANKING}} and the Australian Consumer Data Right Register {{AU-CDR}} each built a central issuer of {{RFC7591}} software statements, yet a client needs a separate integration for each. A portal provides no interoperable protocol for submission, deferral, delivery, metadata binding, renewal, or errors; this specification defines one.
 
-Pre-registration {{CIMD}}, pushed registration {{PUSHED-DCR}}, and approval-based registration {{APPROVAL-DCR}} each establish trust at one authorization server from client-supplied metadata. A software statement makes an issuer's decision portable: a publisher program, enterprise security function, or ecosystem operator reviews the software once, and each authorization server in the audience can rely on the signed decision under its own policy ({{what-issuance-attests}}, {{STATEMENT}}, {{beyond-pre-registration}}).
+Pre-registration {{CIMD}}, pushed registration {{PUSHED-DCR}}, and approval-based registration {{APPROVAL-DCR}} each establish trust at one authorization server from client-supplied metadata. A software statement makes an issuer's decision portable: a publisher program, enterprise security function, or ecosystem operator reviews the software once, and each authorization server in the audience can rely on the signed decision under its own policy ({{STATEMENT}}). {{beyond-pre-registration}} sets out what pre-registration leaves unsolved, and {{what-issuance-attests}} what a statement attests.
 
 {{STATEMENT}} defines the statement, its claims, its validation, and its consumption; this document defines how a client obtains one. It introduces no new client credential or federation architecture. Portability remains bounded by configured issuer trust, typically within an ecosystem or administrative domain rather than the open web.
 
@@ -144,7 +144,7 @@ A software statement makes one decision portable and binds it to the exact conte
 This specification builds on the following:
 
 * {{RFC7591}} defines the software statement; {{STATEMENT}} profiles it for clients identified by a Client ID Metadata Document.
-* {{CIMD}} defines the client identifier, canonical metadata source, pre-registration, and metadata-change handling; the metadata digest ({{metadata-snapshot}}) makes changes precisely detectable.
+* {{CIMD}} defines the client identifier, canonical metadata source, pre-registration, and metadata-change handling; the metadata digest ({{metadata-snapshot}}) makes changes detectable.
 * {{DTR}} defines client opt-in, token endpoint deferral, polling, cancellation, and sender constraint; this specification uses it unchanged for asynchronous issuance, adding the constraints of {{deferred-processing}}.
 * {{RFC8693}} defines the response convention for non-access security tokens and the exchange profiled in {{token-exchange-profile}}.
 
@@ -190,7 +190,7 @@ The protocol has four elements:
 
 1. An HTTPS Client ID Metadata Document URL identifies the client, and its content supplies the canonical metadata {{CIMD}}.
 2. The issuing authorization server fetches and snapshots that document, decides whether to issue, and signs the statement ({{metadata-snapshot}}).
-3. The client presents the statement to consuming servers: in an {{RFC7591}} registration request ({{REGISTRATION}}), a sender-constrained runtime presentation ({{STATEMENT}}), or a delivery that renews what a server already holds ({{STATEMENT}}, {{REGISTRATION}}).
+3. The client carries the statement to trusting authorization servers in an {{RFC7591}} registration request ({{REGISTRATION}}), a token or pushed authorization request ({{STATEMENT}}), or a delivery that renews what a server already holds ({{STATEMENT}}, {{REGISTRATION}}), or publishes it for them to pull ({{STATEMENT}}).
 4. Trusting authorization servers in its audience apply their local acceptance policies.
 
 The URL remains the client identity when its content changes, and one issuance decision can serve many registrations and runtime presentations.
@@ -406,13 +406,13 @@ The client sends an authorization request as described in Section 4.1.1 of {{RFC
 `audience`:
 : OPTIONAL. A target service at which the client intends to use the statement, with the semantics of Section 2.1 of {{RFC8693}}; the parameter can be repeated to request several. Each value MUST be an authorization server issuer identifier as defined by {{RFC8414}}; values MUST NOT be repeated, and order is insignificant.
 
-The authorization server selects the final audience according to policy. It MUST NOT place in the statement's `aud` claim any value the request did not carry, except that a renewal request carrying no `audience` counts as carrying the subject statement's `aud` ({{token-exchange-profile}}); an issuer narrows a requested audience and never widens it. Where no requested audience is acceptable, the authorization server MUST reject the request with `invalid_target` {{RFC8693}}, which {{RFC8707}} uses at the authorization endpoint for a missing or invalid target. An authorization server whose policy requires a restricted audience rejects a request carrying none with the same error. These semantics apply only to software statement requests and do not affect proprietary uses of `audience` for access-token targeting.
-
 `completion_mode`:
 : OPTIONAL. A value that includes `deferred`, sent as the advance hint {{DTR}} defines for an endpoint preceding a token request, so that the authorization server can choose a review path suited to out-of-band completion before it begins work. It does not replace the opt-in required at redemption ({{deferred-processing}}).
 
 `dpop_jkt`:
 : REQUIRED for a public client, and for a confidential client whose `redirect_uri` is a loopback or private-use URI; OPTIONAL otherwise. A declared confidential method proves key possession, not that the key is absent from distributed software, which is why the confidential-client exception for loopback and private-use redirection URIs carries this condition. The parameter has the semantics of Section 10 of {{RFC9449}}. When present, its value MUST be associated with the resulting software statement code and with any deferral state derived from its redemption.
+
+The authorization server selects the final audience according to policy. It MUST NOT place in the statement's `aud` claim any value the request did not carry, except that a renewal request carrying no `audience` counts as carrying the subject statement's `aud` ({{token-exchange-profile}}); an issuer narrows a requested audience and never widens it. Where no requested audience is acceptable, the authorization server MUST reject the request with `invalid_target` {{RFC8693}}, which {{RFC8707}} uses at the authorization endpoint for a missing or invalid target. An authorization server whose policy requires a restricted audience rejects a request carrying none with the same error. These semantics apply only to software statement requests and do not affect proprietary uses of `audience` for access-token targeting.
 
 The authorization server MUST reject with `invalid_request` a request that omits a required PKCE parameter or a required `dpop_jkt`.
 
@@ -671,7 +671,7 @@ A software statement attests client metadata; it grants no resource access or co
 
 Authorization servers MUST enforce the prohibited-parameter and response-type rules in {{prohibited-parameters}}. A software statement returned in the `access_token` member ({{software-statement-response}}) MUST NOT be accepted as an access token at a protected resource.
 
-When an approval interface is shown, it SHOULD clearly describe that the decision concerns attestation to client metadata. It MUST NOT imply that the approver is granting the client access to resources.
+When an approval interface is shown, it SHOULD state that the decision concerns attestation to client metadata. It MUST NOT imply that the approver is granting the client access to resources.
 
 An erroneous approval affects every authorization server in the statement's audience until expiry. The approval interface therefore SHOULD present:
 
@@ -881,11 +881,11 @@ Specification Document(s):
 
 **Why not the device authorization grant.** {{RFC8628}} fits a human decision that outlives a request, and an issuer whose approval is always out of band can use it. It assumes a user co-present with a constrained device who enters a user code elsewhere. Issuance approval is made by an administrator or reviewer who does not operate the client and is often not present, and the client already has a browser. The redirect flow covers an approver reachable through that browser; the token exchange profile covers the case with no browser.
 
-**Why not a profile of attestation-based client authentication.** A client attestation and a software statement are both signed third-party assertions presented with a key proof at the token endpoint, but their signers vouch for different things. An attester vouches for a running instance and its key, for as long as it chooses, to the server in front of it; a statement issuer vouches for reviewed software, for days, to every server that trusts it. Profiling one as the other would give the reviewed-software decision an instance-scoped trust model, or give instance attestation unwarranted portability. {{STATEMENT}} composes the two rather than merging them.
+**Why not a profile of attestation-based client authentication.** A client attestation and a software statement are both signed third-party assertions presented with a key proof at the token endpoint, but their signers vouch for different things. An attester vouches for a running instance and its key, for as long as it chooses, to the server in front of it; a statement issuer vouches for reviewed software, for days, to every server that trusts it. Profiling one as the other would give the reviewed-software decision an instance-scoped trust model, or give instance attestation unwarranted portability. {{STATEMENT}} keeps the two separate and leaves endorsement of an attested instance key to an extension.
 
 **Why not OpenID Federation trust marks.** A trust mark, the closest prior art, is a signed third-party assertion about an entity, with a defined issuer and a status endpoint. It is resolved through a federation, which supplies key discovery, policy, and delegation and requires both parties to enroll. This specification is pairwise: a consumer configures an issuer directly, with no federation above it. Ecosystems already operating a federation are better served by trust marks.
 
-**Deferred capabilities.** This version omits several capabilities, each with an extension point: callback delivery for deferral, a canonicalized digest, and partial review, in which an issuer vouches for particular members rather than a whole document. {{STATEMENT}} defines how a client publishes an issued statement for servers to pull and names the consumption-side extensions, including endorsed instance keys.
+**Deferred capabilities.** This version omits callback delivery for deferral, a canonicalized digest, and partial review, in which an issuer vouches for particular members rather than a whole document. {{STATEMENT}} defines how a client publishes an issued statement for servers to pull and names the consumption-side extensions, including endorsed instance keys.
 
 # Acknowledgments
 {:numbered="false"}

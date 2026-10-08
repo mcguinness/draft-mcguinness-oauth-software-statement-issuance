@@ -344,7 +344,7 @@ An authorization server that supports pulled statements MAY retrieve this URL wh
 * discards statements from issuers it has not configured before verifying any signature; and
 * caches a successful response no longer than it caches the document, and does not cache a failure, as {{CIMD}} requires of the document.
 
-It MAY revalidate a cached response with a conditional request, as it may the document ({{metadata-digest}}). Both the document and this URL are retrieved before any statement exists to validate, so the ordering of {{processing}} applies from the first statement verified onward.
+The authorization server MAY revalidate a cached response from that URL with a conditional request, as it may the document ({{metadata-digest}}). Both the document and this URL are retrieved before any statement exists to validate, so the ordering of {{processing}} applies from the first statement verified onward.
 
 The server considers only statements that:
 
@@ -480,7 +480,7 @@ Where the reviewed document carries `jwks` or `jwks_uri`, a runtime presentation
 
 This section is non-normative.
 
-A provider's marketplace decides which software may exist as a client on its platform, and it configures that reviewer's issuer for the identifier namespaces the reviewer speaks for ({{issuer-trust}}). Whether that software may operate in a particular customer's tenant is a separate decision, usually made by the customer's identity provider ({{identity-assertions}}); this specification carries it only where the customer operates its own issuer.
+A provider's marketplace decides which software may exist as a client on its platform, and the provider configures the marketplace's issuer for the identifier namespaces the marketplace speaks for ({{issuer-trust}}). Whether that software may operate in a particular customer's tenant is a separate decision, usually made by the customer's identity provider ({{identity-assertions}}); this specification carries it only where the customer operates its own issuer.
 
 A marketplace application is reviewed once. Its listing is a statement whose renewal keeps the application admissible, and one listing serves every tenant, whether the customer deploys the software or the vendor hosts it, so a vendor onboards customers without per-customer provisioning.
 
@@ -557,7 +557,7 @@ Both examples are non-normative.
 
 ## Presenting at the Token Endpoint
 
-The following example shows a client presenting an already-issued statement at the token endpoint of a server holding no record for it. The statement attests the client's `jwks_uri` and `private_key_jwt` as its authentication method, so the client authenticates with a key the statement covers; `client_id` is the Client ID Metadata Document URL named by the statement's `sub`.
+The following example shows a client presenting an already-issued statement at the token endpoint of a server holding no record for it. The reviewed document, which the statement's digest covers, names a `jwks_uri` and `private_key_jwt` as its authentication method, so the client authenticates with a key that document carries; `client_id` is the Client ID Metadata Document URL named by the statement's `sub`.
 
 ~~~ http
 POST /token HTTP/1.1
@@ -723,7 +723,7 @@ Change Controller:
 Specification Document(s):
 : This specification, {{runtime-presentation}}
 
-The "OAuth Dynamic Client Registration Metadata" registry already contains a `software_statement` member, which this registration does not affect. The name is reused because the artifact is the same {{RFC7591}} software statement, carried to the same server for the same purpose; a distinct name would make a client carry one artifact under two names, and a server would not recognize at the token endpoint what it accepts at the registration endpoint.
+The "OAuth Dynamic Client Registration Metadata" registry established by {{RFC7591}} already contains a `software_statement` member, which this registration does not affect. The name is reused because the artifact is the same {{RFC7591}} software statement, carried to the same server for the same purpose; a distinct name would make a client carry one artifact under two names, and a server would not recognize at the token endpoint what it accepts at the registration endpoint.
 
 ## Media Type Registration {#media-type}
 

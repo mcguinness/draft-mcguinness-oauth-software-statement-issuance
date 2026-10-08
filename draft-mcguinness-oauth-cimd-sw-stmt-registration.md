@@ -93,13 +93,14 @@ In {{RFC7591}}, values in a software statement take precedence over those in the
 * MUST resolve the Client ID Metadata Document at the statement's `sub`;
 * MUST validate the document as {{CIMD}} requires, including that its `client_id` member matches the client identifier URL it is held for, which is the statement's `sub`;
 * MUST verify that the digest of the retrieved representation equals `cimd_digest`, and MUST derive the registered metadata by parsing the same octets it digested, not a second retrieval or a cached copy it has not digested;
-* MUST take every client metadata value from that document, and MUST NOT take any client metadata value from the registration request, whether or not the document carries that member. A request MAY carry metadata, as {{RFC7591}} clients do; it does not contribute to the registration. The registered `client_id` is assigned as {{RFC7591}} provides, and the document's own `client_id` member is the URL recorded as `sub`;
-* never consumes a statement from a `software_statement` member of the reviewed document, which {{STATEMENT}} forbids at every consumption point; and
+* MUST take every client metadata value from that document, and MUST NOT take any client metadata value from the registration request, whether or not the document carries that member. A request MAY carry metadata, as {{RFC7591}} clients do; it does not contribute to the registration. The registered `client_id` is assigned as {{RFC7591}} provides, and the document's own `client_id` member is the URL recorded as `sub`; and
 * MUST reject the registration with `invalid_client_metadata` where any of the document's redirection URIs could be claimed by another application on the same device (see the public-client presentation rules of {{STATEMENT}}), whatever authentication method the document declares.
 
 Such a redirection URI delivers authorization codes to whichever local application claims it. Registration has no review-only form, as runtime presentation does ({{STATEMENT}}), because the registration is the admission.
 
 Taking every value from the document prevents metadata substitution. Constraining only the members the document carries would leave every omitted member attacker-supplied: a document naming `jwks_uri` and no `jwks` would admit a request-supplied `jwks`, giving a holder of someone else's statement a registration with reviewed branding and its own key.
+
+As at every consumption point, the server never consumes a statement from a `software_statement` member of the reviewed document ({{STATEMENT}}).
 
 An authorization server that pre-registers a client identifier URL, which {{CIMD}} permits and names as the expected enterprise pattern, participates by retaining the exact octets it digested when it onboarded that URL. Such a server MAY satisfy the resolution requirement above by comparing `cimd_digest` against the digest of the retained octets, and MUST retrieve the document afresh where that comparison fails. It SHOULD revalidate retained octets on the schedule the document's caching directives allow, for example with a conditional request, since otherwise a statement over an older document keeps matching bytes the publisher no longer serves. A server holding no such octets retrieves the document.
 
@@ -204,16 +205,19 @@ Registration expiry is reported as `invalid_client` at the token and pushed auth
 
 ## Revalidating a Statement-Governed Registration
 
-The following non-normative example shows a registered client, `client_id` `s6BhdRkqt3`, renewing its registration by delivering a replacement statement on an ordinary refresh, authenticated under its registered method:
+The following non-normative example shows a registered client, `client_id` `s6BhdRkqt3`, renewing its registration by delivering a replacement statement on an ordinary refresh, authenticated under its registered `private_key_jwt` method:
 
 ~~~ http
 POST /token HTTP/1.1
 Host: as.example
 Content-Type: application/x-www-form-urlencoded
-Authorization: Basic czZCaGRSa3F0Mzo3RmpmcDBaQnIxS3REUmJuZlZkbUl3
 
 grant_type=refresh_token
 &refresh_token=tGzv3JOkF0XG5Qx2TlKWIA
+&client_id=s6BhdRkqt3
+&client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3A
+client-assertion-type%3Ajwt-bearer
+&client_assertion=eyJhbGciOiJFUzI1NiIsImtpZCI6IjIwMjYtMDgifQ...
 &software_statement=eyJ0eXAiOiJzb2Z0d2FyZS1zdGF0ZW1l...
 ~~~
 
@@ -242,7 +246,7 @@ Deployments SHOULD pair statement-governed registrations with credential rotatio
 
 Open registration permits `client_name`, `logo_uri`, and `client_uri` values that imitate trusted software on consent screens. Requiring a statement replaces self-asserted branding with issuer-reviewed values. Servers that render such values on consent screens SHOULD prefer those from a reviewed document and SHOULD apply heightened scrutiny to registrations that claim user-visible branding without a statement.
 
-Requiring a statement for registration also means each new client identity needs another issuer decision, so a discarded client cannot return at no cost, and the per-`sub` bounds of {{repeated-registration}} limit how many registrations one piece of software obtains. Neither control makes metadata true: a client that misleads review can obtain a genuine statement for fraudulent metadata, so the depth of the issuer's verification remains decisive ({{ISSUANCE}}).
+Requiring a statement for registration also means each new client identity needs another issuer decision, so a discarded client cannot return at no cost, and the per-`sub` bounds of {{repeated-registration}} limit how many registrations one piece of software obtains. Neither control makes metadata true: a client that misleads review can obtain a genuine statement for fraudulent metadata, so a statement is only as reliable as the issuer's verification ({{ISSUANCE}}).
 
 ## Enforcement Bounds {#enforcement-bounds}
 

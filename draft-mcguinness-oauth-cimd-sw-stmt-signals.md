@@ -181,7 +181,7 @@ A receiver SHOULD alert on stream loss rather than assume quiescence, since the 
 
 A receiver verifies statements only against the issuer's statement key set ({{STATEMENT}}), Status List Tokens only against the issuer's `jwks_uri`, and SETs only against the Transmitter configuration's `jwks_uri`, which {{relationship}} requires to differ from both. This separation holds only while the transmitter publishes no SET key in either of the other key sets.
 
-With the keys separated, compromise of a SET key lets an attacker drive resolutions and nothing more. Compromise of a statement signing key is the serious event, because statements grant standing and events cannot. A receiver responding to such a compromise removes trust in the issuer or its scope as {{STATEMENT}} describes, which also ends event acceptance.
+With the keys separated, compromise of a SET key lets an attacker drive resolutions and nothing more. Compromise of a statement signing key has wider effect, because statements grant standing and events cannot. A receiver responding to such a compromise removes trust in the issuer or its scope as {{STATEMENT}} describes, which also ends event acceptance.
 
 ## Relationship to Scheduled Resolution
 
