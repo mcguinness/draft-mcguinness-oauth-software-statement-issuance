@@ -528,7 +528,7 @@ A replacement carries the subject statement's `tenant` where it carried one, and
 
 An issuer that publishes status MUST NOT accept as subject token a statement whose own published status is other than `VALID`. Renewing a statement it has withdrawn would reissue the decision that withdrawal ended.
 
-The authorization server MAY accept a statement that has expired, and SHOULD bound how long after expiry it will do so, since a client absent for an extended period is asking to be re-established rather than renewed. Whether renewal requires fresh review is issuer policy; the request is a new issuance decision, and the issuer re-evaluates the current document as it would for any other request ({{metadata-snapshot}}).
+The authorization server MAY accept a statement that has expired, and SHOULD bound how long after expiry it will do so, since a client absent for an extended period is asking to be re-established rather than renewed. Where the current document's digest equals the subject statement's `cimd_digest`, whether renewal requires fresh review is issuer policy. Where it differs, the issuer MUST apply the decision it would apply to a first issuance for that document, and MUST NOT renew on the strength of the prior statement alone: a changed document is a new trust state ({{metadata-snapshot}}), and renewal by whoever can change it would otherwise launder the change into the issuer's signature.
 
 Renewal needs no credential beyond the statement the client already holds, which is what keeps automated renewal from depending on an out-of-band credential outliving every statement it renews ({{security-considerations}}).
 
