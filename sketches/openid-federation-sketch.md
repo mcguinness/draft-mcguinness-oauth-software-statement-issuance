@@ -8,12 +8,12 @@ The reason the two meet at all is worth stating before the profiles. Federation'
 
 ## Profile A: Federation as the trust source for statement issuers
 
-The statement draft says it "defines no in-band issuer discovery or trust decision" and has a consuming server record seven things per issuer. Federation is that missing mechanism. A consuming server configures Trust Anchors and their public keys, which is all Federation requires of a relying party (§10), and resolves each issuer rather than enrolling it.
+The statement draft says it "defines no in-band issuer discovery or trust decision" and has a trusting authorization server record seven things per issuer. Federation is that missing mechanism. A trusting authorization server configures Trust Anchors and their public keys, which is all Federation requires of a relying party (§10), and resolves each issuer rather than enrolling it.
 
 | What a consumer records today | Under this profile |
 | --- | --- |
 | The exact `iss` identifier | The statement's `iss` MUST be the Entity Identifier of an entity resolvable to a configured Trust Anchor |
-| The source of the issuer's signing keys | The resolved `oauth_authorization_server` metadata for that entity |
+| The issuer's statement key set, at `software_statement_jwks_uri` | The same member, in the resolved `oauth_authorization_server` metadata for that entity |
 | Signing algorithms accepted | Local, optionally narrowed by federation policy |
 | Client identifier namespaces the issuer may attest | A metadata parameter bounded by superiors, below |
 | Audience identifiers the issuer may name | Local |
@@ -22,7 +22,7 @@ The statement draft says it "defines no in-band issuer discovery or trust decisi
 
 Three of the seven come from the chain: the identifier, the key source, and the namespaces the issuer may attest. The four that stay local are the consumer's own risk posture rather than facts about the issuer, so no discovery mechanism should supply them.
 
-**Keys.** A software statement is signed with a protocol key, not a Federation Entity Key. Federation keeps these families apart and says Federation Entity Keys "SHOULD NOT be used in other protocols" (§3.1.1), so a consumer takes statement verification keys from the issuer's resolved `oauth_authorization_server` metadata, by `jwks`, `jwks_uri`, or `signed_jwks_uri`. The chain vouches for that metadata; it does not supply the signing key directly.
+**Keys.** A software statement is signed with a protocol key, not a Federation Entity Key. Federation keeps these families apart and says Federation Entity Keys "SHOULD NOT be used in other protocols" (§3.1.1). The statement draft separates further among protocol keys: statement signing keys sit at `software_statement_jwks_uri` and never at `jwks_uri`, so that a key that signs anything else cannot verify a statement. A consumer therefore takes statement verification keys from `software_statement_jwks_uri` in the issuer's resolved `oauth_authorization_server` metadata, and never from `jwks`, `jwks_uri`, or `signed_jwks_uri`. The chain vouches for that metadata; it does not supply the signing key directly. Federation's `signed_jwks_uri` has no counterpart for the statement key set, so a profile would define one or rely on the plain URL, as a consumer outside a federation does.
 
 **Scope.** Federation's `naming_constraints` (§6.2.2) bounds which entities may sit beneath an intermediate, which is not the same question as which client identifiers a reviewer may vouch for. It answers the family's question only in the topology where the software publishers are themselves subordinates of the reviewer. The general mechanism is a metadata parameter on the issuer's `oauth_authorization_server` metadata naming the client identifier namespaces it attests, bounded by superiors with `subset_of`. That operator is restriction-only, so it raises none of the problems in the metadata boundary below. A superior can narrow what a reviewer claims for itself and can never widen it.
 
@@ -44,7 +44,7 @@ Federation already has an artifact for a third party's signed assertion about an
 
 **Conveyance costs nothing new.** Trust Marks travel in the `trust_marks` claim of the client's Entity Configuration (§3.1.2), from the Trust Mark endpoint (§8.6), or in a resolve response, which returns only marks the resolver has verified (§8.3). A consumer already resolving the client obtains the review in the same pass.
 
-**There is no circularity, which is what makes this work.** The statement draft refuses to treat a statement embedded in a reviewed document as a review, because a document cannot carry a statement issued over itself. That constraint does not apply here. An Entity Configuration is published at the Entity Identifier plus `/.well-known/openid-federation` (§9), so it is a different resource from the Client ID Metadata Document at the identifier itself. A Trust Mark inside the Entity Configuration can carry a digest over the document without covering its own bytes. This gives the "CIMD-native conveyance" extension point the statement draft defers a working home, in one deployment shape.
+**There is no circularity, which is what makes this work.** The statement draft refuses to treat a statement embedded in a reviewed document as a review, because a document cannot carry a statement issued over itself. That constraint does not apply here. An Entity Configuration is published at the Entity Identifier plus `/.well-known/openid-federation` (§9), so it is a different resource from the Client ID Metadata Document at the identifier itself. A Trust Mark inside the Entity Configuration can carry a digest over the document without covering its own bytes. It is the Federation counterpart of the statement draft's `software_statements_uri`, which solves the same problem outside a federation by naming, in the document, a separate location from which a server pulls statements.
 
 **One URL, both roles, verified.** Federation permits an Entity Identifier to carry a path and forbids query and fragment. CIMD requires a path, forbids fragment and userinfo, and only discourages query. Federation's rules are the stricter ones on the sole overlapping point, so any Federation-legal identifier with a non-empty path already satisfies CIMD, and the two documents sit at different URLs: the metadata JSON at the identifier, the entity configuration at `/.well-known/openid-federation` beneath it. The overlap is deliberate rather than lucky, since Federation's Automatic Registration already requires the `client_id` to be the RP's Entity Identifier.
 
@@ -60,7 +60,7 @@ Four things a publisher has to get right. A path-less identifier such as `https:
 
 ## The metadata boundary
 
-A consuming server under either profile takes the client's registration metadata from the Client ID Metadata Document, digest-verified, and not from Federation's Resolved Metadata. This is a boundary rather than a precedence rule, because no precedence rule would help.
+A trusting authorization server under either profile takes the client's metadata from the Client ID Metadata Document, digest-verified, and not from Federation's Resolved Metadata. This is a boundary rather than a precedence rule, because no precedence rule would help.
 
 Resolved Metadata is a derived object that two parties other than the publisher can change:
 
@@ -68,7 +68,7 @@ Resolved Metadata is a derived object that two parties other than the publisher 
 * The `value`, `add`, and `default` policy operators create or replace values, and `add` initializes a parameter that was absent entirely (§6.1.3.1).
 * Under Explicit Registration, "The OP MAY modify the received RP metadata" (§12.2.2).
 
-The statement draft requires a consumer to derive registered metadata by parsing the same octets it digested and to take every metadata value from that document. Resolved Metadata is by construction not those octets. The draft already generalizes the rule that settles this: any condition that makes retrieval depend on who is asking defeats the comparison, whatever its cause. Metadata policy differs by chain, so Resolved Metadata differs by who resolved it, deliberately.
+The registration draft requires a server to derive registered metadata by parsing the same octets it digested and to take every metadata value from that document, and at request time the statement draft applies that document's members as the client's metadata. Resolved Metadata is by construction not those octets. The statement draft already generalizes the rule that settles this: any condition that makes retrieval depend on who is asking defeats the comparison, whatever its cause. Metadata policy differs by chain, so Resolved Metadata differs by who resolved it, deliberately.
 
 A deployment that wants Resolved Metadata to govern its clients should use Federation's own registration and not this family. The failure mode to avoid is running both for the same client and assuming they agree.
 
@@ -76,7 +76,7 @@ A deployment that wants Resolved Metadata to govern its clients should use Feder
 
 Stated plainly, because it narrows what these drafts are worth inside a federation.
 
-* **Expiring standing is native.** "The validity of an Automatic or Explicit Registration at an OP MUST NOT exceed the lifetime of the Trust Chain the OP used to create the registration" (§12.3), and a chain's expiry is the minimum `exp` in it (§10.4). The registration-validity model in the statement draft answers a question a federated deployment has already answered. It applies to servers keeping a persistent RFC 7591 registration outside a federation.
+* **Expiring standing is native.** "The validity of an Automatic or Explicit Registration at an OP MUST NOT exceed the lifetime of the Trust Chain the OP used to create the registration" (§12.3), and a chain's expiry is the minimum `exp` in it (§10.4). The registration-validity model in the registration draft answers a question a federated deployment has already answered. It applies to servers keeping a persistent RFC 7591 registration outside a federation.
 * **Issuer trust at scale, key discovery, and rotation.** Only Trust Anchor keys are configured locally; everything else chains. The statement draft's issuer-trust section defines no mechanism at all.
 * **Central statements of who is accepted**, through `trust_mark_issuers` and metadata policy, rather than per-consumer configuration.
 
