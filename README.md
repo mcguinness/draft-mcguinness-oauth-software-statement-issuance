@@ -44,6 +44,10 @@ The repository also hosts "Shared Signals Events for CIMD Software Statements", 
 
 [Composing with OpenID Federation](openid-federation-sketch.md) sketches how these drafts could take issuer trust from a federation rather than enrolling each reviewer, how a review could travel as a Trust Mark carrying `cimd_digest`, and the one place the two models cannot be reconciled: Federation derives an entity's metadata by policy, so it is not the octets a digest covers. Non-normative, and not a draft.
 
+## Pulling the Review, and an MCP Profile
+
+[Sketch: Pulling the Review, and an MCP Profile](mcp-profile-sketch.md) takes the ecosystem where Client ID Metadata Documents are the preferred client identity, MCP, which has deprecated dynamic registration and whose desktop clients redirect to loopback. It sketches a server fetching a review instead of a client carrying one, from a location the document names or from the issuer, which removes most of the machinery a carried statement needs, and a profile that composes with MCP's Enterprise-Managed Authorization: the identity provider's assertion answers whether this user may use the client now, and the statement answers who reviewed the software. Non-normative.
+
 ## Related Drafts
 
 * [OAuth Client ID Metadata Document](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/) (normative dependency)
