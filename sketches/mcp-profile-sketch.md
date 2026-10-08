@@ -8,7 +8,7 @@ The MCP authorization specification of 2026-07-28 identifies clients by Client I
 
 Three consequences follow for the family.
 
-* **Registration is out.** Consumption at registration, the registration-validity model, and renewal through the token endpoint serve servers that keep RFC 7591 registrations. An MCP authorization server keeps none. Runtime admission is the whole of the family's relevance here, and a statement without `consumable_at` is already usable only at request time.
+* **Registration is out.** Consumption at registration, the registration-validity model, and renewal through the token endpoint serve servers that keep RFC 7591 registrations. An MCP authorization server keeps none. Runtime admission is the whole of the family's relevance here, and a statement without `statement_uses` is already usable only at request time.
 * **Desktop clients redirect to loopback.** The statement draft now treats such a client's presentation as review-only: it admits nothing an unreviewed client would not get, never satisfies a policy that requires reviewed software, and creates no establishment. That is the honest outcome, since another application on the same device can claim the loopback port, and it means a desktop client presenting a statement is no worse off than one presenting nothing.
 * **Nobody carries anything yet.** An MCP client today sends its document URL and, at most, a client assertion. Asking every client vendor to obtain a statement, store it, renew it before expiry, and attach it to pushed authorization requests is the step that will not happen.
 
@@ -62,7 +62,7 @@ What goes away is everything in the table above that exists only because a copy 
 
 [Reviewed Client Software](../mcp/reviewed-client-software.mdx) is the profile this section first sketched, now written as an MCP authorization extension. In outline:
 
-1. **Identity.** `client_id` is the Client ID Metadata Document URL, as MCP already requires. There is no registration, and statements carry no `consumable_at`, so they are usable only at request time.
+1. **Identity.** `client_id` is the Client ID Metadata Document URL, as MCP already requires. There is no registration, and statements carry no `statement_uses`, so they are usable only at request time.
 2. **Conveyance.** Servers pull statements from the `software_statements_uri` the document names and advertise `software_statement_pull_supported`. A client may also present a statement where a server accepts presentation, and both converge on one validation path.
 3. **Presenter binding.** Confidential clients authenticate with `private_key_jwt` using a key the document carries; public clients with `https` redirection URIs are bound by them and a DPoP key; clients with any loopback redirection URI are review-only.
 4. **Tenants.** A multi-tenant server resolves the tenant by its own means before evaluating any statement, and a customer's tenant-scoped decision carries `aud_tenant`. A statement says nothing about which of a client's own customers a request is for, so a server that needs that binding keeps it itself.

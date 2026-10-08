@@ -630,7 +630,7 @@ An issuer that publishes status:
 An issuer that issues a replacement narrower than the statement it replaces SHOULD withdraw the earlier statement. A replacement is narrower when it:
 
 * is over a document that no longer carries a key, redirection URI, or scope the earlier document carried;
-* has a narrower `aud`, `aud_tenant`, or `consumable_at`; or
+* has a narrower `aud`, `aud_tenant`, or `statement_uses`; or
 * has a shorter remaining lifetime.
 
 What was removed may be why the replacement was issued; a consumer that has not yet seen the replacement, or at which it does not validate, would otherwise accept the earlier statement until it expires.

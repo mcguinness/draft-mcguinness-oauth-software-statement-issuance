@@ -73,7 +73,7 @@ The MCP Client **MUST** use its Client ID Metadata Document URL as its `client_i
 
 A Client Publisher that wants its client admitted as reviewed **MUST** include the `software_statements_uri` member in the client's metadata document and serve the client's current statements there, as [Pulled Statements](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt.html#pulled-statements) defines: an `https` URL returning a JSON object whose `software_statements` member is an array of statements.
 
-The Client Publisher **SHOULD** replace each statement before it expires, by renewal or reissuance from its Statement Issuer, and **SHOULD** remove statements that have expired or been withdrawn. Statements for MCP use need no `consumable_at`: without it a statement is usable only by presentation, so a published copy cannot be used to register the software. MCP has deprecated Dynamic Client Registration, and a server admitting a client under this profile does not register it.
+The Client Publisher **SHOULD** replace each statement before it expires, by renewal or reissuance from its Statement Issuer, and **SHOULD** remove statements that have expired or been withdrawn. Statements for MCP use need no `statement_uses`: without it a statement is usable only by presentation, so a published copy cannot be used to register the software. MCP has deprecated Dynamic Client Registration, and a server admitting a client under this profile does not register it.
 
 The URL is part of the metadata document, and so part of what a statement's digest covers. Changing it, like changing any byte of the document, leaves every published statement naming a document that is no longer served.
 
@@ -188,7 +188,7 @@ The response from `software_statements_uri`:
 }
 ```
 
-The decoded payload of that statement. It names no `aud` because it is a catalog listing, honoured wherever the catalog is trusted, and it carries no `consumable_at`, so it is usable only by presentation and a copy cannot register the software elsewhere:
+The decoded payload of that statement. It names no `aud` because it is a catalog listing, honoured wherever the catalog is trusted, and it carries no `statement_uses`, so it is usable only by presentation and a copy cannot register the software elsewhere:
 
 ```json
 {

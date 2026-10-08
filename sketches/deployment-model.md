@@ -30,7 +30,7 @@ Three capabilities have no incumbent answer, and all three are provider-side:
 
 The customer-side story is worth stating plainly: a determined enterprise can already hold one approval record and drive each provider's administrative API from it, unilaterally, today. What it cannot get that way is a decision the provider verifies rather than trusts, registration metadata bound to a review, or expiring registrations.
 
-A provider can adopt this in two rungs and needs no counterparty for the first. It issues statements from its own listing program that name `registration` in `consumable_at`, consumes them under the registration draft's validity model, and gets delistings that actually take effect. Then it admits clients at request time: on statements presented at the token endpoint by clients that need no redirect, or at the pushed authorization request endpoint by software distributed to end users, which can hold no key of its own to prove, and on statements it pulls from where a client's document points. Either rung asks listed publishers for little more than a hosted metadata document.
+A provider can adopt this in two rungs and needs no counterparty for the first. It issues statements from its own listing program that name `registration` in `statement_uses`, consumes them under the registration draft's validity model, and gets delistings that actually take effect. Then it admits clients at request time: on statements presented at the token endpoint by clients that need no redirect, or at the pushed authorization request endpoint by software distributed to end users, which can hold no key of its own to prove, and on statements it pulls from where a client's document points. Either rung asks listed publishers for little more than a hosted metadata document.
 
 ## Four layers
 
@@ -61,7 +61,7 @@ A Client ID Metadata Document at an HTTPS URL: domain-anchored, retrievable, and
 
 ### 2. A reviewer evaluates the document and issues a statement
 
-The reviewer fetches the document, evaluates it, and signs a statement naming the software as `sub`, the digest of the exact bytes it reviewed as `cimd_digest`, the servers where the review should hold as `aud`, and an expiry reflecting how often it re-checks. If the review should also govern registrations, it names `registration` in `consumable_at`; without that, the statement is usable only at request time. The statement carries no metadata of its own: the document is the metadata, and the digest says which version of it was reviewed.
+The reviewer fetches the document, evaluates it, and signs a statement naming the software as `sub`, the digest of the exact bytes it reviewed as `cimd_digest`, the servers where the review should hold as `aud`, and an expiry reflecting how often it re-checks. If the review should also govern registrations, it names `registration` in `statement_uses`; without that, the statement is usable only at request time. The statement carries no metadata of its own: the document is the metadata, and the digest says which version of it was reviewed.
 
 The publisher can hand the statement to its clients, or publish it at the `software_statements_uri` its document names so that providers fetch it themselves.
 

@@ -177,13 +177,13 @@ A statement asserts that its issuer evaluated the Client ID Metadata Document wh
 : REQUIRED. The exact client identifier URL presented in the request that produced the statement.
 
 `aud`:
-: OPTIONAL. One or more authorization server issuer identifiers ({{RFC8414}}) restricting which authorization servers may accept the statement. Where the claim is present, a trusting authorization server MUST reject the statement unless one of its locally configured audience identifiers exactly matches a value in it. {{ISSUANCE}} states the corresponding constraint on an issuer: a requested audience bounds what it may name. Where the claim is absent, the statement is unrestricted, and acceptance rests on the consumer's configured trust in the issuer and its identifier scope ({{issuer-trust}}). Omitting the claim lets one review serve every authorization server that trusts the issuer, but also lets any holder of a copy use it at any of them. Where `consumable_at` permits registration, a holder can always choose registration, which requires no key. An issuer SHOULD therefore name an audience, and omit it only where it accepts that any server trusting it may register the software on the strength of a copy ({{REGISTRATION}}).
+: OPTIONAL. One or more authorization server issuer identifiers ({{RFC8414}}) restricting which authorization servers may accept the statement. Where the claim is present, a trusting authorization server MUST reject the statement unless one of its locally configured audience identifiers exactly matches a value in it. {{ISSUANCE}} states the corresponding constraint on an issuer: a requested audience bounds what it may name. Where the claim is absent, the statement is unrestricted, and acceptance rests on the consumer's configured trust in the issuer and its identifier scope ({{issuer-trust}}). Omitting the claim lets one review serve every authorization server that trusts the issuer, but also lets any holder of a copy use it at any of them. Where `statement_uses` permits registration, a holder can always choose registration, which requires no key. An issuer SHOULD therefore name an audience, and omit it only where it accepts that any server trusting it may register the software on the strength of a copy ({{REGISTRATION}}).
 
 `aud_tenant`:
 : OPTIONAL. A tenant identifier at a trusting authorization server, as {{IDJAG}} defines the claim, naming the tenant in which this statement's decision applies. A statement whose decision is confined to one tenant MUST carry it, and a trusting authorization server MUST reject a statement carrying it unless the value identifies the tenant the request belongs to. A consumer MUST NOT read its absence as meaning the statement applies in every tenant, since an issuer also omits it where the consumer is single-tenant or where the issuer does not know the identifier; a consumer that requires a tenant-scoped decision and finds no `aud_tenant` rejects the statement rather than choosing between those readings. A listing review that applies wherever its `aud` reaches carries no `aud_tenant`.
 
-`consumable_at`:
-: OPTIONAL. A JSON array naming the points at which the statement may be consumed: `registration` ({{REGISTRATION}}) and `presentation` ({{cimd-presentation}}). A trusting authorization server MUST reject a statement at a point the array does not name, treating a member it does not recognize as naming no point it serves. Where the claim is absent, the statement may be consumed only by presentation; an issuer that intends a statement for registration includes `registration`. Because registration requires no key and a statement published for pulling is readable by anyone ({{pulled-statements}}), a statement is usable at registration only where its issuer says so ({{REGISTRATION}}). A delivery renewing a registration ({{REGISTRATION}}) is consumption at registration; a refresh replacement ({{refresh}}) and a pulled statement are presentation.
+`statement_uses`:
+: OPTIONAL. A JSON array identifying the permitted uses of the statement: `registration` ({{REGISTRATION}}) and `presentation` ({{cimd-presentation}}). A trusting authorization server MUST reject a statement for a use the array does not name, treating a member it does not recognize as naming no use it serves. If the claim is absent, only `presentation` is permitted; an issuer that intends a statement for registration includes `registration`. Because registration requires no key and a statement published for pulling is readable by anyone ({{pulled-statements}}), a statement is usable at registration only where its issuer says so ({{REGISTRATION}}). A delivery renewing a registration ({{REGISTRATION}}) is a use at registration; a refresh replacement ({{refresh}}) and a pulled statement are presentation.
 
 `iat`:
 : REQUIRED. A NumericDate value representing the time at which the software statement was issued. An issuer MUST NOT issue two statements for a given `iss` and `sub` pair with the same `iat`, and MUST ensure the value increases strictly across its signing nodes, so that the order in which it made its decisions is recoverable from the statements themselves. Consumers rely on that order when one statement replaces another ({{refresh}}, {{REGISTRATION}}), so a statement back-dated for clock skew cannot serve as a replacement.
@@ -232,7 +232,7 @@ Before accepting a statement, a trusting authorization server MUST:
 * validate `iat` and `exp`, rejecting an expired statement and one whose `iat` is unreasonably far in the future according to its clock-skew policy;
 * where the statement carries `aud`, verify that one of its own audience identifiers appears in it;
 * where the statement carries `aud_tenant`, verify that its value identifies the tenant this request belongs to, resolved before the statement is evaluated, by the server's own means or from a signed assertion it has validated, and never from a value the client chooses;
-* verify that `consumable_at` names the point at which the statement is being consumed or, where the claim is absent, that the point is presentation;
+* verify that `statement_uses` names the use being made of the statement or, where the claim is absent, that the use is presentation;
 * verify that `sub` is a client identifier URL conforming to {{CIMD}}, and that it falls within the identifier scope for which this server accepts the issuer ({{issuer-trust}});
 * reject a statement carrying any claim registered in the IANA "OAuth Dynamic Client Registration Metadata" registry, which {{profiles}} forbids, and ignore any other claim it does not recognize; and
 * apply the JWT validation guidance in {{RFC8725}}.
@@ -385,7 +385,7 @@ A runtime presentation MUST be sender-constrained by a key the statement attests
 
 Except as {{public-client-presentation}} provides, the proven key MUST appear in the `jwks` or at the `jwks_uri` of the reviewed document ({{effective-metadata}}). Where the reviewed document specifies a client authentication method, the presenter MUST use it, and where the grant type requires client authentication a DPoP proof does not satisfy that requirement ({{RFC9449}}). The authorization server MUST reject a presentation without such a proof, or whose proven key the reviewed document does not carry. A document carrying a redirection URI another application could claim is presented review-only whatever its authentication method ({{public-client-presentation}}).
 
-A statement whose reviewed document carries no key material can be consumed at registration where its `consumable_at` claim permits ({{REGISTRATION}}) and, where the document declares `token_endpoint_auth_method` of `none`, at the pushed authorization request endpoint under {{public-client-presentation}}. Endorsement of a key the statement does not name, by a client attester or by an issuer the statement delegates to, is left to extensions ({{extensions}}).
+A statement whose reviewed document carries no key material can be consumed at registration where its `statement_uses` claim permits ({{REGISTRATION}}) and, where the document declares `token_endpoint_auth_method` of `none`, at the pushed authorization request endpoint under {{public-client-presentation}}. Endorsement of a key the statement does not name, by a client attester or by an issuer the statement delegates to, is left to extensions ({{extensions}}).
 
 A key at the document's `jwks_uri` is retrieved at presentation time; if retrieval fails, the key is unverified and the presentation is rejected with `temporarily_unavailable`. A server MAY reuse a recently retrieved key set within ordinary HTTP caching bounds, subject to a maximum reuse period of its own choosing; it MUST NOT let the client's cache directives alone determine how long a removed key continues to verify ({{external-retrieval}}).
 
@@ -529,7 +529,7 @@ The codes apply as follows:
 | Condition | Pushed authorization request | Token, including refresh |
 | --- | --- | --- |
 | Malformed, or failing signature or claim validation | `invalid_client` | `invalid_client` |
-| Valid but not acceptable here: issuer not configured, `aud` excludes this server, `sub` outside the issuer's scope, `aud_tenant` not this request's tenant or absent where required, `consumable_at` excludes this point | `invalid_client` | `invalid_client` |
+| Valid but not acceptable here: issuer not configured, `aud` excludes this server, `sub` outside the issuer's scope, `aud_tenant` not this request's tenant or absent where required, `statement_uses` excludes this use | `invalid_client` | `invalid_client` |
 | Expired, or refused by a refusal record, including a status resolved as `INVALID`, or as `SUSPENDED` where policy refuses it, or superseded under the `iat` floor of {{multi-instance}} | `statement_required` | `statement_required` |
 | Required statement absent | `statement_required` | `statement_required` |
 | Digest does not match the retrieved document | see {{effective-metadata}} | see {{effective-metadata}} |
@@ -798,10 +798,10 @@ Specification Document(s):
 : This specification, {{profiles}}
 
 Claim Name:
-: `consumable_at`
+: `statement_uses`
 
 Claim Description:
-: Points at which a software statement may be consumed
+: Permitted uses of a software statement
 
 Change Controller:
 : IESG

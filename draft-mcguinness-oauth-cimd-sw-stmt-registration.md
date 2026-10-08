@@ -189,7 +189,7 @@ Rejections at a registration endpoint use the error response of Section 3.2.2 of
 | Condition | Registration endpoint |
 | --- | --- |
 | Malformed, or failing signature or claim validation | `invalid_software_statement` |
-| Valid but not acceptable here: issuer not configured, `aud` excludes this server, `sub` outside the issuer's scope, `aud_tenant` not this request's tenant or absent where required, `consumable_at` excludes this point | `unapproved_software_statement` |
+| Valid but not acceptable here: issuer not configured, `aud` excludes this server, `sub` outside the issuer's scope, `aud_tenant` not this request's tenant or absent where required, `statement_uses` excludes this use | `unapproved_software_statement` |
 | Expired, or refused by a refusal record, including a status resolved as `INVALID`, or as `SUSPENDED` where policy refuses it, or superseded under the `iat` floor of {{STATEMENT}} | `invalid_software_statement` |
 | Required statement absent | `unapproved_software_statement` |
 | Digest does not match the retrieved document | `invalid_software_statement` |
@@ -234,7 +234,7 @@ This specification defines the following authorization server metadata {{RFC8414
 
 ## Statements at Registration {#statement-bearer}
 
-A statement consumed at registration is a reusable bearer artifact until it expires. An issuer limits that exposure with a narrow audience and a short lifetime, and a statement permits registration only where its `consumable_at` claim names registration ({{STATEMENT}}). The repeated-consumption bounds of {{STATEMENT}} and {{repeated-registration}} limit what a stolen statement can create.
+A statement consumed at registration is a reusable bearer artifact until it expires. An issuer limits that exposure with a narrow audience and a short lifetime, and a statement permits registration only where its `statement_uses` claim names registration ({{STATEMENT}}). The repeated-consumption bounds of {{STATEMENT}} and {{repeated-registration}} limit what a stolen statement can create.
 
 ## Renewal Authenticates the Credential
 
