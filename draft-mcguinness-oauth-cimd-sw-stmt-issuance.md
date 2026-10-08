@@ -47,7 +47,7 @@ normative:
     target: https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list
     title: "Token Status List"
   DTR:
-    target: https://datatracker.ietf.org/doc/draft-gerber-oauth-deferred-token-response
+    target: https://datatracker.ietf.org/doc/draft-ietf-oauth-deferred-token-response
     title: "Deferred Token Response"
   CIMD:
     target: https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document
