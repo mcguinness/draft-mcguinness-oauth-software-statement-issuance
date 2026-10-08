@@ -51,7 +51,7 @@ That is the difference between a ceremony a person completes and a ceremony a pr
 
 An `oauth2PermissionGrant` is a row. It says a grant exists, not who decided, against what, when it lapses, or whether it still stands. A statement carries the issuer, an expiry the reviewer chose, and a digest naming the exact bytes of the document that was approved, so a later reader can tell whether the software still matches what was reviewed. Withdrawal is a published status any relying party can resolve rather than a deletion visible only to the directory that performed it.
 
-For an enterprise with more than one vendor, that last property is the point. The same decision is checkable at every provider that trusts the reviewer, which is the case [the deployment model](deployment-model.md#the-situation-being-addressed) opens on.
+For an enterprise with more than one vendor, that last property is the point. The same decision is checkable at every provider that trusts the reviewer, which is the case [the deployment model](deployment-model.md#the-situation-being-addressed) opens on. Where the decision is the tenant's own, the statement names the provider's tenant in `aud_tenant`, and the provider can require that reviewer's statement for the software there.
 
 ## The part with no generic form
 
@@ -60,7 +60,7 @@ Nothing in any open specification expresses a consent that binds a population ra
 The two nearest efforts both miss it, in ways worth knowing:
 
 * **`draft-dellaert-oauth-approval-based-dcr`**, an individual draft at revision `-00` with no working group adoption, applies the device-flow shape to registration. It approves a *client registration* rather than a *consent*, and leaves the approver's identity and trust model to server policy. There is no notion of approving on behalf of a population.
-* **The AuthZEN Access Request and Approval Profile**, an adopted OpenID AuthZEN working group draft, models request then approve for an *access* decision: a denial carries an access request, the enforcement point submits one, polls a status, and re-evaluates on approval. It states outright that it does not define a workflow engine, approval policy, or approver-facing surface, and it leaves who may approve for whom to the access request service.
+* **The AuthZEN Access Request and Approval Profile**, an adopted OpenID AuthZEN working group draft, models request then approve for an *access* decision: a denial carries an access request, the enforcement point submits one, polls a status, and re-evaluates on approval. It puts workflow engines, approval policy languages, and approver-facing inbox APIs out of scope, and it leaves who may approve for whom to the access request service.
 
 So that profile and this family are complementary rather than competing. One is "a user needs access and an approver decides." The other is "software needs admission and a reviewer decides." Neither expresses a decision covering everybody, and neither should.
 
