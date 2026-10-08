@@ -406,6 +406,31 @@ Presentation in an authorization request MUST use a pushed authorization request
 
 At the token endpoint, the client includes the parameter in an eligible token request as defined by {{runtime-presentation}}.
 
+## Pulled Statements {#pulled-statements}
+
+A client can publish its statements rather than present them. Its Client ID Metadata Document then carries the following client metadata member:
+
+`software_statements_uri`:
+: OPTIONAL. URL at which the client publishes software statements about itself. It MUST use the `https` scheme. A request to it returns a JSON object whose `software_statements` member is an array of statements ({{profiles}}), each a string in JWS compact serialization. The URL is part of the document, so the metadata digest covers it ({{metadata-digest}}): a party that changes where statements are found changes the document every statement names.
+
+An authorization server that supports pulled statements MAY retrieve this URL when it resolves the document of a client that presented no statement. Retrieval follows the rules {{CIMD}} sets for the document itself, including its prohibition on automatically following redirects, and the protections and bounds of {{external-retrieval}}; the server bounds the response size as it bounds the document's.
+
+The server considers only statements whose `sub` equals the document's client identifier, that validate under {{validation}}, whose `consumable_at`, where present, names `presentation`, and whose `cimd_digest` equals the digest of the document it resolved. It ignores the rest: anyone able to publish at the URL can place anything there, and what counts is an issuer's signature over the current document. Where more than one statement remains, the server applies the one its trust configuration requires ({{issuer-trust}}), and otherwise any that remains, taking the latest `iat` from each issuer, subject to the watermark of {{multi-instance}}. A pulled statement the server does not apply does not advance the watermark. The server then continues from step 4 of {{processing}}, with the pulled statement in place of a presented one and the document already resolved; the `client_id` rule of step 2 is satisfied by the selection above.
+
+A pulled statement never travels in a request, so it needs no pushed authorization request to stay out of the front channel. The presenter is bound as for a presented statement ({{sender-constraint}}), at the point the request allows:
+
+* At the token endpoint, the request's client authentication or DPoP proof binds it, as for a presentation there.
+* At the authorization endpoint, binding completes at code redemption, before any token is issued. A confidential client authenticates there with a key the document carries, and that key becomes the establishment's Proven Key. A public client's authorization request is subject to {{public-client-presentation}}, including its PKCE and `dpop_jkt` requirements, and redemption proves the `dpop_jkt` key.
+* A public client at the token endpoint has nothing to bind, so a statement pulled for it is review-only ({{public-client-presentation}}), as is one pulled for a document whose redirection URIs that section does not accept.
+
+Where retrieval does not complete, or no statement remains, the server proceeds as it would for a document that names no location: it applies the policy it applies to a Client ID Metadata Document client it has not reviewed, and rejects as {{errors}} defines where that policy requires reviewed software. A retrieval failure is never a withdrawal.
+
+On refresh, a server that created an establishment from a pulled statement and requires a current statement ({{refresh}}) pulls again, and treats the newest statement it obtains as the replacement under the rules of that section.
+
+{{CIMD}} also permits a document to carry a `software_statement` member, which a consumer ignores ({{dcr-presentation}}). A document cannot carry a statement issued over itself, and one carrying a statement issued over an earlier version offers a review of octets no longer being served, a stale review behind current branding. Publishing at `software_statements_uri` is the form that works: the document names a location rather than a statement, and the statements there name the document.
+
+An authorization server advertises support through `software_statement_pull_supported` ({{authorization-server-metadata}}).
+
 ## Presentation Processing {#processing}
 
 On receiving a presentation, the authorization server proceeds as follows, rejecting as {{errors}} defines at the first failure:
@@ -631,6 +656,9 @@ This specification defines the following authorization server metadata {{RFC8414
 
 `software_statement_presentation_grant_types_supported`:
 : OPTIONAL. A JSON array of grant type identifiers on which the authorization server accepts a runtime presentation, in addition to those {{runtime-presentation}} names. Omission means only those.
+
+`software_statement_pull_supported`:
+: OPTIONAL. Boolean value indicating whether the authorization server retrieves statements from a client's `software_statements_uri` when establishing a client that presented none ({{pulled-statements}}). If omitted, the default value is false. A client whose document names a location needs nothing further from the server; the member tells a client whether it also needs to present.
 
 `software_statement_registration_validity_supported`:
 : OPTIONAL. Boolean value indicating whether every registration the authorization server creates from a validated software statement is governed by the validity and revalidation rules of {{registration-validity}} and {{revalidation}}. If omitted, the default value is `false`. A value of `true` does not imply runtime-presentation support. It tells a client that the statement's `exp` will bound the registration and that the server accepts replacement delivery through an authenticated token request or pushed authorization request and, if the server supports {{RFC7592}}, a registration update request. The response carries `registration_expires_at`, so a client also learns the outside boundary that applies to its own registration.
@@ -880,6 +908,20 @@ Change Controller:
 Specification Document(s):
 : This specification, {{registration-validity}}
 
+This specification also requests registration of the following client metadata member, published by a client in its Client ID Metadata Document:
+
+Client Metadata Name:
+: `software_statements_uri`
+
+Client Metadata Description:
+: URL at which a client publishes software statements about itself, for an authorization server to retrieve.
+
+Change Controller:
+: IESG
+
+Specification Document(s):
+: This specification, {{pulled-statements}}
+
 ## OAuth Parameters Registry
 
 This specification requests registration of the following parameter in the IANA "OAuth Parameters" registry established by {{RFC6749}}, for the responses that renew a statement-governed registration:
@@ -929,6 +971,18 @@ Metadata Name:
 
 Metadata Description:
 : URL of the JWK Set containing only the keys with which the authorization server signs software statements.
+
+Change Controller:
+: IESG
+
+Specification Document(s):
+: This specification, {{authorization-server-metadata}}
+
+Metadata Name:
+: `software_statement_pull_supported`
+
+Metadata Description:
+: Boolean value indicating whether the authorization server retrieves software statements from a client's `software_statements_uri`.
 
 Change Controller:
 : IESG
