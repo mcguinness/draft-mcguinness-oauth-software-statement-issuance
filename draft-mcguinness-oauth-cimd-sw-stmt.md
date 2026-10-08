@@ -179,7 +179,7 @@ Refusal Record:
 
 The software statement is a compact JWT {{RFC7519}} protected by JWS {{RFC7515}}. Although {{RFC7591}} permits a MAC, a statement issued under this specification MUST use an asymmetric digital signature so trusting servers need not receive an issuer-held symmetric key. The issuer and trusting authorization server MUST follow {{RFC8725}} algorithm-verification guidance. The `none` algorithm and symmetric algorithms MUST NOT be used.
 
-The JOSE header MUST include `kid`, identifying the signing key within the issuer's JWK Set, and MUST include `typ` with the value `software-statement+jwt`, applying Section 3.11 of {{RFC8725}}. This value names `application/software-statement+jwt` ({{media-type}}) with the `application/` prefix omitted, as described in Section 4.1.9 of {{RFC7515}}. Explicit typing prevents confusion with other JWTs from the same issuer.
+The JOSE header MUST include `kid`, identifying the signing key within the issuer's statement key set ({{authorization-server-metadata}}), and MUST include `typ` with the value `software-statement+jwt`, applying Section 3.11 of {{RFC8725}}. This value names `application/software-statement+jwt` ({{media-type}}) with the `application/` prefix omitted, as described in Section 4.1.9 of {{RFC7515}}. Explicit typing prevents confusion with other JWTs from the same issuer.
 
 Extensions can add claims; an incompatible revision would use a new type value. An issuer advertises the algorithms it signs with in its own authorization server metadata ({{ISSUANCE}}).
 
@@ -255,7 +255,7 @@ Where the statement carries `status` and the trusting authorization server resol
 
 Status constrains and never relaxes. Expiry is the floor: a statement carrying no `status`, or whose status the server cannot resolve, is bounded by `exp` as it would be otherwise, and a server MUST NOT treat status as grounds to accept a statement past `exp`. What a server does when resolution fails is local policy, and it is a real trade. Refusing makes issuer availability a precondition for every request the statement governs; proceeding widens the window in which a withdrawn statement is still accepted to that statement's remaining lifetime.
 
-An issuer URL or JWK Set does not establish trust. A trusting authorization server accepts only configured issuers ({{issuer-trust}}) and obtains their keys from that issuer's authorization server metadata {{RFC8414}}, never from the statement.
+An issuer URL or JWK Set does not establish trust. A trusting authorization server accepts only configured issuers ({{issuer-trust}}) and obtains their statement signing keys from the `software_statement_jwks_uri` of that issuer's authorization server metadata ({{authorization-server-metadata}}), never from the statement.
 
 Rejections at a registration endpoint use the error codes of Section 3.2.2 of {{RFC7591}}: `invalid_software_statement` where the statement is malformed, expired, or fails signature or claim validation, and `unapproved_software_statement` where it validates but is not acceptable here, because its issuer is not configured, its `aud` excludes this server, its `sub` or `tenant` falls outside the issuer's scope, or its `aud_tenant` does not identify this request's tenant or is absent where this server requires one. Rejections elsewhere use {{errors}}.
 
@@ -268,7 +268,7 @@ A trusting authorization server accepts statements only from configured issuers.
 Configuring trust in an issuer is a one-time act that covers every client that issuer attests, so a trusting authorization server maintains a small, stable set of trusted issuers rather than per-client state. For each, it records at least:
 
 * the exact `iss` identifier it will accept;
-* the source of that issuer's signing keys: the `jwks_uri` in the issuer's authorization server metadata {{RFC8414}}, reached from the configured `iss`;
+* the source of that issuer's statement signing keys: the `software_statement_jwks_uri` in the issuer's authorization server metadata ({{authorization-server-metadata}}), reached from the configured `iss`, and never its `jwks_uri`, whose keys sign other artifacts;
 * the signing algorithms it will accept from the issuer;
 * the client identifier namespaces the issuer may attest through `sub`;
 * the audience identifiers the issuer may name;
@@ -614,6 +614,9 @@ The authorization server validates the statement, retrieves the document its dig
 
 This specification defines the following authorization server metadata {{RFC8414}} values:
 
+`software_statement_jwks_uri`:
+: REQUIRED for an authorization server that issues software statements. URL of a JWK Set containing the keys with which it signs software statements and no other keys. The keys in it MUST NOT appear in the JWK Set at the server's `jwks_uri`, and the server MUST NOT sign anything other than software statements with them. A trusting authorization server verifies statements only against this set ({{issuer-trust}}), so a key that signs another artifact, such as a Status List Token, cannot be taken for a statement signing key. This member describes the issuing role.
+
 `software_statement_presentation_supported`:
 : OPTIONAL. A JSON array naming the endpoints at which the authorization server accepts a software statement presented at runtime ({{runtime-presentation}}). Defined members are `token` and `pushed_authorization_request`; a member a client does not recognize is ignored. Omission, or an empty array, means the path is not offered. Advertising only `token` is what lets a server offer presentation to clients that need no redirect, without also promising the front-channel path. This member describes the consuming role. It does not imply acceptance of any particular statement issuer or subject namespace, and it does not imply support for statement-governed registrations. An authorization server advertising presentation at the pushed authorization request endpoint MUST publish `pushed_authorization_request_endpoint`, since {{authorization-requests}} makes presentation there the only front-channel path. A client also examines the ordinary client-authentication and DPoP metadata for the proof it intends to use. Whether the server admits a public client's presentation at that endpoint ({{public-client-presentation}}) is local policy, and a refusal uses {{errors}}.
 
@@ -638,6 +641,10 @@ A statement consumed at registration is a reusable bearer artifact until it expi
 Attesting `jwks_uri` attests the location, not its contents: a compromised key host can add keys that satisfy the proof with no digest change, so where that exposure matters an issuer attests `jwks` inline and accepts digest-visible rotation. A server reusing a cached key set under {{sender-constraint}} additionally accepts that a just-removed key can briefly continue to verify.
 
 Nothing elsewhere relaxes these validation rules; it adds the sender constraint, the grant bindings of {{grant-lifecycle}}, and the registration-validity model on top of them.
+
+## Servers That Do Not Implement This Specification {#legacy-servers}
+
+A statement carries no client metadata, so an {{RFC7591}} server that verified one without implementing this specification would take every metadata value from the registration request, which is the substitution {{dcr-presentation}} exists to prevent: the issuer's approval would attach to an attacker's redirection URIs and keys. Keeping statement signing keys at `software_statement_jwks_uri` and out of `jwks_uri` ({{authorization-server-metadata}}) is what stops this. A server that discovers an issuer's keys through {{RFC8414}} finds none that verify a statement, and a server configured with the statement key set has been configured for this specification.
 
 ## Copied Statements and Public Clients {#public-client-security}
 
@@ -689,7 +696,7 @@ Renewal cadence is a deployment trade: short lifetimes tighten the issuer's cont
 
 Resolving status adds a dependency on the issuer and a fetch the client does not control. {{STATUSLIST}} aggregates many statements into one signed list, so a fetch tells the issuer that some consumer is checking rather than which statement it is checking, and a server SHOULD fetch on the list's own schedule rather than once per request, so that its request timing does not disclose the client population it serves. Per-request resolution discloses that pattern and makes issuer availability a precondition for the requests the statement governs.
 
-A status list is signed by the issuer, and a server MUST obtain its verification keys the same way it obtains statement signing keys ({{issuer-trust}}), never from the list itself. Because a server accepts any key in that set as a statement signing key for the issuer, a key that signs the list can sign statements too, and an issuer protects it as one. An issuer that publishes status for some statements and not others gives a consumer no way to tell an unpublished status from a withdrawn one, which is why {{ISSUANCE}} requires such an issuer to carry the claim in every statement from the point it begins publishing.
+A status list is signed by the issuer, and a server MUST obtain its verification keys from the `jwks_uri` of the issuer's authorization server metadata {{RFC8414}}, reached from the configured `iss`, never from the list itself. Those keys come from the issuer's `jwks_uri`, apart from its statement key set ({{authorization-server-metadata}}), so a key that signs the list cannot sign statements. An issuer that publishes status for some statements and not others gives a consumer no way to tell an unpublished status from a withdrawn one, which is why {{ISSUANCE}} requires such an issuer to carry the claim in every statement from the point it begins publishing.
 
 ## Document Resolution
 
@@ -889,6 +896,18 @@ Metadata Name:
 
 Metadata Description:
 : JSON array of grant type identifiers on which the authorization server accepts a runtime presentation, beyond those the specification names.
+
+Change Controller:
+: IESG
+
+Specification Document(s):
+: This specification, {{authorization-server-metadata}}
+
+Metadata Name:
+: `software_statement_jwks_uri`
+
+Metadata Description:
+: URL of the JWK Set containing only the keys with which the authorization server signs software statements.
 
 Change Controller:
 : IESG
