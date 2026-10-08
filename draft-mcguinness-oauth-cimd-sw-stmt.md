@@ -79,7 +79,7 @@ informative:
 
 --- abstract
 
-RFC 7591 defines the software statement as input to dynamic client registration but does not define how long the resulting registration remains valid or how a client renews the statement on which it was based. This specification profiles the software statement of RFC 7591 for clients identified by a Client ID Metadata Document, and defines everything a trusting authorization server does with one: which issuers it trusts, how it validates and applies one, and the two points at which it consumes one. Consumed in a registration request, a statement governs that registration until it expires and a replacement renews it. Presented in an authorization or token request, it establishes an otherwise unregistered client for that request and the grant state derived from it, on proof of a key the reviewed document carries or, for software distributed to end users, on delivery to a redirection URI the document lists, so possession of the statement alone does not complete a grant. Together these let an issuer curate approved client software across the authorization servers in a statement's audience while each server keeps control of trust, grants, and token lifetime.
+RFC 7591 defines the software statement as input to dynamic client registration but does not define how long the resulting registration remains valid or how a client renews the statement on which it was based. This specification profiles the software statement of RFC 7591 for clients identified by a Client ID Metadata Document, and defines everything a trusting authorization server does with one: which issuers it trusts, how it validates and applies one, and the two points at which it consumes one. Consumed in a registration request, a statement governs that registration until it expires and a replacement renews it. Presented in an authorization or token request, or published where the reviewed document points, it establishes an otherwise unregistered client for that request and the grant state derived from it, on proof of a key the reviewed document carries or, for software distributed to end users, on delivery to a redirection URI the document lists, so possession of the statement alone does not complete a grant. Together these let an issuer curate approved client software across the authorization servers in a statement's audience while each server keeps control of trust, grants, and token lifetime.
 
 --- middle
 
@@ -381,7 +381,7 @@ A review covers the document the issuer evaluated, and `cimd_digest` is what say
 
 # Runtime Presentation {#cimd-presentation}
 
-The client presents its statement in the request. The authorization server validates it under policy for a trusted issuer, verifies the presenter, and applies the reviewed document's metadata to that request without creating a persistent client registration. This establishes an otherwise unregistered client at request time, as {{CIMD}} resolution does, with the issuer's review carried in the statement.
+The client presents its statement in the request, or publishes it where its document points ({{pulled-statements}}). The authorization server validates it under policy for a trusted issuer, verifies the presenter, and applies the reviewed document's metadata to that request without creating a persistent client registration. This establishes an otherwise unregistered client at request time, as {{CIMD}} resolution does, with the issuer's review carried in the statement.
 
 ## Presentation Request {#runtime-presentation}
 
@@ -400,7 +400,7 @@ An authorization server advertises support through `software_statement_presentat
 
 ### Authorization Endpoint {#authorization-requests}
 
-Presentation in an authorization request MUST use a pushed authorization request {{RFC9126}}. The statement and its proof are sent to the pushed authorization request endpoint, where the processing rules of {{processing}} apply. The subsequent authorization request MUST use a `client_id` exactly equal to the establishment's `sub` and MUST NOT include the `software_statement` parameter. A statement never appears in a front-channel URL, just as {{ISSUANCE}} keeps an issued statement out of authorization responses.
+Presentation in an authorization request MUST use a pushed authorization request {{RFC9126}}; a pulled statement, which never travels in a request, needs none ({{pulled-statements}}). The statement and its proof are sent to the pushed authorization request endpoint, where the processing rules of {{processing}} apply. The subsequent authorization request MUST use a `client_id` exactly equal to the establishment's `sub` and MUST NOT include the `software_statement` parameter. A statement never appears in a front-channel URL, just as {{ISSUANCE}} keeps an issued statement out of authorization responses.
 
 ### Token Endpoint
 
@@ -455,7 +455,7 @@ Verifying a key at the document's `jwks_uri` is a retrieval at presentation time
 
 Software distributed to end users cannot hold a key its reviewed document carries. A key inside a distributed binary is in every copy, so it identifies the software and not the installation, and such a document declares `token_endpoint_auth_method` of `none` and carries no key material.
 
-A presentation at the pushed authorization request endpoint by a client whose reviewed document declares `token_endpoint_auth_method` of `none`, and whose redirection URIs all use the `https` scheme, is bound instead by those URIs. The authorization server:
+A presentation at the pushed authorization request endpoint, or a pulled statement at the authorization endpoint ({{pulled-statements}}), by a client whose reviewed document declares `token_endpoint_auth_method` of `none`, and whose redirection URIs all use the `https` scheme, is bound instead by those URIs. The authorization server:
 
 * MUST require PKCE {{RFC7636}} with the `S256` method;
 * MUST require the presenter to bind a key it holds, through the `dpop_jkt` parameter {{RFC9449}}, and records that key as the Proven Key of the establishment ({{grant-lifecycle}}); and
@@ -465,7 +465,7 @@ What admits the statement here is the reviewed document rather than the proven k
 
 A presentation is review-only where the reviewed document declares `none` and carries a redirection URI that does not use the `https` scheme, as a private-use scheme or loopback redirection URI does. Desktop software commonly redirects this way, and another application on the same device can claim such a URI and receive the code ({{public-client-security}}), so the reviewed redirection URIs cannot bind the presenter. A review-only presentation creates no establishment and admits nothing: the authorization server proceeds as it would for the same Client ID Metadata Document client presenting no statement, the statement MUST NOT satisfy a policy requiring reviewed software, and the server SHOULD NOT present the review to the user as an assurance about the presenter. It MAY record the statement's issuer for audit and inventory, and MAY refuse the request where the statement's status shows a withdrawal, since status constrains and never relaxes ({{validation}}), subject to the bounds of {{external-retrieval}}. A review-only presentation does not advance the watermark of {{multi-instance}}, since it changes nothing for the software's other instances.
 
-This binding exists at the pushed authorization request endpoint alone. A presentation at the token endpoint under {{runtime-presentation}} opens no redirect and has nothing to bind it, so an authorization server MUST reject one from a client whose reviewed document carries no key material.
+This binding exists at the pushed authorization request endpoint, and for a pulled statement at the authorization endpoint, alone. A presentation at the token endpoint under {{runtime-presentation}} opens no redirect and has nothing to bind it, so an authorization server MUST reject one from a client whose reviewed document carries no key material.
 
 ## Reviewed Metadata {#effective-metadata}
 
@@ -508,7 +508,7 @@ On refresh-token use the authorization server MUST verify possession of the esta
 
 Where the authorization server holds a refusal record for the establishment's recorded statement, it MUST reject a refresh that does not carry a replacement satisfying this section, whatever its policy on currency otherwise: a withdrawal ends grant continuation at once rather than waiting on local policy.
 
-When policy requires one, the client presents the replacement in the `software_statement` parameter of the refresh request. The replacement:
+When policy requires one, the client presents the replacement in the `software_statement` parameter of the refresh request, or, for an establishment created from a pulled statement, the server pulls one ({{pulled-statements}}). The replacement:
 
 * MUST validate under {{validation}}, including its audience where it carries one;
 * MUST have the recorded statement's `iss` and `sub`, and its `tenant` claim where the recorded statement carried one;
@@ -749,7 +749,7 @@ A software statement remains a sensitive artifact in transit and at rest: posses
 
 # Privacy Considerations
 
-A presentation or delivery reveals to the authorization server the client's issuer relationship and, where the statement carries an `aud` claim, the other authorization servers the client intends to establish relationships with. Omitting that claim discloses nothing beyond the review ({{ISSUANCE}}). The pushed authorization request requirement of {{authorization-requests}} keeps statements out of browser history, referrers, and front-channel logs. A central issuer additionally learns, through renewal requests, which of its statements are in active use; issuance and renewal logs deserve the same care as the statements themselves.
+A presentation or delivery reveals to the authorization server the client's issuer relationship and, where the statement carries an `aud` claim, the other authorization servers the client intends to establish relationships with. Omitting that claim discloses nothing beyond the review ({{ISSUANCE}}). The pushed authorization request requirement of {{authorization-requests}} keeps statements out of browser history, referrers, and front-channel logs. A central issuer additionally learns, through renewal requests, which of its statements are in active use; issuance and renewal logs deserve the same care as the statements themselves. A server pulling statements ({{pulled-statements}}) reveals to the host of `software_statements_uri` that it is resolving that client, which retrieving the document already reveals to the document's host.
 
 # IANA Considerations {#iana}
 
