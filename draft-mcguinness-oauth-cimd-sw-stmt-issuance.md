@@ -618,7 +618,7 @@ An issuer that publishes status:
 
 * MUST publish it for every statement it issues under a given `iss` from the point it begins publishing, rather than for a subset, so that a consumer may read an absent claim as meaning this issuer publishes no status at all. Statements issued before that point carry no claim and cannot be located in the list, so the inference holds once those have expired;
 * MUST assign each statement its own index and MUST NOT reuse an index across statements. Withdrawing a statement sets that statement's index and affects no other. A replacement obtained through {{renewal}} occupies its own index, so withdrawing a superseded statement does not withdraw its replacement, and withdrawing a replacement does not restore its predecessor; and
-* MUST sign the Status List Token with a key a consumer obtains the way it obtains statement signing keys, through the issuer's authorization server metadata {{RFC8414}}. A consumer accepts any key in that set for statements, so the key that signs the list is in effect a statement signing key and is protected as one ({{STATEMENT}}).
+* MUST sign the Status List Token with a key published at the `jwks_uri` of its authorization server metadata {{RFC8414}}, never with a statement signing key ({{STATEMENT}}), and MUST include `exp` in every Status List Token it publishes, so that an older token cannot stand in for a newer one indefinitely.
 
 Status does not replace lifetime. A consumer is not obliged to resolve status, so an issuer chooses `exp` on the assumption that none does, and treats status as what shortens a decision rather than what bounds it.
 
@@ -626,7 +626,7 @@ Status does not replace lifetime. A consumer is not obliged to resolve status, s
 
 The issuing authorization server is a role, not necessarily a general-purpose OAuth deployment. An issuer offering only token exchange can consist of a token endpoint, an authorization server metadata document, and signing keys. It can operate solely as an attestation service, without an authorization endpoint, access tokens, or protected resources.
 
-An authorization server that issues software statements under this specification advertises `true` for `client_id_metadata_document_supported`, as defined by {{CIMD}}, and publishes `software_statement_signing_alg_values_supported` below.
+An authorization server that issues software statements under this specification advertises `true` for `client_id_metadata_document_supported`, as defined by {{CIMD}}, and publishes `software_statement_signing_alg_values_supported` below, and publishes its statement signing keys only at `software_statement_jwks_uri` ({{STATEMENT}}).
 
 An issuer that may defer a request advertises `true` for `deferred_token_response_supported`, as defined by {{DTR}} ({{deferred-processing}}), and, because deferrals are cancellable, lists `urn:ietf:params:oauth:token-type:deferral-code` in `revocation_endpoint_token_type_values_supported` as {{DTR}} requires. A synchronous issuer, which answers every request with a statement or a terminal denial, advertises neither and need not implement {{DTR}}.
 
@@ -715,7 +715,7 @@ An issuer accepting expired statements SHOULD bound how long after expiry it wil
 
 ## Signing Keys and Algorithms
 
-Compromise of a software-statement signing key enables an attacker to mint statements for every audience that trusts that key.
+Compromise of a software-statement signing key enables an attacker to mint statements for every audience that trusts that key. Keeping those keys at `software_statement_jwks_uri`, apart from every key that signs anything else ({{STATEMENT}}), confines that power to the keys that need it.
 
 * Issuers SHOULD protect signing keys according to the scope of their trust relationships and support controlled key rotation.
 * Issuers SHOULD prefer signature algorithms with modern security properties, such as `PS256`, `ES256`, or `EdDSA`, over RSASSA-PKCS1-v1_5 (`RS256`), and MUST follow {{RFC8725}} when signing.
