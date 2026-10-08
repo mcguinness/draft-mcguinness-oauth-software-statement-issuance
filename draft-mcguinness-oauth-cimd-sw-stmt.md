@@ -249,7 +249,7 @@ Before accepting a statement, a trusting authorization server MUST:
 * verify that every required claim of {{profiles}} is present and of the correct type, rejecting a statement that omits one;
 * validate `iat` and `exp`, rejecting an expired statement and one whose `iat` is unreasonably far in the future according to its clock-skew policy;
 * where the statement carries `aud`, verify that one of its own audience identifiers appears in it;
-* where the statement carries `aud_tenant`, verify that its value identifies the tenant this request belongs to, resolved before the statement is evaluated rather than from anything the request supplies;
+* where the statement carries `aud_tenant`, verify that its value identifies the tenant this request belongs to, resolved before the statement is evaluated, by the server's own means or from a signed assertion it has validated, and never from a value the client chooses;
 * verify that the statement may be consumed at the point at which it is being consumed: one `consumable_at` names, or presentation where the claim is absent;
 * verify that `sub` is a client identifier URL conforming to {{CIMD}}, and that it falls within the identifier scope for which this server accepts the issuer ({{issuer-trust}});
 * reject a statement carrying any claim registered in the IANA "OAuth Dynamic Client Registration Metadata" registry, which {{profiles}} forbids, and ignore any other claim it does not recognize; and
@@ -694,7 +694,7 @@ This is a weaker binding than a confidential client's, and deliberately so. The 
 
 ## Tenant Confusion at a Multi-Tenant Consumer {#tenant-confusion}
 
-Where a trusting authorization server serves several tenants and evaluates anything tenant-specific, the tenant it decides against and the tenant that scopes what it issues MUST be the same, and neither may be selected by a value the client supplies. A server that derives the tenant one way to check a decision and another way to scope a token lets a client reach one tenant's resources on another tenant's decision, which is the failure `aud_tenant` exists to make detectable: a statement naming a tenant cannot be spent in a different one.
+Where a trusting authorization server serves several tenants and evaluates anything tenant-specific, the tenant it decides against and the tenant that scopes what it issues MUST be the same, and neither may be selected by a value the client chooses; a tenant asserted in a signed assertion the server has validated, such as an identity assertion authorization grant {{IDJAG}}, is the server's own resolution. A server that derives the tenant one way to check a decision and another way to scope a token lets a client reach one tenant's resources on another tenant's decision, which is the failure `aud_tenant` exists to make detectable: a statement naming a tenant cannot be spent in a different one.
 
 Resolution itself remains the server's own responsibility. This specification defines no tenant parameter, and a client identifier URL is the same value in every tenant ({{multi-instance}}), so nothing a client or an issuer can check tells either of them that a server honored this rule.
 
