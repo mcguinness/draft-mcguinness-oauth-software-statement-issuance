@@ -442,7 +442,7 @@ Hybrid response types that combine `software_statement_code` with `code`, `token
 
 # Authorization Response {#authorization-response}
 
-After validating the request and performing any immediate interaction, the authorization server returns the software statement code response or an error. The authorization server MUST NOT place the software statement or approval-sensitive information in any authorization response.
+After validating the request and performing any immediate interaction, the authorization server returns the software statement code response or an error. The authorization server MUST NOT place the software statement or approval-sensitive information in any response from the authorization endpoint.
 
 A denial is never signaled in the authorization response: the authorization server returns a software statement code whether the issuance decision is complete, pending, or already a denial, and delivers any denial at redemption ({{terminal-denial}}). A client therefore needs no redirect-side `access_denied` handler for issuance outcomes.
 
@@ -717,7 +717,7 @@ No response parameter transits a browser, but neither is there in-band evidence 
 
 ## Renewal by Prior Statement
 
-A statement is a bearer artifact, so anyone holding a stolen copy could renew it. The holder binding of {{renewal}} prevents this: the client authenticates with a key carried by both the reviewed and the current document. Where the documents name a `jwks_uri`, whoever controls that location can supply such a key, which is why a changed document receives the decision a first issuance receives. Binding renewal to that key also spares automated renewal a long-lived reusable initial access token, which would be a standing credential to mint statements. Without a bound on how long after expiry a statement is accepted ({{renewal}}), a client absent long enough for its review to be meaningless could renew rather than be re-established.
+A statement is a bearer artifact, so anyone holding a stolen copy could renew it. The holder binding of {{renewal}} prevents this: the client authenticates with a key carried by both the reviewed and the current document. Where both documents carry their keys inline, a party able to change the current document cannot supply such a key; where they name a `jwks_uri`, whoever controls that location can, which is why a changed document receives the decision a first issuance receives. Binding renewal to that key also spares automated renewal a long-lived reusable initial access token, which would be a standing credential to mint statements. Without a bound on how long after expiry a statement is accepted ({{renewal}}), a client absent long enough for its review to be meaningless could renew rather than be re-established.
 
 ## Signing Keys and Algorithms
 

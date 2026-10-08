@@ -124,7 +124,7 @@ The effective expiry is an upper bound. Where the server resolves status for the
 
 The disposition of outstanding grants is local policy ({{enforcement-bounds}}).
 
-If {{CIMD}} defines an expiry that a document asserts for its own client identifier, that value MAY only shorten the effective expiry and MUST NOT extend it, so that an issuer cannot lengthen the life of a client identifier its subject has declared ephemeral.
+If {{CIMD}} defines an expiry that a document asserts for its own client identifier, that value MAY only shorten the effective expiry and MUST NOT extend it, so that an issuer cannot lengthen the life of a client identifier its subject has declared ephemeral. A statement-governed registration is bounded by the earliest of the statement's `exp`, the maximum statement lifetime the server honors for the issuer, and any expiry the reviewed document asserts.
 
 An authorization server advertising this model MUST publish `pushed_authorization_request_endpoint`, since {{revalidation}} otherwise leaves a client whose only grant type is the authorization code, and which holds no refresh token, with no way to renew.
 
