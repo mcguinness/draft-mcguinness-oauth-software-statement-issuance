@@ -276,7 +276,7 @@ In the redirect flow, the authorization server MUST compare the `redirect_uri` i
 The client authenticates to the token endpoint using the `token_endpoint_auth_method` and related key metadata in its Client ID Metadata Document. The authorization server classifies the client from that member:
 
 * `none` (explicit) establishes a public client.
-* Any other value establishes a confidential client, and the authorization server MUST require exactly that method, as required by {{CIMD}}; a declared method the authorization server does not support MUST cause rejection rather than treatment as public: with `unauthorized_client` at the authorization endpoint, and with `invalid_client` at the token endpoint, which Section 5.2 of {{RFC6749}} assigns to an unsupported authentication method.
+* Any other value establishes a confidential client, and the authorization server MUST require exactly that method, a rule this specification applies to every declared method where {{CIMD}} states it for `private_key_jwt`; a declared method the authorization server does not support MUST cause rejection rather than treatment as public: with `unauthorized_client` at the authorization endpoint, and with `invalid_client` at the token endpoint, which Section 5.2 of {{RFC6749}} assigns to an unsupported authentication method.
 * An omitted value establishes neither, and any request identifying such a client MUST be rejected with `invalid_request`, returned at the authorization endpoint to the redirection URI validated against the document.
 
 Classification uses the singular `token_endpoint_auth_method`; a list of declared supported methods is not interpreted.
