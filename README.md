@@ -27,13 +27,13 @@ The statement draft is the core. The other three build on it, and it depends on 
 
 ## Background and Sketches
 
-These documents explore deployments and edge cases. They are non-normative and not drafts, and some were written before the registration draft was split out.
+These documents explore deployments and edge cases. They are non-normative and not drafts.
 
 | Document | What it covers |
 | --- | --- |
 | [Deployment Model](sketches/deployment-model.md) | A provider marketplace deciding which software may exist as a client, an enterprise deciding which of it may operate in its tenant, and the layers that keep those decisions separate |
 | [A Mobile App, End to End](sketches/mobile-app-sketch.md) | An app store install through review, administrator approval, sign-in, and a third-party SaaS reached through an identity assertion, ending at what a per-install key still lacks |
-| [A Customer Approving a Vendor Integration](sketches/saas-integration-sketch.md) | A vendor-to-vendor integration with no user present, approved once at the customer's own root and revoked once for every platform |
+| [A Customer Approving a Vendor Integration](sketches/saas-integration-sketch.md) | A vendor-to-vendor integration with no user present, comparing the customer's own statement with an approval made once at the customer's root and revoked once for every platform |
 | [Tenant Admin Consent](sketches/admin-consent-sketch.md) | Microsoft Entra ID's tenant-wide admin consent, rebuilt from open specifications |
 | [Composing with OpenID Federation](sketches/openid-federation-sketch.md) | Issuer trust from a federation, a review carried as a Trust Mark, and why Federation's resolved metadata cannot carry a digest |
 | [Pulling the Review, and an MCP Profile](sketches/mcp-profile-sketch.md) | The design notes behind pulled statements and the MCP profile, both now in the drafts |
