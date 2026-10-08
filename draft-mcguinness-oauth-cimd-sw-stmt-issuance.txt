@@ -333,9 +333,10 @@ Table of Contents
        (Section 4.1).
 
    3.  The client presents the statement to consuming servers: in an
-       [RFC7591] registration request ([STATEMENT]), a sender-
-       constrained runtime presentation, or a delivery that renews what
-       a server already holds ([STATEMENT]).
+       [RFC7591] registration request ([REGISTRATION]), a sender-
+       constrained runtime presentation ([STATEMENT]), or a delivery
+       that renews what a server already holds ([STATEMENT],
+       [REGISTRATION]).
 
    4.  Trusting authorization servers in its audience apply their local
        acceptance policies.
@@ -483,8 +484,8 @@ Table of Contents
    document, binding it as the snapshot, or reject the request.  This
    holds even where the change touches no member its policy examines,
    since a statement over a superseded snapshot names a document no
-   longer served and fails at registration ([STATEMENT]).  It MUST NOT
-   silently combine values from different document versions.
+   longer served and fails at registration ([REGISTRATION]).  It MUST
+   NOT silently combine values from different document versions.
 
    An approval recorded against a superseded snapshot does not carry
    forward to its replacement without a fresh issuance-policy decision.
@@ -506,15 +507,15 @@ Table of Contents
    (Section 13).
 
    Byte identity deliberately detects serialization-only changes.  A
-   digest mismatch is fatal at registration and an input to policy at
-   runtime, as [STATEMENT] defines.  A document whose octets change only
-   with its metadata carries a statement across its whole lifetime; one
-   rendered dynamically or served through content negotiation produces
-   digest changes unrelated to its metadata, and a statement over it
-   stops matching for reasons its publisher did not intend.  That is a
-   consequence of binding to octets, not a requirement this
-   specification places on what a publisher may serve.  The
-   authorization server MUST reject duplicate object member names,
+   digest mismatch is fatal at registration ([REGISTRATION]) and an
+   input to policy at runtime ([STATEMENT]).  A document whose octets
+   change only with its metadata carries a statement across its whole
+   lifetime; one rendered dynamically or served through content
+   negotiation produces digest changes unrelated to its metadata, and a
+   statement over it stops matching for reasons its publisher did not
+   intend.  That is a consequence of binding to octets, not a
+   requirement this specification places on what a publisher may serve.
+   The authorization server MUST reject duplicate object member names,
    because parsers can interpret them differently despite an identical
    digest.
 
@@ -949,10 +950,11 @@ Table of Contents
    cannot renew this way; it obtains a replacement through the redirect
    flow.
 
-   A replacement carries the subject statement's tenant where it carried
-   one, and its aud_tenant while the decision is still confined to that
-   tenant, since [STATEMENT] matches a replacement to the statement it
-   replaces by iss, sub, and tenant.
+   A replacement carries the subject statement's aud_tenant while the
+   decision is still confined to that tenant.  An issuer whose tenants
+   are independently trusted reviewing authorities issues under a
+   distinct iss for each ([STATEMENT]), so a replacement is matched to
+   the statement it replaces by iss and sub.
 
    An issuer that publishes status MUST NOT accept as subject token a
    statement whose own published status is other than VALID.  Renewing a
@@ -1080,8 +1082,8 @@ Table of Contents
    }
 
    The client consumes the issued statement, the value of access_token,
-   as described in [STATEMENT]: through an [RFC7591] registration
-   request, by runtime presentation, or by publishing it at its
+   through an [RFC7591] registration request ([REGISTRATION]), by
+   runtime presentation, or by publishing it at its
    software_statements_uri for servers to pull ([STATEMENT]).
 
    The access_token member is a security-token container ([RFC8693]),
@@ -1099,8 +1101,8 @@ Table of Contents
    initial access token, through an exchange under Section 8.  Whether
    replacement requires new approval is determined by issuer policy.
    This document defines how a client obtains a replacement; [STATEMENT]
-   defines how it delivers one to a trusting authorization server, and
-   orders replacements by iat ([STATEMENT]).
+   and [REGISTRATION] define how it delivers one to a trusting
+   authorization server, and orders replacements by iat ([STATEMENT]).
 
 10.1.  Terminal Denial
 
@@ -1734,6 +1736,11 @@ Table of Contents
               "OAuth 2.0 Pushed Client Registration", n.d.,
               <https://datatracker.ietf.org/doc/draft-richer-oauth-
               pushed-client-registration>.
+
+   [REGISTRATION]
+              "CIMD Software Statement Registration", n.d.,
+              <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
+              cimd-sw-stmt-registration>.
 
    [RFC8252]  Denniss, W. and J. Bradley, "OAuth 2.0 for Native Apps",
               BCP 212, RFC 8252, DOI 10.17487/RFC8252, October 2017,

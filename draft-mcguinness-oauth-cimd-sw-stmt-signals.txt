@@ -141,8 +141,8 @@ Table of Contents
    [RFC9493].  Status List Token, and the validation that resolves a
    status, are defined by [STATUSLIST].  The software statement, its
    claims, its validation, its status claim, issuer trust configuration,
-   registration validity, and runtime presentation are defined by
-   [STATEMENT].
+   and runtime presentation are defined by [STATEMENT], and registration
+   validity by [REGISTRATION].
 
    This specification additionally defines the following terms:
 
@@ -528,6 +528,11 @@ Table of Contents
    [ISSUANCE] "CIMD Software Statement Issuance", n.d.,
               <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
               cimd-sw-stmt-issuance>.
+
+   [REGISTRATION]
+              "CIMD Software Statement Registration", n.d.,
+              <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
+              cimd-sw-stmt-registration>.
 
    [RFC5646]  Phillips, A., Ed. and M. Davis, Ed., "Tags for Identifying
               Languages", BCP 47, RFC 5646, DOI 10.17487/RFC5646,
