@@ -18,7 +18,7 @@ The benefits:
 
 - For MCP server operators, a client a trusted party has reviewed can be admitted without per-client onboarding, and a change to its document after review is detected rather than silently accepted.
 - For enterprise administrators, a security team, a client catalog, or a server vendor's marketplace can vouch for agent software once, and every MCP authorization server that trusts that reviewer honours the decision until it expires or is withdrawn.
-- For MCP client publishers, being reviewed requires publishing statements at a URL the client's own metadata document names. MCP clients themselves change nothing.
+- For MCP client publishers, being reviewed requires publishing statements at a URL the client's own metadata document names. Most MCP clients change nothing; a public client with `https` redirection URIs that wants reviewed admission adds a DPoP key (Section 3.3).
 
 ### 1.2 Roles and Terminology
 
@@ -71,7 +71,7 @@ The MCP Client **MUST** use its Client ID Metadata Document URL as its `client_i
 
 A Client Publisher that wants its client admitted as reviewed **MUST** include the `software_statements_uri` member in the client's metadata document and serve the client's current statements there, as [Pulled Statements](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt.html#pulled-statements) defines: an `https` URL returning a JSON object whose `software_statements` member is an array of statements.
 
-The Client Publisher **SHOULD** replace each statement before it expires, by renewal or reissuance from its Statement Issuer, and **SHOULD** remove statements that have expired or been withdrawn. A Statement Issuer reviewing software for MCP use **SHOULD** issue statements with `consumable_at` of `["presentation"]`, since no MCP Authorization Server registers clients, and a statement limited this way cannot be used to register the software elsewhere.
+The Client Publisher **SHOULD** replace each statement before it expires, by renewal or reissuance from its Statement Issuer, and **SHOULD** remove statements that have expired or been withdrawn. Statements for MCP use need no `consumable_at`: without it a statement is usable only by presentation, so a published copy cannot be used to register the software. MCP has deprecated Dynamic Client Registration, and a server admitting a client under this profile does not register it.
 
 The URL is part of the metadata document, and so part of what a statement's digest covers. Changing it, like changing any byte of the document, leaves every published statement naming a document that is no longer served.
 
@@ -101,11 +101,13 @@ The MCP Authorization Server **MUST** accept statements only from Statement Issu
 
 ### 4.3 Admission
 
-A statement that passes validation, names the document the server fetched, and is bound to the presenter (Section 3.3) admits the client as reviewed for that grant. The server applies the reviewed document's metadata to the request: its redirection URIs, grant types, and `scope` are the ceiling on what may be requested. At the authorization endpoint the binding completes only at code redemption, so the server **MAY** show the reviewer on its consent screen only where that binding can complete: the document declares `private_key_jwt`, or the request carries `dpop_jkt` and every redirection URI uses `https`. No token is issued unless redemption proves the key.
+A statement that passes validation, names the document the server fetched, and is bound to the presenter (Section 3.3) admits the client as reviewed for that grant. The server applies the reviewed document's metadata to the request: its redirection URIs and grant types bound the request, and its `scope`, where present, is a ceiling on what may be requested. MCP Servers announce the scopes each resource needs in `WWW-Authenticate` challenges, so an MCP Client's document **SHOULD** omit `scope`; an omitted `scope` sets no ceiling beyond the server's own policy. At the authorization endpoint the binding completes only at code redemption, so the server **MAY** show the reviewer on its consent screen only where that binding can complete: the document declares `private_key_jwt`, or the request carries `dpop_jkt` and every redirection URI uses `https`. No token is issued unless redemption proves the key.
 
-The MCP Authorization Server **MUST NOT** require an MCP Client to register. Where no statement remains after retrieval, or retrieval does not complete, the server applies the policy it applies to any Client ID Metadata Document client it has not reviewed. A retrieval failure is never treated as a withdrawal.
+The MCP Authorization Server **MUST NOT** require an MCP Client it admits under this profile to register. Where no statement remains after retrieval, or retrieval does not complete, the server applies the policy it applies to any Client ID Metadata Document client it has not reviewed. A retrieval failure is never treated as a withdrawal.
 
 Where the server resolves statement status, a withdrawn statement ends refresh for the grants it opened, as CIMD Software Statement requires.
+
+MCP requires access tokens in the `Authorization: Bearer` header. Where a public client binds a DPoP key at redemption, the MCP Authorization Server **MUST** issue the access token with a `token_type` of `Bearer` and bind only the refresh token to that key, as [Section 5 of RFC9449](https://datatracker.ietf.org/doc/html/rfc9449#section-5) permits, unless it knows the MCP Server accepts DPoP-bound access tokens.
 
 ### 4.4 Review-Only Clients
 
@@ -123,7 +125,13 @@ A statement says nothing about which of a client's own customers a request is fo
 
 ### 4.6 Errors
 
-Where the server's policy requires reviewed software and a client has none established, the server returns `statement_required` in the authorization error response, after validating the redirection URI against the client's metadata document. Many MCP clients will not recognize this code, so the server **SHOULD** include an `error_description` a person can act on, such as naming the reviewers the server accepts.
+Where the server's policy requires reviewed software, it responds in the authorization error response, after validating the redirection URI against the client's metadata document, with:
+
+- `statement_required` where no statement is established for a client that could be reviewed;
+- `unauthorized_client` where the client is review-only (Section 4.4), since no statement can make it reviewed; and
+- `temporarily_unavailable` where retrieving the client's statements did not complete.
+
+Many MCP clients will not recognize `statement_required`, so the server **SHOULD** include an `error_description` a person can act on. It **MUST NOT** name the reviewers it accepts, since the request is unauthenticated and CIMD Software Statement keeps issuer trust from unauthenticated requesters.
 
 ## 5. Composition with Enterprise-Managed Authorization
 
