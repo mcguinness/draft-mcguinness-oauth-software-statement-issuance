@@ -60,6 +60,9 @@ normative:
     title: "OAuth 2.0 Form Post Response Mode"
 
 informative:
+  REGISTRATION:
+    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-registration
+    title: "CIMD Software Statement Registration"
   RFC8628:
   RFC9126:
   CLIENT-INSTANCE:
@@ -201,7 +204,7 @@ The flow has four elements:
 
 1. An HTTPS Client ID Metadata Document URL identifies the client, and its content supplies the canonical metadata {{CIMD}}.
 2. The issuing authorization server fetches and snapshots that document, decides whether to issue, and signs the statement ({{metadata-snapshot}}).
-3. The client presents the statement to consuming servers: in an {{RFC7591}} registration request ({{STATEMENT}}), a sender-constrained runtime presentation, or a delivery that renews what a server already holds ({{STATEMENT}}).
+3. The client presents the statement to consuming servers: in an {{RFC7591}} registration request ({{REGISTRATION}}), a sender-constrained runtime presentation ({{STATEMENT}}), or a delivery that renews what a server already holds ({{STATEMENT}}, {{REGISTRATION}}).
 4. Trusting authorization servers in its audience apply their local acceptance policies.
 
 The URL remains the client identity when its content changes. One issuance decision can serve many registrations and runtime presentations.
@@ -293,7 +296,7 @@ All uses of DPoP MUST follow {{RFC9449}} and {{DTR}}.
 
 Client metadata documents can change while a request is pending. Before returning a software statement code or a deferral code, the authorization server MUST bind it to the validated canonical metadata. The bound values constitute the metadata snapshot for the request.
 
-The authorization server MAY retrieve the document again before issuing the software statement. If it does so and the digest differs, it MUST either re-evaluate the request under the new document, binding it as the snapshot, or reject the request. This holds even where the change touches no member its policy examines, since a statement over a superseded snapshot names a document no longer served and fails at registration ({{STATEMENT}}). It MUST NOT silently combine values from different document versions.
+The authorization server MAY retrieve the document again before issuing the software statement. If it does so and the digest differs, it MUST either re-evaluate the request under the new document, binding it as the snapshot, or reject the request. This holds even where the change touches no member its policy examines, since a statement over a superseded snapshot names a document no longer served and fails at registration ({{REGISTRATION}}). It MUST NOT silently combine values from different document versions.
 
 An approval recorded against a superseded snapshot does not carry forward to its replacement without a fresh issuance-policy decision. Replacing the snapshot does not alter the sender-constraint context recorded for a deferral, which remains as it was fixed at origination ({{deferred-processing}}). If a replacement snapshot no longer authorizes the key material behind that context, for example because the client-authentication key is absent from the new document, the authorization server MUST invalidate the deferral; the client makes a new request under its current keys.
 
@@ -301,7 +304,7 @@ The metadata digest is defined in {{STATEMENT}} and computed over the retrieved 
 
 Equal digests identify the same document for this specification. A changed digest marks a new trust state for the same client identifier and is the signal used by the re-evaluation rule above. The digest also supplies the `cimd_digest` claim ({{STATEMENT}}) and audit guidance ({{security-considerations}}).
 
-Byte identity deliberately detects serialization-only changes. A digest mismatch is fatal at registration and an input to policy at runtime, as {{STATEMENT}} defines. A document whose octets change only with its metadata carries a statement across its whole lifetime; one rendered dynamically or served through content negotiation produces digest changes unrelated to its metadata, and a statement over it stops matching for reasons its publisher did not intend. That is a consequence of binding to octets, not a requirement this specification places on what a publisher may serve. The authorization server MUST reject duplicate object member names, because parsers can interpret them differently despite an identical digest.
+Byte identity deliberately detects serialization-only changes. A digest mismatch is fatal at registration ({{REGISTRATION}}) and an input to policy at runtime ({{STATEMENT}}). A document whose octets change only with its metadata carries a statement across its whole lifetime; one rendered dynamically or served through content negotiation produces digest changes unrelated to its metadata, and a statement over it stops matching for reasons its publisher did not intend. That is a consequence of binding to octets, not a requirement this specification places on what a publisher may serve. The authorization server MUST reject duplicate object member names, because parsers can interpret them differently despite an identical digest.
 
 An issuance source SHOULD publish keys by reference through `jwks_uri` rather than inline through `jwks`. Rotation behind a stable URI leaves the document and digest unchanged; inline rotation changes both, so the attested keys no longer match the current document and a new statement is needed. The document carries either the key location or the inline keys, and the digest binds whichever it is. The convenience cuts both ways: rotation invisible to the digest means key-host compromise is also invisible to it, and where that key is the runtime proof under {{STATEMENT}} the compromise substitutes the presenter as well; {{STATEMENT}} weighs the trade, and an issuer serving theft-sensitive deployments attests `jwks` inline instead.
 
@@ -598,11 +601,11 @@ Pragma: no-cache
 }
 ~~~
 
-The client consumes the issued statement, the value of `access_token`, as described in {{STATEMENT}}: through an {{RFC7591}} registration request, by runtime presentation, or by publishing it at its `software_statements_uri` for servers to pull ({{STATEMENT}}).
+The client consumes the issued statement, the value of `access_token`, through an {{RFC7591}} registration request ({{REGISTRATION}}), by runtime presentation, or by publishing it at its `software_statements_uri` for servers to pull ({{STATEMENT}}).
 
 The `access_token` member is a security-token container ({{RFC8693}}), not an OAuth access token: the software statement is consumed only as a software statement ({{STATEMENT}}), MUST NOT be attached to a request as an `Authorization: Bearer` credential, and is not subject to refresh. Implementations that cache issued tokens by type SHOULD key this artifact on its `issued_token_type` so that generic access-token handling does not apply to it, and SHOULD treat it as a sensitive credential in logs.
 
-A client obtains a replacement for an expiring or expired software statement by renewal ({{renewal}}), exchanging the statement it holds; by a new software statement request; or, if it holds an initial access token, through an exchange under {{token-exchange-profile}}. Whether replacement requires new approval is determined by issuer policy. This document defines how a client obtains a replacement; {{STATEMENT}} defines how it delivers one to a trusting authorization server, and orders replacements by `iat` ({{STATEMENT}}).
+A client obtains a replacement for an expiring or expired software statement by renewal ({{renewal}}), exchanging the statement it holds; by a new software statement request; or, if it holds an initial access token, through an exchange under {{token-exchange-profile}}. Whether replacement requires new approval is determined by issuer policy. This document defines how a client obtains a replacement; {{STATEMENT}} and {{REGISTRATION}} define how it delivers one to a trusting authorization server, and orders replacements by `iat` ({{STATEMENT}}).
 
 ## Terminal Denial {#terminal-denial}
 

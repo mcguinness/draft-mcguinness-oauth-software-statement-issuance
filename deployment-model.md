@@ -176,7 +176,7 @@ What does not compose is metadata. Resolved metadata is derived, and parties oth
 | Statement format, claims, digest | Statement | The Software Statement |
 | Validation a consumer performs | Statement | Validating a Statement |
 | Issuer trust and scoping | Statement | Issuer Trust Establishment |
-| Document-authoritative registration, validity, renewal | Statement | Consumption at Registration |
+| Document-authoritative registration, validity, renewal | Registration | Consumption at Registration |
 | Establishment without registration | Statement | Runtime Presentation |
 | Presenter binding | Statement | Sender Constraint |
 | Discovery | Statement | Authorization Server Metadata |

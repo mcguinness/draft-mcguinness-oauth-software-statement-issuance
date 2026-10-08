@@ -105,7 +105,7 @@ sequenceDiagram
 | --- | --- |
 | The customer's root as an authority the platform already holds | [The Federation sketch](openid-federation-sketch.md), Profile A |
 | The customer's approval as a Trust Mark they issue and revoke | [The Federation sketch](openid-federation-sketch.md), Profile B |
-| The platform's own admission control | Statement draft, The Software Statement and Consumption at Registration |
+| The platform's own admission control | Statement draft, The Software Statement; registration draft, Consumption at Registration |
 | Acting with no user present | Statement draft, Runtime Presentation, on the client credentials or assertion grants |
 | The document's `scope` as a ceiling | Statement draft, Reviewed Metadata |
 | The vendor account, in the approval and in the request | Nothing yet; see below |

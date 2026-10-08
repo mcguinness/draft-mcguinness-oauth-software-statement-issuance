@@ -10,11 +10,19 @@ RFC 7591 standardizes how a client presents a software statement and how a regis
 
 ## CIMD Software Statement
 
-This repository also hosts the companion Internet-Draft, "CIMD Software Statement", which defines the artifact, its validation, the issuer trust a consumer configures, and the two points at which a statement is consumed: in a registration request, where its expiry can bound the registration, and at runtime, where it establishes a client for one request without creating a registration.
+This repository also hosts the companion Internet-Draft, "CIMD Software Statement", which defines the artifact, its validation, the issuer trust a consumer configures, and how an authorization server enforces a review when it admits a client at runtime: by a statement presented in the request or pulled from where the client's document points, establishing the client for one grant without creating a registration.
 
 * [Editor's Copy (HTML)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt.html)
 * [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt.txt)
 * [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt/) (after first submission)
+
+## CIMD Software Statement Registration
+
+The companion Internet-Draft "CIMD Software Statement Registration" defines consumption of the same statement in an RFC 7591 registration request: the registration takes every metadata value from the reviewed document, the statement's expiry bounds the registration, and a replacement statement renews it. It depends on the statement draft; the statement draft does not depend on it.
+
+* [Editor's Copy (HTML)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-registration.html)
+* [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-registration.txt)
+* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-registration/) (after first submission)
 
 ## Shared Signals Events for CIMD Software Statements
 

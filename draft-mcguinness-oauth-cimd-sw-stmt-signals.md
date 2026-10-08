@@ -47,6 +47,9 @@ normative:
     title: "OpenID Shared Signals Framework Specification 1.0"
 
 informative:
+  REGISTRATION:
+    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-registration
+    title: "CIMD Software Statement Registration"
   RFC5646:
   CAEP:
     target: https://openid.net/specs/openid-caep-1_0.html
@@ -79,7 +82,7 @@ This specification defines the subject identification, the event, its payload cl
 
 {::boilerplate bcp14-tagged}
 
-Transmitter, Receiver, Stream, and the delivery and configuration mechanisms are defined by {{SSF}}. Security Event Token, or SET, is defined by {{RFC8417}}. Subject identifier formats are defined by {{RFC9493}}. Status List Token, and the validation that resolves a status, are defined by {{STATUSLIST}}. The software statement, its claims, its validation, its `status` claim, issuer trust configuration, registration validity, and runtime presentation are defined by {{STATEMENT}}.
+Transmitter, Receiver, Stream, and the delivery and configuration mechanisms are defined by {{SSF}}. Security Event Token, or SET, is defined by {{RFC8417}}. Subject identifier formats are defined by {{RFC9493}}. Status List Token, and the validation that resolves a status, are defined by {{STATUSLIST}}. The software statement, its claims, its validation, its `status` claim, issuer trust configuration, and runtime presentation are defined by {{STATEMENT}}, and registration validity by {{REGISTRATION}}.
 
 This specification additionally defines the following terms:
 
