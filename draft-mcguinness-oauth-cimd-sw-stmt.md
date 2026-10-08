@@ -504,11 +504,11 @@ A statement MUST be unexpired when presented. Expiry after presentation does not
 
 ### Refresh {#refresh}
 
-On refresh-token use the authorization server MUST verify possession of the establishment's Proven Key under the same sender-constraint mechanism. It MAY, by local policy, additionally require a current unexpired statement, and SHOULD require one once the establishment's recorded statement has expired ({{enforcement-bounds}}).
+On refresh-token use the authorization server MUST verify possession of the establishment's Proven Key under the same sender-constraint mechanism. It MAY, by local policy, additionally require a current unexpired statement, and SHOULD require one once the establishment's recorded statement has expired ({{enforcement-bounds}}). The recorded statement satisfies that requirement while it is unexpired and no refusal record covers it: currency is a check on the statement the establishment already holds, and a replacement is needed only when that check fails.
 
-Where the authorization server holds a refusal record for the establishment's recorded statement, it MUST reject a refresh that does not carry a replacement satisfying this section, whatever its policy on currency otherwise: a withdrawal ends grant continuation at once rather than waiting on local policy.
+Where the authorization server holds a refusal record for the establishment's recorded statement, it MUST reject a refresh that is not accompanied by a replacement satisfying this section, presented or pulled, whatever its policy on currency otherwise: a withdrawal ends grant continuation at once rather than waiting on local policy.
 
-When policy requires one, the client presents the replacement in the `software_statement` parameter of the refresh request, or, for an establishment created from a pulled statement, the server pulls one ({{pulled-statements}}). The replacement:
+When a replacement is needed, the client presents it in the `software_statement` parameter of the refresh request, or, for an establishment created from a pulled statement, the server pulls one ({{pulled-statements}}). A statement with the recorded statement's `iss` and `jti` is not a replacement: offered again, it is rechecked as above. The replacement:
 
 * MUST validate under {{validation}}, including its audience where it carries one;
 * MUST have the recorded statement's `iss` and `sub`, and its `tenant` claim where the recorded statement carried one;
@@ -517,7 +517,7 @@ When policy requires one, the client presents the replacement in the `software_s
 
 The refreshed access MUST fall within the metadata of the document the replacement names.
 
-On success, the establishment's statement identity, `iat`, expiry, reviewed metadata, and trust decision are replaced in a single atomic update, and concurrent deliveries resolve to the most recently issued statement. A refresh that fails these requirements, or omits a statement that policy requires, is rejected with `statement_required` and leaves the establishment unchanged. The operation never rotates the establishment's key; a client that needs a new key performs a new presentation.
+On success, the establishment's statement identity, `iat`, expiry, reviewed metadata, and trust decision are replaced in a single atomic update, and concurrent deliveries resolve to the most recently issued statement. A refresh that fails these requirements, or omits a replacement that is needed, is rejected with `statement_required` and leaves the establishment unchanged. The operation never rotates the establishment's key; a client that needs a new key performs a new presentation.
 
 ## Statements from an Established Client {#registered-delivery}
 
