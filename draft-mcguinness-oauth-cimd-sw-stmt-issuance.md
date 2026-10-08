@@ -93,7 +93,7 @@ In the redirect flow, the authorization endpoint returns a short-lived `software
 
 A client that holds an initial access token authorizing issuance, or a statement to renew, instead uses OAuth 2.0 Token Exchange (RFC 8693), without a redirect.
 
-The issued statement is consumed through RFC 7591 dynamic client registration; the companion specification defines the artifact, its validation, and its consumption.
+The issued statement is presented at registration or at runtime, or published for servers to pull; the companion specification defines the artifact, its validation, and its consumption.
 
 --- middle
 
