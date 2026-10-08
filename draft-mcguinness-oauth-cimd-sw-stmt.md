@@ -285,6 +285,8 @@ A trusting authorization server MUST derive trust from this local configuration 
 
 Issuer trust SHOULD be scoped as well as explicit. Trust configuration SHOULD constrain each issuer to the client identifier namespaces it is expected to attest, for example URLs under the domains of the software publishers it serves, and a statement whose `sub` falls outside that scope MUST be rejected even when its signature verifies ({{validation}}). An issuer accepted for all values of `sub` can, if compromised or over-broad, mint acceptable statements about any client software.
 
+Where a trusting authorization server configures an issuer whose decisions are confined to one of its tenants, as a customer's own issuer is, it SHOULD treat that issuer's decision as required in that tenant, and so reject there a statement from another issuer about software that issuer has decided on. Otherwise a holder could present a broader listing to evade the customer's withdrawal ({{deployment-model}}).
+
 Where an issuer attests software across many publishers, as an enterprise issuer does, the scope is the set of identifiers it is configured for rather than a single domain. The rejection rule is the same.
 
 ## Issuer and Consumer as One Server {#same-server}
