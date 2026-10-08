@@ -29,9 +29,9 @@ Abstract
    a statement to renew, instead uses OAuth 2.0 Token Exchange (RFC
    8693), without a redirect.
 
-   The issued statement is consumed through RFC 7591 dynamic client
-   registration; the companion specification defines the artifact, its
-   validation, and its consumption.
+   The issued statement is presented at registration or at runtime, or
+   published for servers to pull; the companion specification defines
+   the artifact, its validation, and its consumption.
 
 Status of This Memo
 
@@ -434,12 +434,13 @@ Table of Contents
    *  none (explicit) establishes a public client.
 
    *  Any other value establishes a confidential client, and the
-      authorization server MUST require exactly that method, as required
-      by [CIMD]; a declared method the authorization server does not
-      support MUST cause rejection rather than treatment as public: with
-      unauthorized_client at the authorization endpoint, and with
-      invalid_client at the token endpoint, which Section 5.2 of
-      [RFC6749] assigns to an unsupported authentication method.
+      authorization server MUST require exactly that method, a rule this
+      specification applies to every declared method where [CIMD] states
+      it for private_key_jwt; a declared method the authorization server
+      does not support MUST cause rejection rather than treatment as
+      public: with unauthorized_client at the authorization endpoint,
+      and with invalid_client at the token endpoint, which Section 5.2
+      of [RFC6749] assigns to an unsupported authentication method.
 
    *  An omitted value establishes neither, and any request identifying
       such a client MUST be rejected with invalid_request, returned at
@@ -1155,12 +1156,14 @@ Table of Contents
       any token it published there before, so that a consumer can tell
       the newer of two apart.
 
-   An issuer that issues a replacement over a document that no longer
-   carries a key, redirection URI, or scope the earlier document carried
-   SHOULD withdraw the earlier statement, since what was removed may be
-   why the document changed, and a consumer that has not yet seen the
-   replacement would otherwise accept the earlier statement until it
-   expires.
+   An issuer that issues a replacement narrower than the statement it
+   replaces SHOULD withdraw the earlier statement: one over a document
+   that no longer carries a key, redirection URI, or scope the earlier
+   document carried, or one with a narrower aud, aud_tenant, or
+   consumable_at, or a shorter remaining lifetime.  What was removed may
+   be why the replacement was issued, and a consumer that has not yet
+   seen the replacement, or at which it does not validate, would
+   otherwise accept the earlier statement until it expires.
 
    Status does not replace lifetime.  A consumer is not obliged to
    resolve status, so an issuer chooses exp on the assumption that none
@@ -1370,11 +1373,12 @@ Table of Contents
    interaction.  Validating the subject token before metadata retrieval
    or enqueueing (Section 8) limits resource consumption by unauthorized
    requesters.  Authorization servers SHOULD still rate-limit these
-   exchanges, cache retrieval results and failures, and bound pending
-   deferrals per client identifier and requester.  Client authentication
-   remains mandatory when established by the Client ID Metadata
-   Document.  The redirect flow likewise reaches the approval queue
-   before any client-authenticated step; the same rate limits and
+   exchanges, cache successful retrieval results and back off after
+   failures rather than caching them, which [CIMD] forbids, and bound
+   pending deferrals per client identifier and requester.  Client
+   authentication remains mandatory when established by the Client ID
+   Metadata Document.  The redirect flow likewise reaches the approval
+   queue before any client-authenticated step; the same rate limits and
    pending-approval bounds SHOULD apply per client identifier there.
 
    A subject token is an authorization credential, not a client
