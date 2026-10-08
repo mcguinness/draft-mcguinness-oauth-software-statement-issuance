@@ -1,6 +1,6 @@
 # Deployment Model: Portable Review Across Many Authorization Servers
 
-This is a non-normative companion to the three drafts in this repository. It sketches one end-to-end deployment, names the actors, and shows which part of each draft carries which decision. Nothing here is normative; where this document and a draft disagree, the draft wins.
+This is a non-normative companion to the four drafts in this repository. It sketches one end-to-end deployment, names the actors, and shows which part of each draft carries which decision. Nothing here is normative; where this document and a draft disagree, the draft wins.
 
 * [CIMD Software Statement](draft-mcguinness-oauth-cimd-sw-stmt.md), the statement draft: the artifact, its validation, issuer trust, and the two points at which a statement is consumed.
 * [CIMD Software Statement Issuance](draft-mcguinness-oauth-cimd-sw-stmt-issuance.md), the issuance draft: how a client obtains one.

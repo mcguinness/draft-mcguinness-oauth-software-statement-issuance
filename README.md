@@ -1,73 +1,59 @@
-# CIMD Software Statement Issuance
+# CIMD Software Statements
 
-This is the working area for the individual Internet-Draft, "CIMD Software Statement Issuance".
+This is the working area for a family of individual Internet-Drafts on software statements for OAuth clients identified by a [Client ID Metadata Document](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/) (CIMD).
 
-RFC 7591 standardizes how a client presents a software statement and how a registration endpoint consumes it, but not how the client obtains one. This specification defines the missing issuance protocol: a redirect flow returning a `software_statement_code` redeemed at the token endpoint, a token exchange profile for pre-authorized issuance and renewal, and deferred processing under Deferred Token Response so approval can complete out of band over hours or days. Clients are identified by a Client ID Metadata Document, and every statement is bound by a byte-exact digest to the document reviewed.
+A Client ID Metadata Document carries a client's own claims and can change at any time. These drafts let a party that reviews client software, such as a platform marketplace or an enterprise security team, record its review of the exact bytes of that document in a signed software statement. Any authorization server that trusts the reviewer can then enforce that review when the client arrives, without registering it.
 
-* [Editor's Copy (HTML)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-issuance.html)
-* [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-issuance.txt)
-* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-issuance/) (after first submission)
+New to the drafts? Start with the [FAQ](https://github.com/mcguinness/draft-mcguinness-oauth-software-statement-issuance/wiki/FAQ).
 
-## CIMD Software Statement
+## The Drafts
 
-This repository also hosts the companion Internet-Draft, "CIMD Software Statement", which defines the artifact, its validation, the issuer trust a consumer configures, and how an authorization server enforces a review when it admits a client at runtime: by a statement presented in the request or pulled from where the client's document points, establishing the client for one grant without creating a registration.
+| Draft | What it defines | Editor's copy |
+| --- | --- | --- |
+| **CIMD Software Statement** | The statement and its digest binding, validation, issuer trust, and runtime admission by a statement presented in a request or pulled from where the client's document points | [HTML](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt.html), [TXT](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt.txt) |
+| CIMD Software Statement Registration | Consuming a statement in an RFC 7591 registration: metadata taken from the reviewed document, validity bounded by the statement, and renewal by a replacement statement | [HTML](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-registration.html), [TXT](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-registration.txt) |
+| CIMD Software Statement Issuance | How a client obtains a statement: token exchange, a redirect flow returning a `software_statement_code`, and asynchronous review under Deferred Token Response | [HTML](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-issuance.html), [TXT](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-issuance.txt) |
+| Shared Signals Events for CIMD Software Statements | An optional event telling an authorization server that a statement's status changed, so it checks the status list at once rather than on its next scheduled check | [HTML](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-signals.html), [TXT](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-signals.txt) |
 
-* [Editor's Copy (HTML)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt.html)
-* [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt.txt)
-* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt/) (after first submission)
-
-## CIMD Software Statement Registration
-
-The companion Internet-Draft "CIMD Software Statement Registration" defines consumption of the same statement in an RFC 7591 registration request: the registration takes every metadata value from the reviewed document, the statement's expiry bounds the registration, and a replacement statement renews it. It depends on the statement draft; the statement draft does not depend on it.
-
-* [Editor's Copy (HTML)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-registration.html)
-* [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-registration.txt)
-* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-registration/) (after first submission)
-
-## Shared Signals Events for CIMD Software Statements
-
-The repository also hosts "Shared Signals Events for CIMD Software Statements", an optional profile that reduces how long a withdrawal takes to reach a consumer. An issuer ends a decision before its expiry by publishing status through Token Status List, which a trusting authorization server resolves on its own schedule; this profile lets the issuer say that a status changed so the server resolves it at once instead. The event names no status, so the list remains the only authority on whether a statement stands, and a receiver that misses every event reaches the same answer on its ordinary schedule. Neither of the other drafts depends on this one.
-
-* [Editor's Copy (HTML)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-signals.html)
-* [Editor's Copy (TXT)](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-signals.txt)
-* [Datatracker Page](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-signals/) (after first submission)
-
-## Deployment Model
-
-[Deployment Model: Portable Review Across Many Authorization Servers](deployment-model.md) sketches the end-to-end scenario the drafts are built for: a provider marketplace deciding which software may exist as a client, an enterprise deciding which of it may operate in its tenant, and the four layers that keep those decisions separate. Non-normative.
-
-## A Mobile App, End to End
-
-[Sketch: A Mobile App from Install to Third Party](mobile-app-sketch.md) walks one scenario through all three drafts: an app store install refused by an enterprise identity provider as unreviewed, a statement obtained and awaited while an administrator approves, sign-in, and then a third-party SaaS reached through an identity assertion. It stops at what the family still does not give a mobile install: the device key binds a grant to one phone, but nobody vouches for that key, so a server learns the same installation came back and never which one it is. Non-normative.
-
-## A Customer Approving a Vendor Integration
-
-[Sketch: A Customer Approving a Vendor Integration at Their Own Root](saas-integration-sketch.md) takes the case these drafts serve least well, a vendor-to-vendor integration with no user present while it runs. The customer approves the vendor once at the enterprise root their organization already operates, and every platform configured with that root honours it. Whether a platform's own marketplace listed the integration is that platform's business and not the customer's. The prize is one revocation, performed once by the customer, that every platform sees. Non-normative.
-
-## Tenant Admin Consent
-
-[Sketch: Tenant Admin Consent Without a Stored Grant](admin-consent-sketch.md) takes Microsoft Entra ID's tenant-wide admin consent as the reference and asks what each of its parts looks like built from open specifications. Three have generic forms already, one of them better than the original, since Entra's approval loop cannot be automated at all. The fourth, a consent that binds a population rather than a principal, has no form anywhere, and the sketch argues that is the right outcome. Non-normative.
-
-## Composing with OpenID Federation
-
-[Composing with OpenID Federation](openid-federation-sketch.md) sketches how these drafts could take issuer trust from a federation rather than enrolling each reviewer, how a review could travel as a Trust Mark carrying `cimd_digest`, and the one place the two models cannot be reconciled: Federation derives an entity's metadata by policy, so it is not the octets a digest covers. Non-normative, and not a draft.
-
-## Pulling the Review, and an MCP Profile
-
-[Sketch: Pulling the Review, and an MCP Profile](mcp-profile-sketch.md) takes the ecosystem where Client ID Metadata Documents are the preferred client identity, MCP, which has deprecated dynamic registration and whose desktop clients redirect to loopback. It sketches a server fetching a review instead of a client carrying one, from a location the document names or from the issuer, which removes most of the machinery a carried statement needs, and a profile that composes with MCP's Enterprise-Managed Authorization: the identity provider's assertion answers whether this user may use the client now, and the statement answers who reviewed the software. Non-normative.
+The statement draft is the core. The other three build on it, and it depends on none of them. Datatracker pages will be available after first submission:
+[statement](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt/),
+[registration](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-registration/),
+[issuance](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-issuance/),
+[signals](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-signals/).
 
 ## MCP Profile
 
-[Reviewed Client Software](mcp/reviewed-client-software.mdx) is a draft MCP authorization extension, written in the format of MCP's extension repository for proposal there. MCP clients publish statements at the `software_statements_uri` their metadata document names; MCP authorization servers pull and validate them, bind them to the presenter or treat them as review-only for loopback desktop clients, and compose them with Enterprise-Managed Authorization.
+[Reviewed Client Software](mcp/reviewed-client-software.mdx) is a draft MCP authorization extension, written in the format of MCP's extensions repository for proposal there. MCP authorization servers pull statements from the `software_statements_uri` a client's metadata document names, treat desktop clients with loopback redirects as review-only, and compose the review with Enterprise-Managed Authorization.
 
-## Related Drafts
+## Background and Sketches
 
-* [OAuth Client ID Metadata Document](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/) (normative dependency)
-* [Token Status List](https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list/) (normative dependency)
-* [Deferred Token Response](https://datatracker.ietf.org/doc/draft-ietf-oauth-deferred-token-response/) (normative dependency, OAuth working group draft)
-* [OpenID Federation 1.0](https://openid.net/specs/openid-federation-1_0.html) (composition sketched above)
-* [OAuth 2.0 Client Instance Assertion](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-client-instance-assertion/) (instance layer; composes with this draft)
-* [OAuth Identity Assertion Trust Framework](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-assertion-framework/) (issuer trust generalization)
+These documents explore deployments and edge cases. They are non-normative and not drafts, and some were written before the registration draft was split out.
+
+| Document | What it covers |
+| --- | --- |
+| [Deployment Model](deployment-model.md) | A provider marketplace deciding which software may exist as a client, an enterprise deciding which of it may operate in its tenant, and the layers that keep those decisions separate |
+| [A Mobile App, End to End](mobile-app-sketch.md) | An app store install through review, administrator approval, sign-in, and a third-party SaaS reached through an identity assertion, ending at what a per-install key still lacks |
+| [A Customer Approving a Vendor Integration](saas-integration-sketch.md) | A vendor-to-vendor integration with no user present, approved once at the customer's own root and revoked once for every platform |
+| [Tenant Admin Consent](admin-consent-sketch.md) | Microsoft Entra ID's tenant-wide admin consent, rebuilt from open specifications |
+| [Composing with OpenID Federation](openid-federation-sketch.md) | Issuer trust from a federation, a review carried as a Trust Mark, and why Federation's resolved metadata cannot carry a digest |
+| [Pulling the Review, and an MCP Profile](mcp-profile-sketch.md) | The design notes behind pulled statements and the MCP profile, both now in the drafts |
+
+## Related Specifications
+
+Dependencies:
+
+* [OAuth Client ID Metadata Document](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/), for every draft
+* [Token Status List](https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list/), for withdrawing a statement before it expires
+* [Identity Assertion Authorization Grant](https://datatracker.ietf.org/doc/draft-ietf-oauth-identity-assertion-authz-grant/), for the `aud_tenant` claim
+* [Deferred Token Response](https://datatracker.ietf.org/doc/draft-ietf-oauth-deferred-token-response/), for asynchronous issuance only
+* [OpenID Shared Signals Framework](https://openid.net/specs/openid-sharedsignals-framework-1_0.html), for the signals draft only
+
+Related work:
+
+* [OAuth 2.0 Attestation-Based Client Authentication](https://datatracker.ietf.org/doc/draft-ietf-oauth-attestation-based-client-auth/), which attests a running client instance and composes with a statement
+* [OAuth 2.0 Client Instance Assertion](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-client-instance-assertion/), which identifies instances within one client
+* [OpenID Federation 1.0](https://openid.net/specs/openid-federation-1_0.html), sketched above
+* [OAuth Identity Assertion Trust Framework](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-assertion-framework/), which generalizes issuer trust
 
 ## Contributing
 
@@ -77,7 +63,7 @@ Contributions can be made by creating pull requests. The GitHub interface suppor
 
 ## Command Line Usage
 
-Formatted text and HTML versions of the draft can be built using `make`.
+Formatted text and HTML versions of the drafts can be built using `make`.
 
 ```sh
 $ make
