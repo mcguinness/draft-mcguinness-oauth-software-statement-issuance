@@ -40,6 +40,7 @@ normative:
   RFC7636:
   RFC9449:
   RFC9700:
+  RFC9110:
   CIMD:
     target: https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document
     title: "OAuth Client ID Metadata Document"
@@ -237,7 +238,7 @@ An issuer computes the digest over the document it evaluated; a consumer compute
 Three retrieval conditions bear on the comparison:
 
 * {{CIMD}} recommends reading no more than a bounded number of octets and treating a longer response as an error. A digest computed over a truncated read is not the digest of the document, so a trusting authorization server MUST treat a response exceeding its configured bound as a retrieval failure rather than digesting what it read.
-* A shared cache may hold a variant selected for some other request. A server MUST NOT compare a digest against a representation it did not itself retrieve, or store under this section or as retained octets under {{dcr-presentation}}. A `304 Not Modified` response to a conditional request made with a strong validator confirms that the stored octets are still current, and the digest already computed over them continues to apply; one made with a weak validator does not.
+* A shared cache may hold a variant selected for some other request. A server MUST NOT compare a digest against a representation it did not itself retrieve, or store under this section or as retained octets under {{dcr-presentation}}. A `304 Not Modified` response confirms that the stored octets are still current, and the digest already computed over them continues to apply, only where it carries a strong entity tag equal to the one stored with those octets; a conditional request with `If-None-Match` is evaluated with weak comparison (Section 13.1.2 of {{RFC9110}}), so a `304` without such a tag does not show the bytes are unchanged, and the server retrieves the body again.
 * Issuer and consumer must obtain identical octets. Any condition that makes retrieval depend on who is asking defeats the comparison, whatever its cause.
 
 ## Validating a Statement {#validation}
