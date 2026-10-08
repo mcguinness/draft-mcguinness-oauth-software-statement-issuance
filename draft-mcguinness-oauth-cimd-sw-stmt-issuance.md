@@ -92,9 +92,7 @@ informative:
 
 RFC 7591 standardizes how a client presents a software statement and how a registration endpoint consumes it, but not how the client obtains one. This specification defines OAuth 2.0 issuance flows for that artifact, in which a Client ID Metadata Document identifies a client that has not been registered with the authorization server.
 
-In the redirect flow, the authorization endpoint returns a short-lived `software_statement_code`, which the client redeems using a new token endpoint grant. A completed decision returns a statement; a pending decision uses Deferred Token Response and polling. The statement never appears in an authorization response URL.
-
-A client that holds an initial access token authorizing issuance, or a statement to renew, instead uses OAuth 2.0 Token Exchange (RFC 8693), without a redirect.
+A client that holds an initial access token authorizing issuance, or a statement to renew, obtains a statement through OAuth 2.0 Token Exchange (RFC 8693), without a redirect. A client without one uses a redirect flow, in which the authorization endpoint returns a short-lived `software_statement_code` that the client redeems using a new token endpoint grant. Either way, a completed decision returns a statement and a pending decision uses Deferred Token Response and polling. The statement never appears in an authorization response URL.
 
 The issued statement is presented at registration or at runtime, or published for servers to pull; the companion specification defines the artifact, its validation, and its consumption.
 
@@ -116,8 +114,8 @@ This specification supplies the missing issuance protocol. The artifact itself, 
 
 A client identified by its {{CIMD}} URL obtains a statement through either:
 
-* a redirect flow, using `response_type=software_statement_code` and the `urn:ietf:params:oauth:grant-type:software-statement` redemption grant; or
-* OAuth token exchange, when it already holds an initial access token authorizing issuance or a statement to renew ({{token-exchange-profile}}).
+* OAuth token exchange, when it already holds an initial access token authorizing issuance or a statement to renew ({{token-exchange-profile}}); or
+* a redirect flow, using `response_type=software_statement_code` and the `urn:ietf:params:oauth:grant-type:software-statement` redemption grant, when it holds neither.
 
 The flow concerns client establishment, not authorization to access a protected resource. Consequently, a software statement request cannot be combined with `scope`, `resource`, `authorization_details`, or an access-token-producing response type.
 
@@ -198,7 +196,7 @@ Metadata Digest:
 
 # Protocol Overview
 
-A client initiates the redirect flow at the authorization endpoint and redeems the resulting software statement code at the token endpoint. The issuer either completes the decision synchronously or defers it under {{DTR}}. A client that already holds an initial access token authorizing issuance instead uses token exchange, without a user agent ({{token-exchange-profile}}).
+A client that already holds an initial access token authorizing issuance, or a statement to renew, uses token exchange at the token endpoint, without a user agent ({{token-exchange-profile}}). Renewal by prior statement authenticates the reviewed client itself, with a key its reviewed document carries ({{renewal}}): a public client, which holds no such key, cannot renew this way, and a publisher's backend acting for a client is not a party this specification authenticates, so issuance it authorizes on a client's behalf would need a protocol of its own. A client without such a credential initiates the redirect flow at the authorization endpoint and redeems the resulting software statement code at the token endpoint. Either way, the issuer completes the decision synchronously or defers it under {{DTR}}.
 
 The flow has four elements:
 
@@ -309,6 +307,76 @@ Byte identity deliberately detects serialization-only changes. A digest mismatch
 An issuance source SHOULD publish keys by reference through `jwks_uri` rather than inline through `jwks`. Rotation behind a stable URI leaves the document and digest unchanged; inline rotation changes both, so the attested keys no longer match the current document and a new statement is needed. The document carries either the key location or the inline keys, and the digest binds whichever it is. The convenience cuts both ways: rotation invisible to the digest means key-host compromise is also invisible to it, and where that key is the runtime proof under {{STATEMENT}} the compromise substitutes the presenter as well; {{STATEMENT}} weighs the trade, and an issuer serving theft-sensitive deployments attests `jwks` inline instead.
 
 {{CIMD}} permits a document to carry a `software_statement` member, and this specification places no requirement on whether a publisher does so. An issuing authorization server evaluates the document as served and MUST NOT refuse a document because it carries the member. A statement issued under {{STATEMENT}} is the one the client presents, and a consumer ignores any statement embedded in the reviewed document; refusing to issue over such a document would instead leave a client that published its statement unable to renew it for the life of the identifier.
+
+# Token Exchange Profile {#token-exchange-profile}
+
+A software statement request asks the authorization server to make a new issuance decision. A client that already holds a token carrying issuance authority MAY instead exchange that token for a statement using OAuth 2.0 Token Exchange {{RFC8693}}, a pattern used by existing ecosystems ({{UK-OPEN-BANKING}}, {{AU-CDR}}). Support is advertised through `software_statement_subject_token_types_supported` ({{authorization-server-metadata}}).
+
+The client sends a token exchange request as defined in Section 2.1 of {{RFC8693}} with:
+
+`grant_type`:
+: REQUIRED. The value MUST be `urn:ietf:params:oauth:grant-type:token-exchange`.
+
+`requested_token_type`:
+: REQUIRED. The value MUST be `urn:ietf:params:oauth:token-type:software-statement`.
+
+`subject_token` and `subject_token_type`:
+: REQUIRED. One of two subject tokens, according to what the client is asking for:
+
+  * **First issuance.** An initial access token: an authorization credential issued out of band by this authorization server that pre-authorizes software statement issuance, analogous to the initial access token of {{RFC7591}}, presented with a `subject_token_type` of `urn:ietf:params:oauth:token-type:access_token`. The credential MUST be bound to the request's `client_id`, exactly or through a client identifier namespace, as below. It is deployment-defined: this profile standardizes the exchange, not the credential, and `software_statement_subject_token_types_supported` ({{authorization-server-metadata}}) is what tells a client which types an issuer accepts.
+  * **Renewal.** A software statement this authorization server previously issued for the same `sub`, presented with a `subject_token_type` of `urn:ietf:params:oauth:token-type:software-statement` ({{renewal}}).
+
+An initial access token presented under this profile MUST be:
+
+* time limited;
+* limited to the issuing authorization server;
+* bound to an exact client identifier URL or an explicitly authorized client identifier namespace; and
+* of at least 128 bits of entropy, when opaque.
+
+The initial access token is subject to the following:
+
+* A reusable one MUST be sender-constrained to a client key, for example through DPoP or mTLS, and the authorization server MUST verify that binding against the key the exchange request proves; a bearer one MUST be single-use.
+* It SHOULD be integrity protected and kept confidential in transit and at rest, and MAY further restrict audiences or metadata.
+* The authorization server MUST enforce every restriction the credential carries and MUST prevent replay beyond its permitted number of uses.
+
+A use is consumed when the authorization server commits to an outcome, whether it issues a statement, creates a deferral, or denies issuance, and concurrent presentations of a single-use credential MUST NOT both be committed. Once a deferral exists, the client recovers the outcome by polling with the deferral code rather than by presenting the credential again.
+
+A DPoP proof on the exchange constrains any resulting deferral; it does not authenticate the presenter or protect the subject token (Section 3 of {{RFC9449}}). The initial access token therefore needs its own sender constraint or single-use restriction.
+
+The exchange is evaluated against current metadata. The authorization server MUST obtain and validate the Client ID Metadata Document and MUST bind a fresh metadata snapshot ({{metadata-snapshot}}) and the requested audience before returning either the software statement or a deferral code. The statement's claims derive from that snapshot. An authorization server that recorded the metadata digest of a prior issuance for this `client_id` MAY compare it against the fresh snapshot and treat a change as an input to issuance policy.
+
+Issuance policy determines whether an initial access token authorizes only the request or issuance itself. The result is:
+
+* a software statement token response ({{software-statement-response}}) on success;
+* a {{DTR}} deferred token response from a deferred issuer, followed by polling, when processing cannot complete immediately ({{deferred-processing}}); or
+* the terminal denial of {{terminal-denial}} when issuance policy denies the exchange.
+
+`client_id`:
+: REQUIRED. The client identifier URL described in {{client-identity}}.
+
+`audience`:
+: OPTIONAL. The requested audience described in {{authorization-request}}. The same syntax, validation, and narrowing rules apply. On renewal ({{renewal}}), the subject statement's `aud` stands in for the requested audience where the request carries none, and bounds it where it does, so a replacement is never broader than the statement it replaces.
+
+`completion_mode`:
+: As described in {{software-statement-code-redemption}}.
+
+The request MUST NOT contain `actor_token` or `actor_token_type`, nor the `scope`, `resource`, or `authorization_details` parameters prohibited by {{prohibited-parameters}}.
+
+The client authenticates according to {{client-identity}}, using an assertion-based method such as `private_key_jwt` {{RFC7521}} {{RFC7523}} where its document specifies one, and the sender-constraint rules there apply to the exchange; the polling rules of {{deferred-processing}} govern any resulting deferral.
+
+The authorization server MUST validate the subject token before retrieving client-controlled metadata or enqueueing any processing. An invalid or revoked subject token, one that has expired other than a prior software statement accepted under {{renewal}}, or one that does not authorize issuance for the presented `client_id`, MUST result in `invalid_request`, as Section 2.2.2 of {{RFC8693}} requires for a subject token that is invalid or unacceptable under policy. An unacceptable requested audience results in `invalid_target` {{RFC8693}}.
+
+## Renewal {#renewal}
+
+A client renews by presenting its current or most recent software statement as the subject token. The authorization server MUST verify that it issued the statement, that the statement's `sub` equals the request's `client_id`, and that the client authenticated with a key carried both by the document the statement's `cimd_digest` names and by the current document. A key the publisher has removed since review cannot renew, and neither can one added since; a client rotating keys inline renews while its document carries the old key and the new one. For a document naming `jwks_uri`, both carry the same location, so the binding is to whatever that location serves ({{STATEMENT}}). An issuer offering renewal therefore retains the octets of each document it issues a statement over. That authentication is the holder binding: a statement is otherwise a bearer artifact, and without it whoever held a copy could renew. A public client holds no such key and cannot renew this way; it obtains a replacement through the redirect flow.
+
+A replacement carries the subject statement's `aud_tenant` while the decision is still confined to that tenant. An issuer whose tenants are independently trusted reviewing authorities issues under a distinct `iss` for each ({{STATEMENT}}), so a replacement is matched to the statement it replaces by `iss` and `sub`.
+
+An issuer that publishes status MUST NOT accept as subject token a statement whose own published status is other than `VALID`. Renewing a statement it has withdrawn would reissue the decision that withdrawal ended.
+
+The authorization server MAY accept a statement that has expired, and SHOULD bound how long after expiry it will do so, since a client absent for an extended period is asking to be re-established rather than renewed. Where the current document's digest equals the subject statement's `cimd_digest`, whether renewal requires fresh review is issuer policy. Where it differs, the issuer MUST apply the decision it would apply to a first issuance for that document, and MUST NOT renew on the strength of the prior statement alone: a changed document is a new trust state ({{metadata-snapshot}}), and renewal by whoever can change it would otherwise launder the change into the issuer's signature.
+
+Renewal needs no credential beyond the statement the client already holds, which is what keeps automated renewal from depending on an out-of-band credential outliving every statement it renews ({{security-considerations}}).
 
 # Software Statement Authorization Request {#authorization-request}
 
@@ -464,76 +532,6 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3A
   client-assertion-type%3Ajwt-bearer
   &client_assertion=eyJhbGciOiJFUzI1NiIsImtpZCI6ImNsaWVudC0xIn0...
 ~~~
-
-# Token Exchange Profile {#token-exchange-profile}
-
-A software statement request asks the authorization server to make a new issuance decision. A client that already holds a token carrying issuance authority MAY instead exchange that token for a statement using OAuth 2.0 Token Exchange {{RFC8693}}, a pattern used by existing ecosystems ({{UK-OPEN-BANKING}}, {{AU-CDR}}). Support is advertised through `software_statement_subject_token_types_supported` ({{authorization-server-metadata}}).
-
-The client sends a token exchange request as defined in Section 2.1 of {{RFC8693}} with:
-
-`grant_type`:
-: REQUIRED. The value MUST be `urn:ietf:params:oauth:grant-type:token-exchange`.
-
-`requested_token_type`:
-: REQUIRED. The value MUST be `urn:ietf:params:oauth:token-type:software-statement`.
-
-`subject_token` and `subject_token_type`:
-: REQUIRED. One of two subject tokens, according to what the client is asking for:
-
-  * **First issuance.** An initial access token: an authorization credential issued out of band by this authorization server that pre-authorizes software statement issuance, analogous to the initial access token of {{RFC7591}}, presented with a `subject_token_type` of `urn:ietf:params:oauth:token-type:access_token`. The credential MUST be bound to the request's `client_id`, exactly or through a client identifier namespace, as below. It is deployment-defined: this profile standardizes the exchange, not the credential, and `software_statement_subject_token_types_supported` ({{authorization-server-metadata}}) is what tells a client which types an issuer accepts.
-  * **Renewal.** A software statement this authorization server previously issued for the same `sub`, presented with a `subject_token_type` of `urn:ietf:params:oauth:token-type:software-statement` ({{renewal}}).
-
-An initial access token presented under this profile MUST be:
-
-* time limited;
-* limited to the issuing authorization server;
-* bound to an exact client identifier URL or an explicitly authorized client identifier namespace; and
-* of at least 128 bits of entropy, when opaque.
-
-The initial access token is subject to the following:
-
-* A reusable one MUST be sender-constrained to a client key, for example through DPoP or mTLS, and the authorization server MUST verify that binding against the key the exchange request proves; a bearer one MUST be single-use.
-* It SHOULD be integrity protected and kept confidential in transit and at rest, and MAY further restrict audiences or metadata.
-* The authorization server MUST enforce every restriction the credential carries and MUST prevent replay beyond its permitted number of uses.
-
-A use is consumed when the authorization server commits to an outcome, whether it issues a statement, creates a deferral, or denies issuance, and concurrent presentations of a single-use credential MUST NOT both be committed. Once a deferral exists, the client recovers the outcome by polling with the deferral code rather than by presenting the credential again.
-
-A DPoP proof on the exchange constrains any resulting deferral; it does not authenticate the presenter or protect the subject token (Section 3 of {{RFC9449}}). The initial access token therefore needs its own sender constraint or single-use restriction.
-
-The exchange is evaluated against current metadata. The authorization server MUST obtain and validate the Client ID Metadata Document and MUST bind a fresh metadata snapshot ({{metadata-snapshot}}) and the requested audience before returning either the software statement or a deferral code. The statement's claims derive from that snapshot. An authorization server that recorded the metadata digest of a prior issuance for this `client_id` MAY compare it against the fresh snapshot and treat a change as an input to issuance policy.
-
-Issuance policy determines whether an initial access token authorizes only the request or issuance itself. The result is:
-
-* a software statement token response ({{software-statement-response}}) on success;
-* a {{DTR}} deferred token response from a deferred issuer, followed by polling, when processing cannot complete immediately ({{deferred-processing}}); or
-* the terminal denial of {{terminal-denial}} when issuance policy denies the exchange.
-
-`client_id`:
-: REQUIRED. The client identifier URL described in {{client-identity}}.
-
-`audience`:
-: OPTIONAL. The requested audience described in {{authorization-request}}. The same syntax, validation, and narrowing rules apply. On renewal ({{renewal}}), the subject statement's `aud` stands in for the requested audience where the request carries none, and bounds it where it does, so a replacement is never broader than the statement it replaces.
-
-`completion_mode`:
-: As described in {{software-statement-code-redemption}}.
-
-The request MUST NOT contain `actor_token` or `actor_token_type`, nor the `scope`, `resource`, or `authorization_details` parameters prohibited by {{prohibited-parameters}}.
-
-The client authenticates according to {{client-identity}}, using an assertion-based method such as `private_key_jwt` {{RFC7521}} {{RFC7523}} where its document specifies one, and the sender-constraint rules there apply to the exchange; the polling rules of {{deferred-processing}} govern any resulting deferral.
-
-The authorization server MUST validate the subject token before retrieving client-controlled metadata or enqueueing any processing. An invalid or revoked subject token, one that has expired other than a prior software statement accepted under {{renewal}}, or one that does not authorize issuance for the presented `client_id`, MUST result in `invalid_request`, as Section 2.2.2 of {{RFC8693}} requires for a subject token that is invalid or unacceptable under policy. An unacceptable requested audience results in `invalid_target` {{RFC8693}}.
-
-## Renewal {#renewal}
-
-A client renews by presenting its current or most recent software statement as the subject token. The authorization server MUST verify that it issued the statement, that the statement's `sub` equals the request's `client_id`, and that the client authenticated with a key carried both by the document the statement's `cimd_digest` names and by the current document. A key the publisher has removed since review cannot renew, and neither can one added since; a client rotating keys inline renews while its document carries the old key and the new one. For a document naming `jwks_uri`, both carry the same location, so the binding is to whatever that location serves ({{STATEMENT}}). An issuer offering renewal therefore retains the octets of each document it issues a statement over. That authentication is the holder binding: a statement is otherwise a bearer artifact, and without it whoever held a copy could renew. A public client holds no such key and cannot renew this way; it obtains a replacement through the redirect flow.
-
-A replacement carries the subject statement's `aud_tenant` while the decision is still confined to that tenant. An issuer whose tenants are independently trusted reviewing authorities issues under a distinct `iss` for each ({{STATEMENT}}), so a replacement is matched to the statement it replaces by `iss` and `sub`.
-
-An issuer that publishes status MUST NOT accept as subject token a statement whose own published status is other than `VALID`. Renewing a statement it has withdrawn would reissue the decision that withdrawal ended.
-
-The authorization server MAY accept a statement that has expired, and SHOULD bound how long after expiry it will do so, since a client absent for an extended period is asking to be re-established rather than renewed. Where the current document's digest equals the subject statement's `cimd_digest`, whether renewal requires fresh review is issuer policy. Where it differs, the issuer MUST apply the decision it would apply to a first issuance for that document, and MUST NOT renew on the strength of the prior statement alone: a changed document is a new trust state ({{metadata-snapshot}}), and renewal by whoever can change it would otherwise launder the change into the issuer's signature.
-
-Renewal needs no credential beyond the statement the client already holds, which is what keeps automated renewal from depending on an out-of-band credential outliving every statement it renews ({{security-considerations}}).
 
 # Deferred Processing {#deferred-processing}
 
