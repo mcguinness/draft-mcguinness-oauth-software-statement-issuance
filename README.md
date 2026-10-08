@@ -48,7 +48,7 @@ The repository also hosts "Shared Signals Events for CIMD Software Statements", 
 
 * [OAuth Client ID Metadata Document](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/) (normative dependency)
 * [Token Status List](https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list/) (normative dependency)
-* [Deferred Token Response](https://datatracker.ietf.org/doc/draft-gerber-oauth-deferred-token-response/) (normative dependency)
+* [Deferred Token Response](https://datatracker.ietf.org/doc/draft-ietf-oauth-deferred-token-response/) (normative dependency, OAuth working group draft)
 * [OpenID Federation 1.0](https://openid.net/specs/openid-federation-1_0.html) (composition sketched above)
 * [OAuth 2.0 Client Instance Assertion](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-client-instance-assertion/) (instance layer; composes with this draft)
 * [OAuth Identity Assertion Trust Framework](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-id-assertion-framework/) (issuer trust generalization)
