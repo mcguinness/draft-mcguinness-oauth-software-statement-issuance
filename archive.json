@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2026-10-06T05:08:07.349564+00:00",
+  "timestamp": "2026-10-08T04:45:47.588415+00:00",
   "repo": "mcguinness/draft-mcguinness-oauth-software-statement-issuance",
   "labels": [
     {
@@ -50,5 +50,90 @@
     }
   ],
   "issues": [],
-  "pulls": []
+  "pulls": [
+    {
+      "number": 1,
+      "id": "PR_kwDOTdw2S88AAAABHA5YDQ",
+      "title": "Review round 2026-10-06: consistency fixes across all three drafts",
+      "url": "https://github.com/mcguinness/draft-mcguinness-oauth-software-statement-issuance/pull/1",
+      "state": "MERGED",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "A review round across all three drafts. The review used two cold working-group reviewers (one for the statement draft, one for issuance and signals), a cold implementer walking four roles, three reference verifiers, and a full read of the rendered text. Every finding was checked against the draft text before being applied. There is one commit per finding, so any of them can be dropped on its own.\n\nThe branch also carries two commits made earlier to `main` and not yet pushed: babedf0 (what `aud_tenant` does not bind) and 6535b77 (showing and bounding the tenant an approval confines a statement to).\n\n## High\n\n1. **Expired registration had three error answers.**\n   - Before: \u00a75.1 and \u00a75.2 gave `unauthorized_client` at the authorization and PAR endpoints, while \u00a76.6 and \u00a710 gave `invalid_client` \"at every endpoint\".\n   - Now: `invalid_client` at the token and PAR endpoints, and `statement_required` at the authorization endpoint. \u00a710 already reasons that a client should learn it needs a statement, and the recovery path is the same (deliver a replacement through PAR).\n2. **Expired statement at presentation.** Table 1 gave `invalid_client` but the \u00a710 prose gave `statement_required`. It is now `statement_required`.\n3. **Replacement delivery.** \u00a75.2 re-derives a registration's metadata from the replacement, while \u00a76.6 said a delivery \"does not otherwise alter the registration\". \u00a76.6 now follows \u00a75.2.\n4. **Default audience.**\n   - Before: statement \u00a73 told issuers to name an audience, issuance Privacy told them to restrict it only where they mean to limit reach, and issuance \u00a75 forbade adding an audience the client didn't request.\n   - Now: an issuer can require an audience, rejecting a request without one with `invalid_target` (RFC 8707 covers a missing target). On renewal, the prior `aud` is both the default and the ceiling.\n5. **`iat` watermark at a multi-tenant consumer.** It is now kept per consumer tenant, so statements an issuer makes for different tenants don't supersede each other.\n6. **Per-instance registration.** \u00a77 said software whose instances hold their own keys \"registers per instance\", which \u00a75's document-only rule forbids. That case now points to the endorsement extension.\n7. **DPoP nonce.** A `use_dpop_nonce` challenge no longer consumes the software statement code. Before, any server requiring nonces broke public-client issuance.\n8. **Key compartments.**\n   - A consumer accepts any key in the issuer's JWK Set for statements. A key there that signs the status list or events can therefore also sign statements; both drafts now say so.\n   - Signals now verifies events with keys from the SSF Transmitter configuration. That location must differ from the issuer's own, and a receiver can check this.\n\n## Medium and low\n\n- **Statement:**\n  - Tenant and status claims are now recorded with what the statement governs.\n  - SUSPENDED status now follows configured policy everywhere.\n  - The presentation order is stated as processing performs it.\n  - A runtime digest mismatch now has defined behavior.\n  - Public clients are no longer promised a document key.\n  - The deployment model now says which decision a request carries when two issuers govern a client.\n  - Missing error codes are named, and replacements get the same audience rule everywhere.\n  - Editorial fixes: the definitions list, the table header, and several cross-references.\n- **Issuance:**\n  - Renewal is listed among the ways to obtain a replacement, and it keeps `tenant` and `aud_tenant`.\n  - The snapshot is re-bound on any digest change.\n  - The polling example now uses `private_key_jwt` with a URL `client_id`.\n  - Who can cancel a deferral by replaying its code is bounded.\n  - The initial access token binding rules now agree.\n  - DPoP is required at redemption wherever `dpop_jkt` was sent.\n  - Each request failure has a named error.\n  - A registry change that DTR already requests is dropped.\n- **Signals:**\n  - An event is never grounds for refusal; receivers fetch afresh and keep the copy they hold until that succeeds.\n  - A transmitter sends an event only once the changed list is retrievable.\n  - Streams are scoped by `aud`.\n  - `event_timestamp` and Status List terms are described accurately.\n\n## Normative changes to look at\n\n- **Deliberately removed:**\n  - The registration grace-period MAY (\u00a75.2 restoration replaces it).\n  - \u00a76.4's MAY to accept a changed document or narrow the policy, folded into a single local-policy permission.\n  - The signals MAY to refuse while a fetch is pending.\n  - The signals MAY to put event keys in the issuer's key set.\n- **Design change:** the source of event signing keys in signals.\n- **Added:**\n  - A MUST to verify the initial access token's key binding.\n  - A nonce challenge doesn't consume the code.\n  - A transmitter MUST NOT send an event before the list is retrievable.\n  - A MAY to limit replay revocation to replays that pass PKCE.\n\n## Not applied\n\n- **PUSHED-DCR** has expired; it is left as an informative reference.\n- **An example event** wasn't added: its type URN plus indentation exceeds the 72-column figure limit.\n- **Deferred:** a normative audit of requirements no other party can observe, a terminology pass, and DTR's status as an individual draft and normative dependency.\n- **Open tension:** \u00a75.3 still calls a runtime digest mismatch \"a policy input rather than an automatic failure\". The new \u00a76.4 is consistent with that reading, but a reader may stumble on it.\n\n## Checks\n\n- All three drafts build after every commit.\n- idnits warnings are identical to the pre-round versions.\n- The before-and-after BCP 14 sentence diff shows only the changes listed above.\n- Dependency claims were verified against CIMD-02, DTR-00, Token Status List-21, IDJAG-04, OIDC Enterprise, SSF 1.0, CAEP, and the RFC sections cited. IANA entries were checked against the live registries.\n",
+      "createdAt": "2026-10-06T23:12:24Z",
+      "updatedAt": "2026-10-06T23:28:34Z",
+      "baseRepository": "mcguinness/draft-mcguinness-oauth-software-statement-issuance",
+      "baseRefName": "main",
+      "baseRefOid": "077bf371506f70fb19ea5f99dacd417776fcc5a6",
+      "headRepository": "mcguinness/draft-mcguinness-oauth-software-statement-issuance",
+      "headRefName": "review-2026-10-06",
+      "headRefOid": "632f5bc5933069a33e2d2bcd0a0ac87de6ed24de",
+      "closedAt": "2026-10-06T23:28:34Z",
+      "mergedAt": "2026-10-06T23:28:34Z",
+      "mergedBy": "mcguinness",
+      "mergeCommit": {
+        "oid": "632f5bc5933069a33e2d2bcd0a0ac87de6ed24de"
+      },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 2,
+      "id": "PR_kwDOTdw2S88AAAABHP7WoQ",
+      "title": "Critique round 2026-10-07: statement key set, consumption limits, review-only loopback, MCP sketch",
+      "url": "https://github.com/mcguinness/draft-mcguinness-oauth-software-statement-issuance/pull/2",
+      "state": "MERGED",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "This PR applies a design critique of all three drafts. It is a substance review, not the consistency round in #1. Three cold critics read the drafts:\n- a skeptical working-group participant, arguing necessity and shape against CIMD, ABCA, approval-based DCR and OpenID Federation, using their current text;\n- an OAuth security reviewer, who built a threat model and ranked attacks;\n- the operator of an MCP authorization server, grounded in the MCP 2026-07-28 authorization spec and CIMD-02.\n\nTheir load-bearing claims were checked against the drafts, and the MCP and Enterprise-Managed Authorization facts against the live specs. There is one commit per finding.\n\n## Decisions taken\n\n- **Registration stays in the statement draft**, with targeted fixes. The alternative was to move registration consumption and the validity model together into a companion draft. They can't be separated: the validity model is the fix for registrations that outlive their review.\n- **Loopback public clients get review-only presentation** rather than refusal.\n- **The `iat` watermark stays**, with guidance that instances share one current statement.\n\n## Changes\n\n### Statement draft\n\n- **Separate statement key set.**\n  - New AS metadata `software_statement_jwks_uri` holds statement signing keys only.\n  - Consumers verify statements against it, and status lists against `jwks_uri`.\n  - This closes the downgrade at RFC 7591 servers that don't implement the profile; a new \"Servers That Do Not Implement This Specification\" section explains it.\n  - It also means a status-list key can no longer sign statements.\n- **`consumable_at` claim.** An issuer can limit a statement to `presentation` or `registration`. The name is a placeholder.\n- **Registration rule.** Registration refuses a keyless (`none`) document with a non-https redirect URI. Registration has no review-only form, because the registration is the admission.\n- **Review-only presentation.** A document with loopback or private-use redirects is presented review-only:\n  - it creates no establishment and admits nothing an unreviewed client wouldn't get;\n  - it never satisfies a \"reviewed software\" policy;\n  - it doesn't advance the watermark.\n- **No credentials on repeat registration.** An idempotent registration response never returns the registration's credentials.\n- **Withdrawal ends refresh.** A refusal record now ends refresh-based continuation regardless of local policy.\n- **Establishment bound.** Only establishments whose grant completed count toward the per-software bound. Before, anyone holding a copy of a public statement could lock legitimate installations out.\n- **Status rollback.** A server refuses an older Status List Token in place of a newer one.\n- **Retained documents.** Retained document octets are revalidated on the document's caching schedule.\n- **Customer's issuer.** A customer's own issuer is required in that customer's tenant, so a holder can't present a broader listing to evade its withdrawal.\n- **Shared statements.** Watermark guidance says instances obtain the current statement from a shared source.\n\n### Issuance draft\n\n- **Changed document on renewal.** Renewal over a changed document gets the decision a first issuance gets, so a compromise of the client's origin can't be laundered through renewal.\n- **Corrected claim.** The claim about what renewal binding protects against was false for `jwks_uri` documents; it's now accurate.\n- **Status lists.** They are signed only with `jwks_uri` keys, never statement keys, and always carry `exp`.\n- **Withdrawing superseded statements.** An issuer withdraws a statement whose replacement removed a key, redirect URI or scope.\n- **Approval screen.** It shows the client's origin as its identity and marks display metadata as client-asserted. An issuer limits approvers to enrolled publisher namespaces.\n- **DTR reference.** It now points to `draft-ietf-oauth-deferred-token-response`, the working-group adoption that replaced the Gerber draft on 2026-09-23.\n\n### Signals draft\n\n- **Key location.** The Transmitter configuration's `jwks_uri` must differ from the statement key set rather than from `jwks_uri`.\n\n### Repository\n\n- **README.** It points at the working-group DTR draft.\n- **New sketch.** `mcp-profile-sketch.md` is new and non-normative. It covers a server pulling the review (from a location the document names, or from the issuer) instead of the client carrying it, an outline of an MCP profile, and how the statement composes with MCP Enterprise-Managed Authorization.\n\n## Normative changes to look at\n\n- **Replaced on purpose:**\n  - \u00a76.3.1's rejection of loopback documents, replaced by review-only presentation;\n  - the \u00a76.5.1 refusal-record sentence, now stronger;\n  - the status-list key source, in both the statement and issuance drafts;\n  - the signals key-location rule, now aimed at the statement key set.\n- **Reworded:** every other removed BCP 14 sentence.\n- **Added:** about twenty requirements, listed above.\n\n## Not applied\n\n- **Stronger renewal fix (D4):** pinning key thumbprints at issuance, or reversing the issuance draft's SHOULD that prefers `jwks_uri`.\n- **Canonical or partial-review digest.**\n- **Trimming issuance:** cutting it down to token exchange first, with the redirect flow and DTR second.\n- **For the author:** the embedded-statement disagreement with CIMD \u00a74.3, and the document-located reference, both go to the CIMD editors.\n\n## Checks\n\n- **Builds:** all three drafts build after every commit.\n- **idnits:** warnings unchanged, except one fewer \"outdated draft\" in issuance now that DTR points at the WG draft.\n- **BCP 14 diff:** the before-and-after sentence diff shows only the changes listed above.\n",
+      "createdAt": "2026-10-08T03:39:36Z",
+      "updatedAt": "2026-10-08T03:53:26Z",
+      "baseRepository": "mcguinness/draft-mcguinness-oauth-software-statement-issuance",
+      "baseRefName": "main",
+      "baseRefOid": "632f5bc5933069a33e2d2bcd0a0ac87de6ed24de",
+      "headRepository": "mcguinness/draft-mcguinness-oauth-software-statement-issuance",
+      "headRefName": "critique-2026-10-07",
+      "headRefOid": "db08da36384235d47a8dfe3d7856c112a3735c95",
+      "closedAt": "2026-10-08T03:53:26Z",
+      "mergedAt": "2026-10-08T03:53:26Z",
+      "mergedBy": "mcguinness",
+      "mergeCommit": {
+        "oid": "db08da36384235d47a8dfe3d7856c112a3735c95"
+      },
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 3,
+      "id": "PR_kwDOTdw2S88AAAABHQFhDQ",
+      "title": "Draft the MCP Reviewed Client Software profile, with pulled statements",
+      "url": "https://github.com/mcguinness/draft-mcguinness-oauth-software-statement-issuance/pull/3",
+      "state": "MERGED",
+      "author": "mcguinness",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "This PR drafts an MCP profile of the family and defines the server-pull mechanism the profile needs. The pull mechanism is defined normatively in the statement draft.\n\n## MCP profile\n\n`mcp/reviewed-client-software.mdx`, titled \"Reviewed Client Software\", is written in the format of Enterprise-Managed Authorization in `modelcontextprotocol/ext-auth`, for proposal there. It covers the following:\n\n- **Clients.** A client publisher lists its statements at the `software_statements_uri` the client's metadata document names. MCP clients send nothing new.\n- **Authorization servers.** MCP authorization servers MUST pull and validate those statements. They take statement signing keys only from configured issuers, through `software_statement_jwks_uri`, and MUST NOT require registration.\n- **Binding the presenter:**\n  - Confidential clients authenticate with `private_key_jwt` at the token endpoint.\n  - Public clients with https redirects use PKCE plus `dpop_jkt`.\n  - Loopback desktop clients, and public clients at the token endpoint, are review-only.\n- **Tenants and errors.** Tenant resolution follows the statement draft. A `statement_required` response carries a readable `error_description`.\n- **Enterprise-Managed Authorization.** The profile composes with it on the same `jwt-bearer` request: the ID-JAG answers whether this user may use the client now, and the statement answers who reviewed the software. IDJAG-04 \u00a74.4.1 requires the ID-JAG's `client_id` to match the authenticated client, so the ID-JAG, the request and the statement's `sub` all name the metadata document URL.\n- **Facts checked.** The MCP facts it relies on were checked against the live sources:\n  - the 2026-07-28 authorization spec deprecates DCR;\n  - the spec's example client is public with loopback redirects;\n  - Enterprise-Managed Authorization is an ID-JAG profile using `jwt-bearer` with a CIMD `client_id`.\n\n## Statement draft changes (normative)\n\n- **New \"Pulled Statements\" section.** It defines the `software_statements_uri` client metadata member, which MUST use https and returns a JSON object holding a `software_statements` array. It also says how a server fetches from it, filters and validates the results, and binds the presenter:\n  - The server considers only statements whose `sub` is the document URL, that validate, whose `consumable_at` names `presentation`, and whose `cimd_digest` matches the fetched document.\n  - The watermark still applies, and a statement the server does not apply never advances it.\n  - A retrieval failure is never treated as a withdrawal.\n  - On refresh, the server pulls again.\n- **Behaviour change.** A pulled statement is usable at the authorization endpoint without PAR, because it never travels in a request. The public-client binding and review-only rules of \u00a76.3.1 now apply there too. The profile depends on this.\n- **New AS metadata.** `software_statement_pull_supported`.\n- **IANA.** Registrations for `software_statements_uri` (DCR Metadata registry) and `software_statement_pull_supported` (AS Metadata registry).\n- **Extension points.** The extension point that pull fills is retired. The issuance draft points to pulled statements as the way to publish an issued statement.\n\n## Also\n\n- **README.** Gains an \"MCP Profile\" entry.\n- **`mcp-profile-sketch.md`.** Its open questions now point to the defined member and the drafted profile.\n\n## For the author\n\n- **CIMD coordination.** `software_statements_uri` is a member that CIMD documents carry, now registered by the statement draft. Raise it with the CIMD editors before -00, alongside the embedded-statement question from CIMD \u00a74.3.\n- **Length.** The statement draft is now 53 pages. idnits reports a new RAGGED_RIGHT warning, which comes from the page footers once a draft passes 50 pages and is not a content defect.\n\n## Checks\n\n- All drafts build after every commit.\n- `git diff --check` is clean.\n- The normative diff shows only the intended change: the PAR rule for authorization requests now exempts pulled statements.\n- Other idnits warnings are unchanged.\n",
+      "createdAt": "2026-10-08T04:04:20Z",
+      "updatedAt": "2026-10-08T04:13:23Z",
+      "baseRepository": "mcguinness/draft-mcguinness-oauth-software-statement-issuance",
+      "baseRefName": "main",
+      "baseRefOid": "db08da36384235d47a8dfe3d7856c112a3735c95",
+      "headRepository": "mcguinness/draft-mcguinness-oauth-software-statement-issuance",
+      "headRefName": "mcp-profile",
+      "headRefOid": "4d1af9f382df4ea3ebe5e362777dbb309fa0812c",
+      "closedAt": "2026-10-08T04:13:23Z",
+      "mergedAt": "2026-10-08T04:13:23Z",
+      "mergedBy": "mcguinness",
+      "mergeCommit": {
+        "oid": "4d1af9f382df4ea3ebe5e362777dbb309fa0812c"
+      },
+      "comments": [],
+      "reviews": []
+    }
+  ]
 }
