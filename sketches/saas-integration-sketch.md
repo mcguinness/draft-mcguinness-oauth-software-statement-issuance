@@ -4,7 +4,7 @@ A non-normative walkthrough of the case these drafts serve least well. One vendo
 
 The act being modelled is the customer's. An administrator approves the vendor once, at the enterprise root their organization already operates and the platform is already configured with, and every platform that trusts that root honours it. Whether the platform's own marketplace has separately reviewed and listed the integration is the platform's business. From the customer's side it is implementation detail.
 
-**A ruling this sketch assumes.** The customer's permission is a decision these drafts deliberately do not carry, and the usual answer, that the customer's identity provider conveys it by issuing an assertion, is unavailable here because no user is present. This sketch has the customer's own root carry it, through OpenID Federation machinery the customer already operates. The family gains no artifact and the request carries no second review, which is the shape that was considered and rejected. Whether that distinction holds is the authors' call, and everything below depends on it.
+**Two ways to carry the customer's decision.** The usual answer, that the customer's identity provider conveys permission by issuing an assertion, is unavailable here because no user is present. The statement draft has an answer of its own: the customer operates a reviewer and issues a statement about the vendor's software, confined to the platform tenant by `aud_tenant`, and the platform requires that reviewer's statement for the vendor's software in that tenant. Its cost shows in exactly this case: the customer's decision travels through the vendor it constrains, which holds the statement and presents it. This sketch works through the other answer, in which the customer's own root carries the decision through OpenID Federation machinery the customer already operates, and the platform fetches it, so the vendor carries nothing. Both leave the same gap, which of the vendor's own customers a request is for, and step 3 has to close it. [The two answers compared](#the-two-answers-compared) sets out the trade; which one a deployment should prefer is the authors' call.
 
 ## What is broken today
 
@@ -60,15 +60,15 @@ This is the whole of the customer's action, and it is the only artifact the cust
 
 The integrating SaaS makes a token request to the platform using client credentials or an assertion grant, since no user is present.
 
-The platform, for its own reasons, satisfies itself that this software is admissible: it validates the marketplace statement the client presents, resolves the document at `sub`, and compares the digest. None of that is the customer's concern.
+The platform, for its own reasons, satisfies itself that this software is admissible: it validates the marketplace statement the client presents or the platform pulls, resolves the document at `sub`, and compares the digest. None of that is the customer's concern.
 
 Then it answers the customer's question. The request names the account in the vendor's product that it acts for. The platform resolves which of its own tenants the request is for, authenticates to that customer's root, and fetches the vendor's mark, querying by subject rather than enumerating the customer's vendors. The root's endpoint knows nothing about accounts, so the comparison is the platform's: the account the mark names must be the account the request names. It then evaluates the request against the reviewed document, whose `scope` is the ceiling on what may be requested.
 
-Two rules govern this, one for each side. The statement draft carries the first: the tenant the platform decides against and the tenant that scopes what it issues must be the same, and neither may be selected by a value the client supplies. That keeps an approval for one platform tenant from being spent in another. The second is this sketch's own: the vendor account the request names must be the one the approval names. That keeps one of the vendor's customers from reaching another customer's data on that customer's approval. Of the two attacks it is the cheaper one, since it needs only an account at the vendor and the victim's platform tenant identifier.
+Two rules govern this, one for each side. The statement draft carries the first: the tenant the platform decides against and the tenant that scopes what it issues must be the same, and neither may be selected by a value the client supplies. That keeps an approval for one platform tenant from being spent in another. The second is this sketch's own: the vendor account the request names must be the one the approval names. That keeps one of the vendor's customers from reaching another customer's data on that customer's approval. Of the two attacks it is the cheaper one, since it needs only an account at the vendor and the victim's platform tenant identifier. The statement draft's tenant-confusion considerations name the same gap and leave it to the consumer, or to instance identity.
 
 The vendor account is still the vendor's word, and nothing else could supply it. The second rule therefore defends against the vendor's customers, not against the vendor. With one credential for every customer, a compromised or careless vendor backend can name any account it holds. The approval could also bind a key the vendor generated for this customer alone, proven on every request made for it. The vendor still holds every such key, so this does not make the vendor trustworthy. What it does is limit one bug or one stolen key to one customer, which recovers what the per-customer refresh token gave for free.
 
-The platform pulls rather than having the client present the customer's trust mark. Presenting it would put two review artifacts from two authorities on one request, which is the arrangement this family rejected, and it would also make the customer's decision travel through the vendor it constrains.
+The platform pulls rather than having the client present the customer's trust mark. Presenting it beside the marketplace statement would put two review artifacts from two authorities on one request, which the family avoids: where a customer's decision is required, the statement draft has the request carry the customer's statement in place of the listing. Presenting it at all would make the customer's decision travel through the vendor it constrains, which is the cost of the in-family answer that this one avoids.
 
 ### 4. Withdrawal, and the reason to do it this way
 
@@ -99,6 +99,19 @@ sequenceDiagram
     B-->>A: Refused
 ```
 
+## The two answers compared
+
+| | The customer's statement (in the drafts) | The customer's trust mark (this sketch) |
+| --- | --- | --- |
+| Who carries it | The vendor, which presents it; publishing it would disclose the customer's approval to anyone | Nobody; the platform fetches it from the customer's root |
+| Confined to one platform tenant by | `aud_tenant` | `aud_tenant`, borrowed |
+| What the platform configures | The customer's reviewer, required for the vendor's software in that tenant | The customer's root, as a trust anchor |
+| Withdrawal | Status at the customer's reviewer, or non-renewal | Revocation at the customer's root |
+| Names the vendor's own customer | No | Can, through an unregistered claim |
+| Defined today | Yes | Endpoint mechanics only; no authorization model for who may ask |
+
+The in-family answer is specified and needs nothing from Federation. This sketch's answer keeps the customer's decision off the vendor's path and gives it room to name the vendor account, at the price of an authorization model that does not exist yet.
+
 ## What each part relies on
 
 | Part | Where it comes from |
@@ -106,6 +119,7 @@ sequenceDiagram
 | The customer's root as an authority the platform already holds | [The Federation sketch](openid-federation-sketch.md), Profile A |
 | The customer's approval as a Trust Mark they issue and revoke | [The Federation sketch](openid-federation-sketch.md), Profile B |
 | The platform's own admission control | Statement draft, The Software Statement; registration draft, Consumption at Registration |
+| The in-family alternative for the customer's decision | Statement draft, `aud_tenant` claim and Issuer Trust Establishment |
 | Acting with no user present | Statement draft, Runtime Presentation, on the client credentials or assertion grants |
 | The document's `scope` as a ceiling | Statement draft, Reviewed Metadata |
 | The vendor account, in the approval and in the request | Nothing yet; see below |
@@ -119,9 +133,9 @@ sequenceDiagram
 
 For a customer's commercial approvals that is the wrong way round. Which vendors an enterprise has approved is competitively sensitive and useful to an attacker mapping its estate. A root carrying these approvals therefore has to require client authentication at its trust mark endpoint, decline to publish a listing endpoint at all, and enforce a query-authorization policy the specification does not describe. All three are permitted, none is the default, and the last has no interoperable form, so two roots will do it differently.
 
-**No user means no assertion.** Everything the deployment model says about the customer's identity provider conveying permission per grant is unavailable here. That is why this case needed a third path, and why it remains the weakest scenario in the set.
+**No user means no assertion.** Everything the deployment model says about the customer's identity provider conveying permission per grant is unavailable here. That is why this case needs either the customer's own statement or a third path, and why it remains the weakest scenario in the set.
 
-**Nothing names the vendor's side.** Neither artifact has room for it. In the platform's statement, `sub` is the vendor's one client identifier URL, and `tenant` and `aud_tenant` name tenants at the issuer and at the platform. The customer's trust mark borrows `aud_tenant` and nothing else. It can carry an account claim, since Federation permits additional claims, but nothing registers one. In the request, the nearest existing carrier is a Client Instance Assertion with the vendor as instance issuer for its own accounts. That draft requires sender-constrained tokens, which a vendor calling with client credentials may not use. A plain request parameter would serve, and nothing defines one.
+**Nothing names the vendor's side.** Neither artifact has room for it. In a statement, `sub` is the vendor's one client identifier URL and `aud_tenant` names a tenant at the platform; an issuer serving several customers issues under a distinct `iss` for each rather than naming its own tenant. The customer's trust mark borrows `aud_tenant` and nothing else. It can carry an account claim, since Federation permits additional claims, but nothing registers one. In the request, the nearest existing carrier is a Client Instance Assertion with the vendor as instance issuer for its own accounts. That draft requires sender-constrained tokens, which a vendor calling with client credentials may not use. A plain request parameter would serve, and nothing defines one.
 
 **The trust mark type is an IETF URN**, `urn:ietf:params:oauth:trust-mark-type:` with a terminal segment naming the decision, registered in the IANA OAuth URI registry. Federation asks only that the identifier be collision-resistant across federations, so this satisfies it while keeping the vocabulary with the specifications that define the decisions.
 
