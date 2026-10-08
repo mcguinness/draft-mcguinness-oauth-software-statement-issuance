@@ -73,9 +73,6 @@ informative:
   CLIENT-INSTANCE:
     target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-client-instance-assertion
     title: "OAuth 2.0 Client Instance Assertion"
-  OIDC-ENTERPRISE:
-    target: https://openid.net/specs/openid-connect-enterprise-extensions-1_0.html
-    title: "OpenID Connect Enterprise Extensions 1.0"
   SIGNALS:
     target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-signals
     title: "Shared Signals Events for CIMD Software Statements"
@@ -100,7 +97,7 @@ This specification defines the trust configuration a consuming server keeps ({{i
 
 The same statement can also be consumed in an {{RFC7591}} registration request, where its expiry bounds the registration; {{REGISTRATION}} defines that consumption. The dependency runs one way: {{REGISTRATION}} builds on this specification, and implementing this specification requires none of it.
 
-Establishment is one layer of the decision to let a client act, and this specification defines only that layer. It sits above the sender-constraint proof that identifies the presenter and the grant that carries a user's authorization, and beside a question it deliberately does not answer: whether a particular customer permits this software to operate in its tenant right now. That decision changes on the customer's clock rather than the reviewer's, and where a customer's identity provider mediates the grant it is answered continuously by whether that provider issues an assertion at all ({{identity-assertions}}). A statement answers the durable question instead: who reviewed this software, and what did they attest.
+Establishment is one layer of the decision to let a client act, and this specification defines only that layer. It sits above the sender-constraint proof that identifies the presenter and the grant that carries a user's authorization, and beside a question it deliberately does not answer: whether a particular customer permits this software to operate in its tenant right now. A tenant-scoped decision (`aud_tenant`) constrains where a review applies; it does not authorize any particular user or transaction. That decision changes on the customer's clock rather than the reviewer's, and where a customer's identity provider mediates the grant it is answered continuously by whether that provider issues an assertion at all ({{identity-assertions}}). A statement answers the durable question instead: who reviewed this software, and what did they attest.
 
 Ceasing statement renewal stops new establishment after the applicable expiry, and stops continued use of a grant where this specification requires a current statement. It does not revoke access tokens already issued, and continuation of runtime-established grants is subject to the refresh policy in {{refresh}}. These enforcement bounds are detailed in {{enforcement-bounds}}.
 
@@ -181,20 +178,17 @@ A statement says that its issuer evaluated the Client ID Metadata Document whose
 `sub`:
 : REQUIRED. The exact client identifier URL presented in the request that produced the statement.
 
-`tenant`:
-: OPTIONAL. A tenant identifier at the issuing authorization server, where that server serves more than one tenant under a single `iss`. The value MUST be opaque to consumers and unique within the issuer. The reserved values {{OIDC-ENTERPRISE}} defines for describing how an account is managed MUST NOT be used here, because they name a kind of tenant rather than a particular one, and a rule keyed on such a value would treat unrelated tenants as one. Where the claim is present, the deciding party is `iss` and `tenant` together rather than `iss` alone ({{multi-tenant-issuers}}).
-
 `aud`:
 : OPTIONAL. One or more audience identifiers restricting which authorization servers may accept the statement, each an authorization server issuer identifier as defined by {{RFC8414}}. Where the claim is present, a trusting authorization server MUST reject the statement unless one of its locally configured audience identifiers exactly matches a value in it. The corresponding constraint on an issuer, that a requested audience bounds what it may name, is stated in {{ISSUANCE}}. Where the claim is absent, the statement is unrestricted and acceptance rests on the consumer's configured trust in the issuer and its identifier scope ({{issuer-trust}}). Omitting the claim lets one review serve every server that trusts the issuer, which is the portability the artifact exists for; it also lets whoever holds a copy use it at any of them. Where `consumable_at` permits registration, a holder can always choose it, and registration requires no key. An issuer SHOULD therefore name an audience, and omit it only where it accepts that any server trusting it may register the software on the strength of a copy ({{statement-validation}}).
 
 `aud_tenant`:
-: OPTIONAL. A tenant identifier at a trusting authorization server, as {{IDJAG}} defines the claim, naming the tenant in which this statement's decision applies. A statement whose decision is confined to one tenant MUST carry it, and a trusting authorization server MUST reject a statement carrying it unless the value identifies the tenant the request belongs to. A consumer MUST NOT read its absence as meaning the statement applies in every tenant, since an issuer also omits it where the consumer is single-tenant or where the issuer does not know the identifier; a consumer that requires a tenant-scoped decision and finds no `aud_tenant` rejects the statement rather than choosing between those readings. A listing review that applies wherever its `aud` reaches carries neither this claim nor `tenant`.
+: OPTIONAL. A tenant identifier at a trusting authorization server, as {{IDJAG}} defines the claim, naming the tenant in which this statement's decision applies. A statement whose decision is confined to one tenant MUST carry it, and a trusting authorization server MUST reject a statement carrying it unless the value identifies the tenant the request belongs to. A consumer MUST NOT read its absence as meaning the statement applies in every tenant, since an issuer also omits it where the consumer is single-tenant or where the issuer does not know the identifier; a consumer that requires a tenant-scoped decision and finds no `aud_tenant` rejects the statement rather than choosing between those readings. A listing review that applies wherever its `aud` reaches carries no `aud_tenant`.
 
 `consumable_at`:
 : OPTIONAL. A JSON array naming the points at which the statement may be consumed: `registration` ({{REGISTRATION}}) and `presentation` ({{cimd-presentation}}). A trusting authorization server MUST reject a statement at a point the array does not name, treating a member it does not recognize as naming no point it serves. Where the claim is absent, the statement may be consumed only by presentation, and an issuer that means a statement to serve registration names `registration`. Registration requires no key, and a statement published for pulling is readable by anyone ({{pulled-statements}}), so a statement is usable at registration only where its issuer says so ({{statement-validation}}). A delivery renewing a registration ({{REGISTRATION}}) is consumption at registration; a refresh replacement ({{refresh}}) and a pulled statement are presentation.
 
 `iat`:
-: REQUIRED. A NumericDate value representing the time at which the software statement was issued. An issuer MUST NOT issue two statements for a given `iss` and `sub` pair, and for a given `tenant` where it carries one, with the same `iat`, and MUST ensure the value increases strictly across its signing nodes, so that the order in which it made its decisions is recoverable from the statements themselves. Consumers rely on that order when one statement replaces another ({{refresh}}, {{REGISTRATION}}). Back-dating a statement to allow for clock skew makes it unusable as a replacement.
+: REQUIRED. A NumericDate value representing the time at which the software statement was issued. An issuer MUST NOT issue two statements for a given `iss` and `sub` pair with the same `iat`, and MUST ensure the value increases strictly across its signing nodes, so that the order in which it made its decisions is recoverable from the statements themselves. Consumers rely on that order when one statement replaces another ({{refresh}}, {{REGISTRATION}}). Back-dating a statement to allow for clock skew makes it unusable as a replacement.
 
 `exp`:
 : REQUIRED. A NumericDate value representing the expiration time. A trusting authorization server MUST reject an expired statement.
@@ -295,13 +289,9 @@ A statement's portability is therefore a property other servers need rather than
 
 ## Multi-Tenant Issuers {#multi-tenant-issuers}
 
-A reviewer serving several customers is one service with several deciding parties inside it, and how it identifies itself decides whether their decisions can be told apart. Such a reviewer SHOULD issue under a distinct `iss` per tenant, which is what {{RFC8414}} discovery and the trust configuration above already assume and which needs nothing further.
+A reviewer serving several customers is one service with several deciding parties inside it, and how it identifies itself decides whether their decisions can be told apart. Where its tenants are independently trusted reviewing authorities, it MUST issue under a distinct `iss` for each. Each tenant's decisions, keys, statuses, and watermark then stand apart, and a consumer configures trust per tenant as {{issuer-trust}} describes, which {{RFC8414}} discovery already supports. A statement carries no claim naming the issuer's tenant.
 
-An issuer that instead serves several tenants under one `iss` MUST carry `tenant` in every statement it issues ({{profiles}}). Wherever this specification keys a rule on `iss` and `sub`, that key includes `tenant` for such an issuer: the `iat` uniqueness requirement of {{profiles}}, the watermark and derivation bound of {{multi-instance}}, and the matching of a replacement to the statement it replaces ({{refresh}}, {{REGISTRATION}}).
-
-Omitting it makes two customers indistinguishable. Both review the same software, so their statements share `iss` and `sub`, and the watermark treats the later as superseding the earlier: one customer's renewal invalidates another customer's review, and the second customer sees a review that expired early for no reason it can observe.
-
-Trust configuration for such an issuer records the tenants it may attest for, alongside the identifier namespaces of {{issuer-trust}}. A statement whose `tenant` falls outside that set MUST be rejected, as one whose `sub` falls outside the issuer's namespace scope is.
+Issuing for several such authorities under one `iss` makes their customers indistinguishable. Both review the same software, so their statements share `iss` and `sub`, and the watermark of {{multi-instance}} treats the later as superseding the earlier: one customer's renewal invalidates another customer's review, and the second customer sees a review that expired early for no reason it can observe.
 
 # Runtime Presentation {#cimd-presentation}
 
@@ -349,7 +339,7 @@ A pulled statement never travels in a request, so it needs no pushed authorizati
 
 Where retrieval does not complete, or no statement remains, the server proceeds as it would for a document that names no location: it applies the policy it applies to a Client ID Metadata Document client it has not reviewed, and rejects, where that policy requires reviewed software, with `temporarily_unavailable` if retrieval did not complete and `statement_required` if no statement remains. A retrieval failure is never a withdrawal. At refresh, a re-pull that does not complete or yields no replacement leaves the establishment without one: the refresh fails as {{refresh}} provides, and a reviewed grant never continues under the policy for clients the server has not reviewed.
 
-On refresh, where {{refresh}} needs a replacement for an establishment created from a pulled statement, the server pulls again and considers only statements with the recorded statement's `iss` and `sub`, and its `tenant` where the recorded statement carried one. It applies the newest of those as the replacement under that section. Where the newest is the recorded statement itself, nothing is replaced, and currency rests on that statement as {{refresh}} describes.
+On refresh, where {{refresh}} needs a replacement for an establishment created from a pulled statement, the server pulls again and considers only statements with the recorded statement's `iss` and `sub`. It applies the newest of those as the replacement under that section. Where the newest is the recorded statement itself, nothing is replaced, and currency rests on that statement as {{refresh}} describes.
 
 {{CIMD}} also permits a document to carry a `software_statement` member, from which this specification never consumes a statement ({{profiles}}). A document cannot carry a statement issued over itself, and one carrying a statement issued over an earlier version offers a review of octets no longer being served, a stale review behind current branding. Publishing at `software_statements_uri` is the form that works: the document names a location rather than a statement, and the statements there name the document.
 
@@ -406,7 +396,7 @@ A presentation refused because a bound of {{multi-instance}} is reached is rejec
 A successful presentation creates an establishment comprising the following, which is the state a server persists for the grant:
 
 * the validated `sub`;
-* the statement identity, its `iss`, `jti`, `iat`, and expiry, and its `tenant` and `status` claims where it carries them;
+* the statement identity, its `iss`, `jti`, `iat`, and expiry, and its `status` claim where it carries one;
 * the authorization server's own tenant the grant was opened for, where it hosts more than one;
 * the reviewed metadata and the digest it matched ({{effective-metadata}});
 * the issuer trust decision; and
@@ -435,7 +425,7 @@ Where the authorization server holds a refusal record for the establishment's re
 When a replacement is needed, the client presents it in the `software_statement` parameter of the refresh request, or, for an establishment created from a pulled statement, the server pulls one ({{pulled-statements}}). A statement with the recorded statement's `iss` and `jti` is not a replacement: offered again, it is rechecked as above. The replacement:
 
 * MUST validate under {{validation}}, including its audience where it carries one;
-* MUST have the recorded statement's `iss` and `sub`, and its `tenant` claim where the recorded statement carried one;
+* MUST have the recorded statement's `iss` and `sub`;
 * MUST have an `iat` later than the recorded statement's `iat`;
 * MUST name, by its `cimd_digest`, the document currently served at its `sub`, which the server confirms by retrieval or by revalidating octets it holds; and
 * MUST authorize the establishment's Proven Key ({{sender-constraint}}) or, for an establishment created under {{public-client-presentation}}, name a document that still satisfies that section.
@@ -450,7 +440,7 @@ A statement attests client software, identified by `sub`; it does not identify t
 
 One unexpired statement is therefore consumable more than once: at each trusting authorization server in its audience and, where the server registers clients ({{REGISTRATION}}) and its policy permits, in more than one registration at the same authorization server. An authorization server hosting multiple tenants resolves which tenant a request belongs to by its own means, such as a per-tenant issuer identifier or a per-tenant endpoint. This specification defines no tenant parameter, and a `client_id` that is a Client ID Metadata Document URL is the same value in every tenant. Bounds, inventories, and the watermark below are kept within whatever scope the authorization server treats as one deployment, which at a multi-tenant server is one tenant, so that statements an issuer makes for different tenants do not supersede one another.
 
-A trusting authorization server MUST retain, per `iss` and `sub` and per `tenant` where the issuer carries one ({{multi-tenant-issuers}}), the `iat` of the most recent statement it has accepted, and MUST reject a statement whose `iat` is earlier, whether it arrives as a replacement, a new registration, or a new presentation. Without a floor that spans records rather than sitting inside one, a client holding a superseded broader statement defers a narrowing by opening a fresh registration or establishment with it. The watermark is retained at least as long as the maximum statement lifetime the server honors for that issuer. Because it spans every registration and establishment, the first presentation of a replacement that establishes the client retires its predecessor for every instance of the software at that server. Instances SHOULD therefore obtain the current statement from a source they share, such as an endpoint the publisher operates or a store their deployment shares, rather than each holding a copy fixed when it was built or installed.
+A trusting authorization server MUST retain, per `iss` and `sub`, the `iat` of the most recent statement it has accepted, and MUST reject a statement whose `iat` is earlier, whether it arrives as a replacement, a new registration, or a new presentation. Without a floor that spans records rather than sitting inside one, a client holding a superseded broader statement defers a narrowing by opening a fresh registration or establishment with it. The watermark is retained at least as long as the maximum statement lifetime the server honors for that issuer. Because it spans every registration and establishment, the first presentation of a replacement that establishes the client retires its predecessor for every instance of the software at that server. Instances SHOULD therefore obtain the current statement from a source they share, such as an endpoint the publisher operates or a store their deployment shares, rather than each holding a copy fixed when it was built or installed.
 
 A trusting authorization server SHOULD use the statement's `sub` and `iss` to inventory the establishments, and any registrations ({{REGISTRATION}}), derived from that issuer's statements about that software, and SHOULD bound their number. An establishment counts toward a bound only once the authorization server has issued an access token from it, which in a redirect flow means its authorization code has been redeemed. State that a pushed authorization request created does not count, including state whose code was issued but never redeemed, since anyone holding a copy of a public client's statement can create it and approve it with an account of their own. A bound is counted across replacements, since a replacement statement carries a new `jti` and a bound keyed on it would reset at every renewal.
 
@@ -503,7 +493,7 @@ Which code applies where:
 | Condition | Pushed authorization request | Token, including refresh |
 | --- | --- | --- |
 | Malformed, or failing signature or claim validation | `invalid_client` | `invalid_client` |
-| Valid but not acceptable here: issuer not configured, `aud` excludes this server, `sub` or `tenant` outside the issuer's scope, `aud_tenant` not this request's tenant or absent where required, `consumable_at` excludes this point | `invalid_client` | `invalid_client` |
+| Valid but not acceptable here: issuer not configured, `aud` excludes this server, `sub` outside the issuer's scope, `aud_tenant` not this request's tenant or absent where required, `consumable_at` excludes this point | `invalid_client` | `invalid_client` |
 | Expired, or refused by a refusal record, including a status resolved as `INVALID`, or as `SUSPENDED` where policy refuses it, or superseded under the `iat` floor of {{multi-instance}} | `statement_required` | `statement_required` |
 | Required statement absent | `statement_required` | `statement_required` |
 | Digest does not match the retrieved document | see {{effective-metadata}} | see {{effective-metadata}} |
@@ -741,7 +731,7 @@ Change controller:
 
 ## Claims Defined Elsewhere
 
-This specification uses two claims it does not define. `aud_tenant` is defined and registered by {{IDJAG}}. `tenant` is defined by {{OIDC-ENTERPRISE}} and is registered by neither that document nor {{IDJAG}}; this specification constrains its value ({{profiles}}) but does not request its registration, and the gap is recorded here because a consumer cannot resolve the claim through the registry.
+This specification uses one claim it does not define: `aud_tenant`, defined and registered by {{IDJAG}}.
 
 ## JSON Web Token Claims Registry
 

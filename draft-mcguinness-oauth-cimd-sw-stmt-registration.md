@@ -114,7 +114,7 @@ The retrieval is client-controlled and reachable before any client is registered
 
 An authorization server that advertises `software_statement_registration_validity_supported` as `true` MUST apply this model to every registration it creates from a validated software statement, whichever issuer signed it, so that a client can rely on the signal before it registers:
 
-* It MUST record the governing statement's `iss`, `jti`, `sub`, and `iat`, and its `tenant` and `status` claims where it carries them, with the registration, and the registration's effective expiry: the earlier of the statement's `exp` and its `iat` plus the maximum statement lifetime the server records for that issuer ({{STATEMENT}}). The effective expiry is what bounds the registration, what a renewal extends, and what `registration_expires_at` reports. It is an upper bound rather than a guarantee: a status resolved as `INVALID`, or as `SUSPENDED` where the server's policy for that issuer refuses it ({{STATEMENT}}), ends the registration earlier, and a client learns of that only from the rejection, since the withdrawal is a decision it was not party to.
+* It MUST record the governing statement's `iss`, `jti`, `sub`, and `iat`, and its `status` claim where it carries one, with the registration, and the registration's effective expiry: the earlier of the statement's `exp` and its `iat` plus the maximum statement lifetime the server records for that issuer ({{STATEMENT}}). The effective expiry is what bounds the registration, what a renewal extends, and what `registration_expires_at` reports. It is an upper bound rather than a guarantee: a status resolved as `INVALID`, or as `SUSPENDED` where the server's policy for that issuer refuses it ({{STATEMENT}}), ends the registration earlier, and a client learns of that only from the rejection, since the withdrawal is a decision it was not party to.
 * The registration is valid until that effective expiry.
 * Once that time passes without a replacement ({{revalidation}}), it MUST reject requests under the registration: `invalid_client` at the token and pushed authorization request endpoints, and `statement_required` at the authorization endpoint ({{errors}}). The revalidation requests {{revalidation}} permits are the exception.
 * It SHOULD retain the expired record so that it can process a later authenticated revalidation ({{oracle-considerations}}). A valid replacement restores the registration under {{revalidation}}, which needs no grace period.
@@ -138,7 +138,7 @@ The client renews a statement-governed registration by delivering a replacement 
 The replacement MUST:
 
 * validate under {{STATEMENT}}, including its audience where it carries one;
-* carry the governing statement's `iss` and `sub`, and its `tenant` where the governing statement carried one;
+* carry the governing statement's `iss` and `sub`;
 * be unexpired; and
 * have an `iat` later than the recorded statement's `iat`.
 
@@ -160,20 +160,20 @@ A registration created from a statement is statement-governed when the server ad
 
 # Repeated Registration {#repeated-registration}
 
-One unexpired statement is consumable more than once, as {{STATEMENT}} describes, and a server whose policy permits it may create more than one registration from it. The safe default is one registration per (`iss`, `sub`), and per `tenant` where the issuer carries one, at one authorization server, counted across replacements, since a replacement statement carries a new `jti` and a bound keyed on it would reset at every renewal. On repeated consumption, local policy can reject the request, treat it as idempotent, or create another registration; {{RFC7591}} defines no duplicate-registration protocol. An idempotent response MUST NOT return the existing registration's credentials, such as its `registration_access_token`, since a repeated request may come from any holder of a copy of the statement.
+One unexpired statement is consumable more than once, as {{STATEMENT}} describes, and a server whose policy permits it may create more than one registration from it. The safe default is one registration per (`iss`, `sub`) at one authorization server, counted across replacements, since a replacement statement carries a new `jti` and a bound keyed on it would reset at every renewal. On repeated consumption, local policy can reject the request, treat it as idempotent, or create another registration; {{RFC7591}} defines no duplicate-registration protocol. An idempotent response MUST NOT return the existing registration's credentials, such as its `registration_access_token`, since a repeated request may come from any holder of a copy of the statement.
 
 Where the reviewed document carries `jwks` or `jwks_uri`, every registration derived from the statement uses that key material rather than an instance-supplied replacement. Software whose instances hold their own keys cannot register those keys, since {{dcr-presentation}} takes no key from the request: a statement is a bearer artifact at registration, and a request-supplied key would let any holder of a copy register reviewed branding under a key of its own.
 
 # Error Responses {#errors}
 
-Rejections at a registration endpoint use the error codes of Section 3.2.2 of {{RFC7591}}: `invalid_software_statement` where the statement is malformed, expired, or fails signature or claim validation, and `unapproved_software_statement` where it validates but is not acceptable here, because its issuer is not configured, its `aud` excludes this server, its `sub` or `tenant` falls outside the issuer's scope, its `aud_tenant` does not identify this request's tenant or is absent where this server requires one, or it does not permit registration ({{STATEMENT}}). Rejections at other endpoints use the errors of {{STATEMENT}}.
+Rejections at a registration endpoint use the error codes of Section 3.2.2 of {{RFC7591}}: `invalid_software_statement` where the statement is malformed, expired, or fails signature or claim validation, and `unapproved_software_statement` where it validates but is not acceptable here, because its issuer is not configured, its `aud` excludes this server, its `sub` falls outside the issuer's scope, its `aud_tenant` does not identify this request's tenant or is absent where this server requires one, or it does not permit registration ({{STATEMENT}}). Rejections at other endpoints use the errors of {{STATEMENT}}.
 
 Which code applies at the registration endpoint:
 
 | Condition | Registration endpoint |
 | --- | --- |
 | Malformed, or failing signature or claim validation | `invalid_software_statement` |
-| Valid but not acceptable here: issuer not configured, `aud` excludes this server, `sub` or `tenant` outside the issuer's scope, `aud_tenant` not this request's tenant or absent where required, `consumable_at` excludes this point | `unapproved_software_statement` |
+| Valid but not acceptable here: issuer not configured, `aud` excludes this server, `sub` outside the issuer's scope, `aud_tenant` not this request's tenant or absent where required, `consumable_at` excludes this point | `unapproved_software_statement` |
 | Expired, or refused by a refusal record, including a status resolved as `INVALID`, or as `SUSPENDED` where policy refuses it, or superseded under the `iat` floor of {{STATEMENT}} | `invalid_software_statement` |
 | Required statement absent | `unapproved_software_statement` |
 | Digest does not match the retrieved document | `invalid_software_statement` |
