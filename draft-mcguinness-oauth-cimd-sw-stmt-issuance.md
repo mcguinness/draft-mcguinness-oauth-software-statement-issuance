@@ -598,7 +598,7 @@ Pragma: no-cache
 }
 ~~~
 
-The client consumes the issued statement, the value of `access_token`, as described in {{STATEMENT}}: through an {{RFC7591}} registration request or by runtime presentation ({{STATEMENT}}).
+The client consumes the issued statement, the value of `access_token`, as described in {{STATEMENT}}: through an {{RFC7591}} registration request, by runtime presentation, or by publishing it at its `software_statements_uri` for servers to pull ({{STATEMENT}}).
 
 The `access_token` member is a security-token container ({{RFC8693}}), not an OAuth access token: the software statement is consumed only as a software statement ({{STATEMENT}}), MUST NOT be attached to a request as an `Authorization: Bearer` credential, and is not subject to refresh. Implementations that cache issued tokens by type SHOULD key this artifact on its `issued_token_type` so that generic access-token handling does not apply to it, and SHOULD treat it as a sensitive credential in logs.
 
@@ -883,7 +883,7 @@ Specification Document(s):
 
 **Why not OpenID Federation trust marks.** A trust mark is the closest prior art: a signed third-party assertion about an entity, with a defined issuer and a status endpoint. The difference is what a consumer must join. A trust mark is resolved through a federation, which supplies key discovery, policy, and delegation, and requires both parties to enroll in one; this specification is pairwise, so a consumer configures an issuer directly and nothing above it exists. Ecosystems already operating a federation should use trust marks. This is for the ones that will not.
 
-**Deliberately deferred capabilities.** This version omits several capabilities, each with an extension point: callback delivery for deferral, a canonicalized digest, and CIMD-native conveyance of an issued statement, and partial review, by which an issuer would vouch for particular members rather than a whole document. Consumption-side extensions, including endorsed instance keys, are named by {{STATEMENT}}.
+**Deliberately deferred capabilities.** This version omits several capabilities, each with an extension point: callback delivery for deferral, a canonicalized digest, and partial review, by which an issuer would vouch for particular members rather than a whole document. {{STATEMENT}} defines how a client publishes an issued statement for servers to pull, and names the consumption-side extensions, including endorsed instance keys.
 
 # Acknowledgments
 {:numbered="false"}
