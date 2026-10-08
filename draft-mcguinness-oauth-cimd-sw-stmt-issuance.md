@@ -132,7 +132,7 @@ Pre-registration {{CIMD}} lets a client enroll its identifier URL before its fir
 
 Pre-registration changes when the trust decision is made, but not:
 
-* **Who decides:** each consuming authorization server still evaluates the client's self-asserted document.
+* **Who decides:** each authorization server still evaluates the client's self-asserted document.
 * **What transfers:** the decision remains local state and cannot be presented elsewhere.
 * **What was approved:** the subject is a URL whose content can change, with no interoperable binding to the reviewed version.
 * **What acceptance depends on:** later evaluation still requires dereferencing the document.

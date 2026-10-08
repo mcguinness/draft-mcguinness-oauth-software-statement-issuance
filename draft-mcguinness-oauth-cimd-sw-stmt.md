@@ -101,7 +101,7 @@ A statement authorizes metadata, not its presenter, and nothing in this specific
 * Software distributed to end users, which can hold no such key, is bound by the reviewed redirection URIs instead.
 * Software whose redirection URIs another application could claim is reviewed but not admitted on the strength of the review.
 
-This specification defines only one layer of the decision to let a client act: establishment, which sits above the sender-constraint proof that identifies the presenter and the grant that carries a user's authorization. A statement records who reviewed the software and what they attested, not whether a particular customer currently permits the software to operate in its tenant. That question is answered on the customer's schedule rather than the reviewer's; where a customer's identity provider mediates the grant, it is answered continuously by whether that provider issues an assertion ({{identity-assertions}}). A tenant-scoped decision (`aud_tenant`) constrains where a review applies; it does not authorize any particular user or transaction.
+This specification defines only one layer of the decision to let a client act: admission, which sits above the sender-constraint proof that identifies the presenter and the grant that carries a user's authorization. A statement records who reviewed the software and what they attested, not whether a particular customer currently permits the software to operate in its tenant. That question is answered on the customer's schedule rather than the reviewer's; where a customer's identity provider mediates the grant, it is answered continuously by whether that provider issues an assertion ({{identity-assertions}}). A tenant-scoped decision (`aud_tenant`) constrains where a review applies; it does not authorize any particular user or transaction.
 
 Ceasing statement renewal stops new admissions after the applicable expiry, and ends continuation of a grant where the server requires a current statement ({{refresh}}). It does not revoke issued access tokens ({{enforcement-bounds}}).
 
@@ -130,7 +130,7 @@ Lifetime and audience:
 : A software statement carries a reviewer-chosen expiry and, optionally, an audience, and is consumed at every authorization server that trusts its issuer, within that audience where it names one. A client attestation carries its own expiry and is presented with a proof bound to the request it accompanies.
 
 Effect:
-: A software statement supplies establishment: which client this is, and what metadata a named reviewer stands behind. A client attestation supplies presenter proof: that the party sending this request holds a key someone vouches for. Neither grants access, and neither substitutes for the other.
+: A software statement supports admission: it says which client this is and what metadata a named reviewer stands behind. A client attestation supplies presenter proof: that the party sending this request holds a key someone vouches for. Neither grants access, and neither substitutes for the other.
 
 A deployment holding only a client attestation knows what is running but not whether anyone approved it; one holding only a software statement knows the software was reviewed but not that this sender is running it. Runtime presentation therefore always requires both the statement and a sender constraint ({{sender-constraint}}).
 
@@ -360,7 +360,7 @@ Where its trust configuration requires an issuer for this client ({{issuer-trust
 The presenter of a pulled statement is bound as for a presented statement ({{sender-constraint}}), at the point the request allows:
 
 * At the token endpoint, the request's client authentication or DPoP proof binds it, as for a presentation there.
-* At the authorization endpoint, binding completes at code redemption, before any token is issued. A confidential client authenticates there with a key carried by the octets the server digested, not one that only a later retrieval of the document carries, and that key becomes the establishment's Proven Key. A public client's authorization request is subject to {{public-client-presentation}}, including PKCE and `dpop_jkt`, and redemption proves the `dpop_jkt` key.
+* At the authorization endpoint, binding completes at code redemption, before any token is issued. A confidential client authenticates there with a key carried by the octets the server digested, not one that only a later retrieval of the document carries, and that key becomes the establishment's proven key. A public client's authorization request is subject to {{public-client-presentation}}, including PKCE and `dpop_jkt`, and redemption proves the `dpop_jkt` key.
 * A public client opening a new grant at the token endpoint has nothing to bind, so a statement pulled for it is review-only ({{public-client-presentation}}), as is one pulled for a document whose redirection URIs that section does not accept. Code redemption and refresh continue an establishment and keep the binding it already has ({{grant-lifecycle}}, {{refresh}}).
 
 Where retrieval does not complete or no statement remains, the server applies its policy for Client ID Metadata Document clients it has not reviewed. Where that policy requires reviewed software, it rejects the request with `temporarily_unavailable` if retrieval did not complete and with `statement_required` if no statement remains. A retrieval failure is never a withdrawal.
@@ -396,7 +396,7 @@ Software distributed to end users cannot hold a key its reviewed document carrie
 A presentation at the pushed authorization request endpoint, or a pulled statement at the authorization endpoint ({{pulled-statements}}), is bound instead by its reviewed redirection URIs where the client's reviewed document declares `token_endpoint_auth_method` of `none` and none of its redirection URIs is one another application could claim (see below). For such a presentation, the authorization server:
 
 * MUST require PKCE {{RFC7636}} with the `S256` method;
-* MUST require the presenter to bind a key it holds, through the `dpop_jkt` parameter {{RFC9449}}, and records that key as the Proven Key of the establishment ({{grant-lifecycle}}); and
+* MUST require the presenter to bind a key it holds, through the `dpop_jkt` parameter {{RFC9449}}, and records that key as the proven key of the establishment ({{grant-lifecycle}}); and
 * MUST NOT require that key to appear in the reviewed document.
 
 The reviewed document, not the proven key, admits the statement here: an authorization code opened by such a presentation is delivered only to a redirection URI the issuer reviewed, so a holder of a copied statement cannot receive it ({{public-client-security}}). The proven key identifies the installation the grant belongs to; code redemption and refresh demonstrate possession of that same key ({{grant-lifecycle}}, {{refresh}}).
@@ -428,16 +428,16 @@ A successful presentation creates an establishment, the state a server persists 
 * the authorization server's own tenant the grant was opened for, where it hosts more than one;
 * the reviewed metadata and the digest it matched ({{effective-metadata}});
 * the issuer trust decision; and
-* the sender-constraint mechanism and Proven Key.
+* the sender-constraint mechanism and proven key.
 
-An authorization server MAY reuse an establishment across presentations that resolve to the same `sub`, statement, and Proven Key, rather than creating one per request; the bounds of {{multi-instance}} count distinct establishments, not presentations.
+An authorization server MAY reuse an establishment across presentations that resolve to the same `sub`, statement, and proven key, rather than creating one per request; the bounds of {{multi-instance}} count distinct establishments, not presentations.
 
 The establishment persists while the grant depends on it. The authorization server MUST bind the resulting `request_uri`, authorization code, refresh token, and other grant continuation state to it, as applicable, and MAY discard it once no such state references it.
 
 A token request that redeems an authorization code opened by a presentation:
 
 * MUST have a `client_id` exactly equal to the establishment's `sub`;
-* MUST demonstrate possession of the same Proven Key under the same sender-constraint mechanism; and
+* MUST demonstrate possession of the same proven key under the same sender-constraint mechanism; and
 * MUST NOT carry the `software_statement` parameter.
 
 A redemption carrying a statement is rejected with `invalid_request`; a wrong client identifier or failed key binding is rejected with `invalid_grant`. This prohibition covers redemption of a code bound to an establishment; a registered client redeeming its own code may deliver a replacement statement under {{REGISTRATION}}, which is a delivery, not a presentation.
@@ -446,7 +446,7 @@ A statement MUST be unexpired when presented. Expiry after presentation does not
 
 ### Refresh {#refresh}
 
-On refresh-token use the authorization server MUST verify possession of the establishment's Proven Key under the same sender-constraint mechanism. It MAY, by local policy, additionally require a current unexpired statement, and SHOULD require one once the establishment's recorded statement has expired ({{enforcement-bounds}}). The recorded statement satisfies that requirement while it is unexpired and no refusal record covers it; a replacement is needed only once it no longer does.
+On refresh-token use the authorization server MUST verify possession of the establishment's proven key under the same sender-constraint mechanism. It MAY, by local policy, additionally require a current unexpired statement, and SHOULD require one once the establishment's recorded statement has expired ({{enforcement-bounds}}). The recorded statement satisfies that requirement while it is unexpired and no refusal record covers it; a replacement is needed only once it no longer does.
 
 Where the authorization server holds a refusal record for the establishment's recorded statement, it MUST reject a refresh that is not accompanied by a replacement satisfying this section, presented or pulled, whatever its policy on currency otherwise: a withdrawal ends grant continuation at once rather than waiting on local policy. A server that resolves status for the recorded statement's issuer SHOULD check that statement at each refresh against a Status List Token it holds within that token's validity, so that a withdrawal it has resolved reaches open grants and not only new ones.
 
@@ -456,11 +456,11 @@ When a replacement is needed, the client presents it in the `software_statement`
 * MUST have the recorded statement's `iss` and `sub`;
 * MUST have an `iat` later than the recorded statement's `iat`;
 * MUST name, by its `cimd_digest`, the document currently served at its `sub`, which the server confirms by retrieval or by revalidating octets it holds; and
-* MUST authorize the establishment's Proven Key ({{sender-constraint}}) or, for an establishment created under {{public-client-presentation}}, name a document that still satisfies that section.
+* MUST authorize the establishment's proven key ({{sender-constraint}}) or, for an establishment created under {{public-client-presentation}}, name a document that still satisfies that section.
 
 The refreshed access MUST fall within the metadata of the document the replacement names.
 
-On success, the establishment's statement identity, `iat`, expiry, reviewed metadata, and trust decision are replaced in a single atomic update, and concurrent deliveries resolve to the most recently issued statement. A refresh that fails these requirements, or omits a replacement that is needed, is rejected with `statement_required` and leaves the establishment unchanged. Refresh never rotates the establishment's key; a client that needs a new key performs a new presentation.
+On success, the establishment's statement identity, `iat`, expiry, reviewed metadata, and trust decision are replaced in a single atomic update, and concurrent replacements resolve to the most recently issued statement. A refresh that fails these requirements, or omits a replacement that is needed, is rejected with `statement_required` and leaves the establishment unchanged. Refresh never rotates the establishment's key; a client that needs a new key performs a new presentation.
 
 # Repeated Consumption of One Statement {#multi-instance}
 
@@ -504,7 +504,7 @@ This specification addresses the durable question, which a statement answers whe
 
 # Error Responses {#errors}
 
-A statement consumed at registration is rejected as {{REGISTRATION}} defines. A rejected presentation or delivery uses the error responses of {{RFC6749}} for the endpoint at which it was presented. At the token endpoint:
+A statement consumed at registration is rejected as {{REGISTRATION}} defines. A rejected presentation or replacement uses the error responses of {{RFC6749}} for the endpoint at which it was presented. At the token endpoint:
 
 `invalid_client`:
 : the statement or its proof fails to establish the client, including a failed sender constraint ({{sender-constraint}}) and a failed statement requirement of {{profiles}} other than expiry; and, under {{REGISTRATION}}, a request under an expired registration that carries no replacement.
@@ -670,9 +670,9 @@ A retrieval failure leaves the relevant metadata or proof unverified; the author
 
 ## Enforcement Bounds {#enforcement-bounds}
 
-Expiry is enforced at every presentation, so a lapsed statement prevents new runtime establishment ({{REGISTRATION}} defines its effect on registrations). It does not retroactively invalidate an establishment, revoke an access token, or terminate an outstanding grant. Issuer non-renewal ends runtime-established grants only where the server requires a current statement on refresh; otherwise they last for the life of their refresh tokens whatever the statement lifetime, unless the server has resolved a withdrawal ({{refresh}}).
+Expiry is enforced at every presentation, so a lapsed statement prevents new runtime admission ({{REGISTRATION}} defines its effect on registrations). It does not retroactively invalidate an establishment, revoke an access token, or terminate an outstanding grant. Issuer non-renewal ends runtime-established grants only where the server requires a current statement on refresh; otherwise they last for the life of their refresh tokens whatever the statement lifetime, unless the server has resolved a withdrawal ({{refresh}}).
 
-A narrowed re-review takes effect when the client publishes the narrower document and obtains a statement over it. Post-issuance metadata change is detected through `cimd_digest`, which covers exact bytes but requires the server to hold the current ones, retrieved or retained. The bounded statement lifetime limits what either signal can miss for new establishment. The `status` claim of {{profiles}}, resolved through {{STATUSLIST}}, lets an issuer end a decision before its expiry, and `exp` remains the floor where no status resolves ({{validation}}). {{SIGNALS}} defines an optional, earlier notification of status change, on which neither this specification nor the status mechanism depends.
+A narrowed re-review takes effect when the client publishes the narrower document and obtains a statement over it. Post-issuance metadata change is detected through `cimd_digest`, which covers exact bytes but requires the server to hold the current ones, retrieved or retained. The bounded statement lifetime limits what either signal can miss for new admissions. The `status` claim of {{profiles}}, resolved through {{STATUSLIST}}, lets an issuer end a decision before its expiry, and `exp` remains the floor where no status resolves ({{validation}}). {{SIGNALS}} defines an optional, earlier notification of status change, on which neither this specification nor the status mechanism depends.
 
 Short statement lifetimes tighten the issuer's control and increase issuance and delivery traffic. A fleet of statements issued together expires together, so issuers SHOULD stagger expiries or renew ahead of the boundary to avoid synchronized lapses.
 

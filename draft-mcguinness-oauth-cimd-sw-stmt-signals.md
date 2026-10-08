@@ -70,7 +70,7 @@ A software statement records a reviewer's decision about client software. An iss
 
 Responsiveness therefore depends on the fetch interval. For a withdrawal to take effect within minutes, every consumer has to poll at that interval, and most of those requests report no change.
 
-The parties already have a configured relationship: a trusting authorization server records each issuer's identifier, key source, scope, and lifetime policy in order to accept its statements at all ({{STATEMENT}}). This specification uses that relationship to carry a notification over the Shared Signals Framework {{SSF}}. The statement issuer transmits, the trusting authorization server receives, and events are Security Event Tokens {{RFC8417}} delivered by the push {{RFC8935}} or poll {{RFC8936}} delivery methods.
+The parties already have a configured relationship: a trusting authorization server records each issuer's identifier, key source, scope, and lifetime policy in order to accept its statements at all ({{STATEMENT}}). This specification uses that relationship to carry a notification over the Shared Signals Framework {{SSF}}. The issuing authorization server transmits, the trusting authorization server receives, and events are Security Event Tokens {{RFC8417}} delivered by the push {{RFC8935}} or poll {{RFC8936}} delivery methods.
 
 An event carries no decision: it reports that the issuer changed a status, and the receiver resolves that status as it would have later anyway. The status list remains the authority on whether a statement stands. {{processing}} makes two properties normative: an event can only prompt a resolution and never itself increases what a client may do, and a receiver that misses events enforces status and expiry exactly as it would without them.
 
@@ -82,19 +82,13 @@ This specification defines the subject identification, the event, its payload cl
 
 Transmitter, Receiver, Stream, and the delivery and configuration mechanisms are defined by {{SSF}}. Security Event Token, or SET, is defined by {{RFC8417}}. Subject identifier formats are defined by {{RFC9493}}. Status List Token, and the validation that resolves a status, are defined by {{STATUSLIST}}. The software statement, its claims including `status`, its validation, issuer trust configuration, and runtime presentation are defined by {{STATEMENT}}, and registration validity by {{REGISTRATION}}.
 
-This specification additionally defines the following terms:
-
-Statement Issuer:
-: The Issuing Authorization Server ({{STATEMENT}}) that signed a software statement and publishes its status ({{ISSUANCE}}), acting as a Transmitter of the events defined here.
-
-Consuming Authorization Server:
-: A Trusting Authorization Server ({{STATEMENT}}) that has configured the statement issuer, acting as a Receiver of the events defined here.
+Issuing Authorization Server and Trusting Authorization Server are defined by {{STATEMENT}}. For the events defined here, the issuing authorization server, which publishes the status of its statements ({{ISSUANCE}}), acts as a Transmitter, and a trusting authorization server that has configured it acts as a Receiver.
 
 # Relationship to the Statement Family {#relationship}
 
 An event bears only on the statements the transmitting issuer has made about the named subject, never on statements another issuer made about the same software.
 
-A consuming authorization server MUST NOT accept an event from an issuer it has not configured. It MUST verify the SET using keys from the `jwks_uri` of the issuer's Transmitter configuration {{SSF}}, discovered from the issuer identifier it has configured. The SET's `iss` is that issuer identifier, which is also the `iss` of the statements the event concerns.
+A trusting authorization server MUST NOT accept an event from an issuer it has not configured. It MUST verify the SET using keys from the `jwks_uri` of the issuer's Transmitter configuration {{SSF}}, discovered from the issuer identifier it has configured. The SET's `iss` is that issuer identifier, which is also the `iss` of the statements the event concerns.
 
 The Transmitter configuration's `jwks_uri` MUST differ both from the issuer's `software_statement_jwks_uri` ({{STATEMENT}}) and from the `jwks_uri` in its authorization server metadata {{RFC8414}}, whose keys verify its Status List Tokens. A receiver:
 
@@ -108,7 +102,7 @@ A SET carrying an event defined here MUST use the explicit `typ` JOSE header par
 
 The subject of every event defined here is client software, identified by the `sub` of the statements the event concerns. Events carry it in the `sub_id` claim of {{SSF}} using the `uri` format of {{RFC9493}}, whose `uri` member carries the Client ID Metadata Document URL {{CIMD}} exactly as it appears in the statement's `sub`.
 
-A consuming authorization server MUST match the subject by exact comparison of the `uri` member against a statement's `sub`. A receiver MAY receive an event for a subject it holds no state for, as it ordinarily does for software it has never seen presented, and such an event requires nothing of it.
+A trusting authorization server MUST match the subject by exact comparison of the `uri` member against a statement's `sub`. A receiver MAY receive an event for a subject it holds no state for, as it ordinarily does for software it has never seen presented, and such an event requires nothing of it.
 
 # Event Types {#events}
 
@@ -135,7 +129,7 @@ Carrying the new status in the event would create a second source for it, which 
 
 # Receiver Processing {#processing}
 
-A consuming authorization server that receives an event defined here MUST:
+A trusting authorization server that receives an event defined here MUST:
 
 1. verify the SET as {{RFC8417}} requires, including its `typ`, and verify that its issuer is configured and its keys were obtained as {{relationship}} requires;
 2. reject an event whose `aud` does not contain its issuer identifier ({{relationship}}), and an event whose type it does not recognize;
@@ -161,9 +155,9 @@ Applying an event does not revoke access tokens already issued. A receiver appli
 
 # Stream Configuration {#configuration}
 
-A statement issuer supporting this specification publishes Transmitter configuration metadata as {{SSF}} defines, discoverable from the issuer identifier the consuming authorization server has already configured. Stream creation, subject management, verification, and delivery follow {{SSF}}; this specification adds no configuration mechanism.
+An issuing authorization server supporting this specification publishes Transmitter configuration metadata as {{SSF}} defines, discoverable from the issuer identifier the trusting authorization server has already configured. Stream creation, subject management, verification, and delivery follow {{SSF}}; this specification adds no configuration mechanism.
 
-A consuming authorization server SHOULD create one stream per configured issuer, covering every subject that issuer attests rather than an enumerated set. A receiver cannot enumerate subjects: under runtime presentation ({{STATEMENT}}) it holds no state for software until its first presentation, by which time an event about that software would already have been missed.
+A trusting authorization server SHOULD create one stream per configured issuer, covering every subject that issuer attests rather than an enumerated set. A receiver cannot enumerate subjects: under runtime presentation ({{STATEMENT}}) it holds no state for software until its first presentation, by which time an event about that software would already have been missed.
 
 A transmitter supporting this specification MUST therefore advertise `default_subjects` as `ALL` in its transmitter configuration {{SSF}}, so that a stream carries every subject appropriate to it without the receiver adding any. The subjects appropriate to a stream are those of the issuer's statements whose `aud` is absent or names the receiving authorization server; a receiver discards events for subjects outside the identifier scope for which it accepts that issuer ({{STATEMENT}}).
 

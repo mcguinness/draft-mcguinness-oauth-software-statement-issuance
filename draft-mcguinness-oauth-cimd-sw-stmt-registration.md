@@ -147,7 +147,7 @@ The replacement MUST:
 * validate under the validation rules of {{STATEMENT}}, including its audience where it carries one;
 * carry the governing statement's `iss` and `sub`;
 * be unexpired; and
-* have an `iat` later than the recorded statement's `iat`.
+* have an `iat` later than the governing statement's `iat`.
 
 For a replacement, the authorization server MUST:
 
@@ -157,13 +157,13 @@ For a replacement, the authorization server MUST:
 
 Renewing on the statement alone would leave the registration carrying metadata the new review never covered, so a removed key, redirection URI, or scope would survive its own withdrawal.
 
-On success, the authorization server MUST replace the recorded statement identity, `iat`, `exp`, and derived metadata in a single atomic update, and concurrent deliveries resolve to the most recently issued statement.
+On success, the replacement becomes the governing statement: the authorization server MUST replace the recorded statement identity, `iat`, `exp`, and derived metadata with the replacement's in a single atomic update, and concurrent deliveries resolve to the most recently issued statement.
 
 When a request under an expired registration contains a replacement, the authorization server MUST authenticate the client against the retained registration and evaluate the replacement before applying the expiry rejection. A valid replacement therefore restores the registration; an omitted or invalid replacement does not.
 
 The rejection of a request under an expired registration that carries no replacement ({{registration-validity}}) MUST NOT by itself trigger the refresh-token family revocation of {{RFC9700}}; the client recovers by delivering a valid replacement.
 
-A request whose replacement fails the rules above is rejected, whether or not the registration has expired, with `statement_required` at the token and pushed authorization request endpoints and with the codes of {{errors}} at the registration management endpoint, so that the client learns of the failure at once and can tell a bad replacement from a missing one. A rejected delivery leaves the recorded statement unchanged.
+A request whose replacement fails the rules above is rejected, whether or not the registration has expired, with `statement_required` at the token and pushed authorization request endpoints and with the codes of {{errors}} at the registration management endpoint, so that the client learns of the failure at once and can tell a bad replacement from a missing one. A rejected delivery leaves the governing statement unchanged.
 
 A registration request without an {{RFC7592}} registration access token creates a new registration and never renews an existing one.
 
