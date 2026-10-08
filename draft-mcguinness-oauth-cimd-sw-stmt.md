@@ -195,10 +195,13 @@ A statement says that its issuer evaluated the Client ID Metadata Document whose
 : OPTIONAL. A tenant identifier at the issuing authorization server, where that server serves more than one tenant under a single `iss`. The value MUST be opaque to consumers and unique within the issuer. The reserved values {{OIDC-ENTERPRISE}} defines for describing how an account is managed MUST NOT be used here, because they name a kind of tenant rather than a particular one, and a rule keyed on such a value would treat unrelated tenants as one. Where the claim is present, the deciding party is `iss` and `tenant` together rather than `iss` alone ({{multi-tenant-issuers}}).
 
 `aud`:
-: OPTIONAL. One or more audience identifiers restricting which authorization servers may accept the statement, each an authorization server issuer identifier as defined by {{RFC8414}}. Where the claim is present, a trusting authorization server MUST reject the statement unless one of its locally configured audience identifiers exactly matches a value in it. The corresponding constraint on an issuer, that a requested audience bounds what it may name, is stated in {{ISSUANCE}}. Where the claim is absent, the statement is unrestricted and acceptance rests on the consumer's configured trust in the issuer and its identifier scope ({{issuer-trust}}). Omitting the claim lets one review serve every server that trusts the issuer, which is the portability the artifact exists for; it also lets whoever holds a copy use it at any of them. Nothing in a statement says which way it will be consumed, and a holder can always choose registration, which requires no key. An issuer SHOULD therefore name an audience, and omit it only where it accepts that any server trusting it may register the software on the strength of a copy ({{statement-validation}}).
+: OPTIONAL. One or more audience identifiers restricting which authorization servers may accept the statement, each an authorization server issuer identifier as defined by {{RFC8414}}. Where the claim is present, a trusting authorization server MUST reject the statement unless one of its locally configured audience identifiers exactly matches a value in it. The corresponding constraint on an issuer, that a requested audience bounds what it may name, is stated in {{ISSUANCE}}. Where the claim is absent, the statement is unrestricted and acceptance rests on the consumer's configured trust in the issuer and its identifier scope ({{issuer-trust}}). Omitting the claim lets one review serve every server that trusts the issuer, which is the portability the artifact exists for; it also lets whoever holds a copy use it at any of them. Unless `consumable_at` excludes it, a holder can always choose registration, which requires no key. An issuer SHOULD therefore name an audience, and omit it only where it accepts that any server trusting it may register the software on the strength of a copy ({{statement-validation}}).
 
 `aud_tenant`:
 : OPTIONAL. A tenant identifier at a trusting authorization server, as {{IDJAG}} defines the claim, naming the tenant in which this statement's decision applies. A statement whose decision is confined to one tenant MUST carry it, and a trusting authorization server MUST reject a statement carrying it unless the value identifies the tenant the request belongs to. A consumer MUST NOT read its absence as meaning the statement applies in every tenant, since an issuer also omits it where the consumer is single-tenant or where the issuer does not know the identifier; a consumer that requires a tenant-scoped decision and finds no `aud_tenant` rejects the statement rather than choosing between those readings. A listing review that applies wherever its `aud` reaches carries neither this claim nor `tenant`.
+
+`consumable_at`:
+: OPTIONAL. A JSON array naming the points at which the statement may be consumed: `registration` ({{dcr-presentation}}) and `presentation` ({{cimd-presentation}}). A trusting authorization server MUST reject a statement at a point the array does not name, treating a member it does not recognize as naming no point it serves. Where the claim is absent, the statement may be consumed at either point. Registration requires no key, so an issuer that means its review to admit only a presenter proving a key the document carries limits the claim to `presentation` ({{statement-validation}}).
 
 `iat`:
 : REQUIRED. A NumericDate value representing the time at which the software statement was issued. An issuer MUST NOT issue two statements for a given `iss` and `sub` pair, and for a given `tenant` where it carries one, with the same `iat`, and MUST ensure the value increases strictly across its signing nodes, so that the order in which it made its decisions is recoverable from the statements themselves. Consumers rely on that order when one statement replaces another ({{revalidation}}, {{refresh}}). Back-dating a statement to allow for clock skew makes it unusable as a replacement.
@@ -247,6 +250,7 @@ Before accepting a statement, a trusting authorization server MUST:
 * validate `iat` and `exp`, rejecting an expired statement and one whose `iat` is unreasonably far in the future according to its clock-skew policy;
 * where the statement carries `aud`, verify that one of its own audience identifiers appears in it;
 * where the statement carries `aud_tenant`, verify that its value identifies the tenant this request belongs to, resolved before the statement is evaluated rather than from anything the request supplies;
+* where the statement carries `consumable_at`, verify that it names the point at which the statement is being consumed;
 * verify that `sub` is a client identifier URL conforming to {{CIMD}}, and that it falls within the identifier scope for which this server accepts the issuer ({{issuer-trust}});
 * reject a statement carrying any claim registered in the IANA "OAuth Dynamic Client Registration Metadata" registry, which {{profiles}} forbids, and ignore any other claim it does not recognize; and
 * apply the JWT validation guidance in {{RFC8725}}.
@@ -257,7 +261,7 @@ Status constrains and never relaxes. Expiry is the floor: a statement carrying n
 
 An issuer URL or JWK Set does not establish trust. A trusting authorization server accepts only configured issuers ({{issuer-trust}}) and obtains their statement signing keys from the `software_statement_jwks_uri` of that issuer's authorization server metadata ({{authorization-server-metadata}}), never from the statement.
 
-Rejections at a registration endpoint use the error codes of Section 3.2.2 of {{RFC7591}}: `invalid_software_statement` where the statement is malformed, expired, or fails signature or claim validation, and `unapproved_software_statement` where it validates but is not acceptable here, because its issuer is not configured, its `aud` excludes this server, its `sub` or `tenant` falls outside the issuer's scope, or its `aud_tenant` does not identify this request's tenant or is absent where this server requires one. Rejections elsewhere use {{errors}}.
+Rejections at a registration endpoint use the error codes of Section 3.2.2 of {{RFC7591}}: `invalid_software_statement` where the statement is malformed, expired, or fails signature or claim validation, and `unapproved_software_statement` where it validates but is not acceptable here, because its issuer is not configured, its `aud` excludes this server, its `sub` or `tenant` falls outside the issuer's scope, its `aud_tenant` does not identify this request's tenant or is absent where this server requires one, or its `consumable_at` does not name registration. Rejections elsewhere use {{errors}}.
 
 A trusting authorization server resolving the reviewed document MUST reject a document containing duplicate object member names, since parsers interpret them differently despite an identical digest.
 
@@ -550,7 +554,7 @@ Which code applies where:
 | Condition | Registration (RFC 7591) | Pushed authorization request | Token, including refresh |
 | --- | --- | --- | --- |
 | Malformed, or failing signature or claim validation | `invalid_software_statement` | `invalid_client` | `invalid_client` |
-| Valid but not acceptable here: issuer not configured, `aud` excludes this server, `sub` or `tenant` outside the issuer's scope, `aud_tenant` not this request's tenant or absent where required | `unapproved_software_statement` | `invalid_client` | `invalid_client` |
+| Valid but not acceptable here: issuer not configured, `aud` excludes this server, `sub` or `tenant` outside the issuer's scope, `aud_tenant` not this request's tenant or absent where required, `consumable_at` excludes this point | `unapproved_software_statement` | `invalid_client` | `invalid_client` |
 | Expired, or refused by a refusal record, including a status resolved as `INVALID`, or as `SUSPENDED` where policy refuses it, or superseded under the `iat` floor of {{multi-instance}} | `invalid_software_statement` | `statement_required` | `statement_required` |
 | Required statement absent | `unapproved_software_statement` | `statement_required` | `statement_required` |
 | Digest does not match the retrieved document | `invalid_software_statement` | see {{effective-metadata}} | see {{effective-metadata}} |
@@ -636,7 +640,7 @@ Four extensions of this path are left to separate specifications. Endorsed keys:
 
 A runtime presentation resists statement theft because the proof is a key the reviewed document carries. Possession of a stolen statement is insufficient unless the attacker also controls that key, and admitting only that key is what prevents downgrade: every server in the audience either binds the presenter to it or refuses the presentation. An extension admitting endorsed keys ({{extensions}}) reopens that question and needs to answer it in its own terms.
 
-A statement consumed at registration is a reusable bearer artifact until it expires, so an issuer relies on narrow audience and lifetime, and the bounds of {{multi-instance}} limit what a stolen statement can create.
+A statement consumed at registration is a reusable bearer artifact until it expires, so an issuer relies on narrow audience and lifetime, or excludes registration with `consumable_at` ({{profiles}}), and the bounds of {{multi-instance}} limit what a stolen statement can create.
 
 Attesting `jwks_uri` attests the location, not its contents: a compromised key host can add keys that satisfy the proof with no digest change, so where that exposure matters an issuer attests `jwks` inline and accepts digest-visible rotation. A server reusing a cached key set under {{sender-constraint}} additionally accepts that a just-removed key can briefly continue to verify.
 
@@ -802,6 +806,18 @@ Claim Name:
 
 Claim Description:
 : Unpadded base64url-encoded SHA-256 digest of the retrieved octets of the Client ID Metadata Document evaluated during software statement issuance
+
+Change Controller:
+: IESG
+
+Specification Document(s):
+: This specification, {{profiles}}
+
+Claim Name:
+: `consumable_at`
+
+Claim Description:
+: Points at which a software statement may be consumed
 
 Change Controller:
 : IESG
