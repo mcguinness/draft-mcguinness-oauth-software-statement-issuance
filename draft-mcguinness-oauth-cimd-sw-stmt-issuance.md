@@ -709,7 +709,7 @@ No response parameter transits a browser, but there is also no in-band evidence 
 
 ## Renewal by Prior Statement
 
-A statement is a bearer artifact, so accepting one as a subject token is safe only alongside the holder binding {{renewal}} requires: the client authenticates with a key both the reviewed document and the current one carry, which a party holding only a stolen copy cannot do, and which a party able to change the current document cannot supply either. Binding renewal to that key also keeps automated renewal from needing a long-lived reusable initial access token, which would be a standing credential to mint statements ({{te-considerations}}).
+A statement is a bearer artifact, so accepting one as a subject token is safe only alongside the holder binding {{renewal}} requires: the client authenticates with a key both the reviewed document and the current one carry, which a party holding only a stolen copy cannot do. Where both documents carry their keys inline, a party able to change the current document cannot supply one either; where they name a `jwks_uri`, whoever controls that location can, which is why a changed document gets the decision a first issuance gets ({{renewal}}). Binding renewal to that key also keeps automated renewal from needing a long-lived reusable initial access token, which would be a standing credential to mint statements ({{te-considerations}}).
 
 An issuer accepting expired statements SHOULD bound how long after expiry it will do so. Without a bound, a client absent long enough for its review to be meaningless can still renew rather than being re-established.
 
