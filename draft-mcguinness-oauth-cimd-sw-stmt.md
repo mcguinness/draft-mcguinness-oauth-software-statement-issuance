@@ -713,7 +713,7 @@ Presentation reaches these retrievals before any client is registered or any use
 
 * rate-limit presentations per statement identity, per subject, and per source, and bound the establishments it will create from one statement ({{multi-instance}}), before spending retrieval or storage on a new presentation;
 * bound JWT size and parsing work, concurrent retrievals, response size, and response time; and
-* cache successful and failed retrieval results for an appropriate period.
+* cache successful retrieval results within the document's caching directives, and back off after a failure rather than cache it, since {{CIMD}} forbids caching error responses.
 
 A retrieval failure leaves the relevant metadata or proof unverified; the authorization server MUST reject the request and MUST NOT fall back to a weaker proof.
 
