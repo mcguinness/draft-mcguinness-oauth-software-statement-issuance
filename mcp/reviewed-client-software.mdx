@@ -109,7 +109,7 @@ Where the server resolves statement status, a withdrawn statement ends refresh f
 
 ### 4.4 Review-Only Clients
 
-For a public client with a loopback or private-use redirection URI, and for a public client at the token endpoint, a statement is review-only. The MCP Authorization Server:
+For a public client with a loopback or private-use redirection URI, and for a public client opening a new grant at the token endpoint without an established presenter binding, a statement is review-only. Code redemption and refresh continue a grant whose binding was established at the authorization endpoint, and keep it. The MCP Authorization Server:
 
 - **MUST** treat the client exactly as an unreviewed Client ID Metadata Document client, and **MUST NOT** let the statement satisfy a policy that requires reviewed software;
 - **SHOULD NOT** present the review to the user as an assurance about the application requesting access;
