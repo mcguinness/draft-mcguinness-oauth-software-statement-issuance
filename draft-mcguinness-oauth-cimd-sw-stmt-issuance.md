@@ -620,6 +620,8 @@ An issuer that publishes status:
 * MUST assign each statement its own index and MUST NOT reuse an index across statements. Withdrawing a statement sets that statement's index and affects no other. A replacement obtained through {{renewal}} occupies its own index, so withdrawing a superseded statement does not withdraw its replacement, and withdrawing a replacement does not restore its predecessor; and
 * MUST sign the Status List Token with a key published at the `jwks_uri` of its authorization server metadata {{RFC8414}}, never with a statement signing key ({{STATEMENT}}), and MUST include `exp` in every Status List Token it publishes, so that an older token cannot stand in for a newer one indefinitely.
 
+An issuer that issues a replacement over a document that no longer carries a key, redirection URI, or scope the earlier document carried SHOULD withdraw the earlier statement, since what was removed may be why the document changed, and a consumer that has not yet seen the replacement would otherwise accept the earlier statement until it expires.
+
 Status does not replace lifetime. A consumer is not obliged to resolve status, so an issuer chooses `exp` on the assumption that none does, and treats status as what shortens a decision rather than what bounds it.
 
 # Authorization Server Metadata {#authorization-server-metadata}
