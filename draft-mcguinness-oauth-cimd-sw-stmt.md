@@ -428,14 +428,15 @@ Verifying a key at the document's `jwks_uri` is a retrieval at presentation time
 
 Software distributed to end users cannot hold a key its reviewed document carries. A key inside a distributed binary is in every copy, so it identifies the software and not the installation, and such a document declares `token_endpoint_auth_method` of `none` and carries no key material.
 
-A presentation at the pushed authorization request endpoint by a client whose reviewed document declares `token_endpoint_auth_method` of `none` is bound instead by the reviewed redirection URIs. The authorization server:
+A presentation at the pushed authorization request endpoint by a client whose reviewed document declares `token_endpoint_auth_method` of `none`, and whose redirection URIs all use the `https` scheme, is bound instead by those URIs. The authorization server:
 
-* MUST reject the presentation unless every redirection URI in the reviewed document uses the `https` scheme, and MUST reject a document carrying a private-use scheme or loopback redirection URI;
 * MUST require PKCE {{RFC7636}} with the `S256` method;
 * MUST require the presenter to bind a key it holds, through the `dpop_jkt` parameter {{RFC9449}}, and records that key as the Proven Key of the establishment ({{grant-lifecycle}}); and
 * MUST NOT require that key to appear in the reviewed document.
 
 What admits the statement here is the reviewed document rather than the proven key. An authorization code opened by such a presentation is delivered only to a redirection URI the issuer reviewed, so a party holding a copied statement cannot receive it ({{public-client-security}}). The proven key answers the separate question of which installation the grant belongs to, and nothing after establishment changes: code redemption and refresh demonstrate possession of that same key ({{grant-lifecycle}}, {{refresh}}).
+
+A presentation is review-only where the reviewed document declares `none` and carries a redirection URI that does not use the `https` scheme, as a private-use scheme or loopback redirection URI does. Desktop software commonly redirects this way, and another application on the same device can claim such a URI and receive the code ({{public-client-security}}), so the reviewed redirection URIs cannot bind the presenter. A review-only presentation creates no establishment and admits nothing: the authorization server proceeds as it would for the same Client ID Metadata Document client presenting no statement, the statement MUST NOT satisfy a policy requiring reviewed software, and the server SHOULD NOT present the review to the user as an assurance about the presenter. It MAY record the statement's issuer for audit and inventory, and MAY refuse the request where the statement's status shows a withdrawal, since status constrains and never relaxes ({{validation}}), subject to the bounds of {{external-retrieval}}. A review-only presentation does not advance the watermark of {{multi-instance}}, since it changes nothing for the software's other instances.
 
 This binding exists at the pushed authorization request endpoint alone. A presentation at the token endpoint under {{runtime-presentation}} opens no redirect and has nothing to bind it, so an authorization server MUST reject one from a client whose reviewed document carries no key material.
 
@@ -654,7 +655,7 @@ A statement carries no client metadata, so an {{RFC7591}} server that verified o
 
 ## Copied Statements and Public Clients {#public-client-security}
 
-A public client's presentation ({{public-client-presentation}}) admits a statement without proof of a key the reviewed document carries, so a party holding a copied statement can open a pushed authorization request in the reviewed software's name. What it cannot do is complete the grant. The authorization code is delivered only to a redirection URI the issuer reviewed, and requiring every such URI to use the `https` scheme is what makes that binding hold: a private-use scheme or loopback redirection URI can be claimed by other software on the same device, and would deliver the code to the holder of the copy.
+A public client's presentation ({{public-client-presentation}}) admits a statement without proof of a key the reviewed document carries, so a party holding a copied statement can open a pushed authorization request in the reviewed software's name. What it cannot do is complete the grant. The authorization code is delivered only to a redirection URI the issuer reviewed, and the `https` requirement on documents bound by their redirection URIs is what makes that binding hold: a private-use scheme or loopback redirection URI can be claimed by other software on the same device, and would deliver the code to the holder of the copy. A document carrying such a URI is therefore presented review-only ({{public-client-presentation}}).
 
 The residual exposure is a consent prompt carrying the reviewed software's name and branding, raised by a party that cannot receive what the user approves. An authorization server SHOULD rate-limit presentations per statement identity and per subject ({{external-retrieval}}), and an issuer bounds the exposure through audience, lifetime, and status ({{profiles}}).
 
