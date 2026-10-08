@@ -425,7 +425,7 @@ A pulled statement never travels in a request, so it needs no pushed authorizati
 
 Where retrieval does not complete, or no statement remains, the server proceeds as it would for a document that names no location: it applies the policy it applies to a Client ID Metadata Document client it has not reviewed, and rejects as {{errors}} defines where that policy requires reviewed software. A retrieval failure is never a withdrawal.
 
-On refresh, a server that created an establishment from a pulled statement and requires a current statement ({{refresh}}) pulls again, and treats the newest statement it obtains as the replacement under the rules of that section.
+On refresh, where {{refresh}} needs a replacement for an establishment created from a pulled statement, the server pulls again and considers only statements with the recorded statement's `iss` and `sub`, and its `tenant` where the recorded statement carried one. It applies the newest of those as the replacement under that section. Where the newest is the recorded statement itself, nothing is replaced, and currency rests on that statement as {{refresh}} describes.
 
 {{CIMD}} also permits a document to carry a `software_statement` member, which a consumer ignores ({{dcr-presentation}}). A document cannot carry a statement issued over itself, and one carrying a statement issued over an earlier version offers a review of octets no longer being served, a stale review behind current branding. Publishing at `software_statements_uri` is the form that works: the document names a location rather than a statement, and the statements there name the document.
 
