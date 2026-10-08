@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          6 October 2026
-Expires: 9 April 2027
+Intended status: Standards Track                          8 October 2026
+Expires: 11 April 2027
 
 
                         CIMD Software Statement
@@ -47,7 +47,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -101,16 +101,17 @@ Table of Contents
    13. Extension Points
    14. Security Considerations
      14.1.  Statement Theft and Replay
-     14.2.  Copied Statements and Public Clients
-     14.3.  Tenant Confusion at a Multi-Tenant Consumer
-     14.4.  Renewal Authenticates the Credential
-     14.5.  External Retrieval and Resource Exhaustion
-     14.6.  Registration Fraud and Impersonation
-     14.7.  Enforcement Bounds
-     14.8.  Status Resolution
-     14.9.  Document Resolution
-     14.10. Observable State
-     14.11. Statement Handling
+     14.2.  Servers That Do Not Implement This Specification
+     14.3.  Copied Statements and Public Clients
+     14.4.  Tenant Confusion at a Multi-Tenant Consumer
+     14.5.  Renewal Authenticates the Credential
+     14.6.  External Retrieval and Resource Exhaustion
+     14.7.  Registration Fraud and Impersonation
+     14.8.  Enforcement Bounds
+     14.9.  Status Resolution
+     14.10. Document Resolution
+     14.11. Observable State
+     14.12. Statement Handling
    15. Privacy Considerations
    16. IANA Considerations
      16.1.  OAuth Parameters Registry
@@ -206,7 +207,7 @@ Table of Contents
    current statement.  It does not revoke access tokens already issued,
    and continuation of runtime-established grants is subject to the
    refresh policy in Section 6.5.1.  These enforcement bounds are
-   detailed in Section 14.7.
+   detailed in Section 14.8.
 
    This separation lets one issuer curate approved software across many
    authorization servers without making the issuer the final policy
@@ -367,12 +368,12 @@ Table of Contents
    algorithms MUST NOT be used.
 
    The JOSE header MUST include kid, identifying the signing key within
-   the issuer's JWK Set, and MUST include typ with the value software-
-   statement+jwt, applying Section 3.11 of [RFC8725].  This value names
-   application/software-statement+jwt (Section 16.2) with the
-   application/ prefix omitted, as described in Section 4.1.9 of
-   [RFC7515].  Explicit typing prevents confusion with other JWTs from
-   the same issuer.
+   the issuer's statement key set (Section 12), and MUST include typ
+   with the value software-statement+jwt, applying Section 3.11 of
+   [RFC8725].  This value names application/software-statement+jwt
+   (Section 16.2) with the application/ prefix omitted, as described in
+   Section 4.1.9 of [RFC7515].  Explicit typing prevents confusion with
+   other JWTs from the same issuer.
 
    Extensions can add claims; an incompatible revision would use a new
    type value.  An issuer advertises the algorithms it signs with in its
@@ -413,11 +414,11 @@ Table of Contents
       (Section 4).  Omitting the claim lets one review serve every
       server that trusts the issuer, which is the portability the
       artifact exists for; it also lets whoever holds a copy use it at
-      any of them.  Nothing in a statement says which way it will be
-      consumed, and a holder can always choose registration, which
-      requires no key.  An issuer SHOULD therefore name an audience, and
-      omit it only where it accepts that any server trusting it may
-      register the software on the strength of a copy (Section 14.1).
+      any of them.  Unless consumable_at excludes it, a holder can
+      always choose registration, which requires no key.  An issuer
+      SHOULD therefore name an audience, and omit it only where it
+      accepts that any server trusting it may register the software on
+      the strength of a copy (Section 14.1).
 
    aud_tenant:  OPTIONAL.  A tenant identifier at a trusting
       authorization server, as [IDJAG] defines the claim, naming the
@@ -432,6 +433,16 @@ Table of Contents
       finds no aud_tenant rejects the statement rather than choosing
       between those readings.  A listing review that applies wherever
       its aud reaches carries neither this claim nor tenant.
+
+   consumable_at:  OPTIONAL.  A JSON array naming the points at which
+      the statement may be consumed: registration (Section 5) and
+      presentation (Section 6).  A trusting authorization server MUST
+      reject a statement at a point the array does not name, treating a
+      member it does not recognize as naming no point it serves.  Where
+      the claim is absent, the statement may be consumed at either
+      point.  Registration requires no key, so an issuer that means its
+      review to admit only a presenter proving a key the document
+      carries limits the claim to presentation (Section 14.1).
 
    iat:  REQUIRED.  A NumericDate value representing the time at which
       the software statement was issued.  An issuer MUST NOT issue two
@@ -553,6 +564,9 @@ Table of Contents
       statement is evaluated rather than from anything the request
       supplies;
 
+   *  where the statement carries consumable_at, verify that it names
+      the point at which the statement is being consumed;
+
    *  verify that sub is a client identifier URL conforming to [CIMD],
       and that it falls within the identifier scope for which this
       server accepts the issuer (Section 4);
@@ -571,9 +585,15 @@ Table of Contents
    follows [STATUSLIST], including its caching rules and its requirement
    to reject where the referenced index lies outside the list, so a
    server MAY decide from a Status List Token it already holds within
-   that token's validity.  A rejection on status uses the refusal-record
-   row of Section 10, because re-presenting the same statement cannot
-   succeed while that status stands.
+   that token's validity.  A server MUST NOT replace a Status List Token
+   it holds with one whose iat is earlier, and MUST treat one whose iat
+   is equal but whose contents differ as a resolution failure, since a
+   host serving an older token could otherwise restore a status the
+   issuer has withdrawn.  An issuer gives each token it publishes at a
+   list URI a later iat than the last ([ISSUANCE]).  A rejection on
+   status uses the refusal-record row of Section 10, because re-
+   presenting the same statement cannot succeed while that status
+   stands.
 
    Status constrains and never relaxes.  Expiry is the floor: a
    statement carrying no status, or whose status the server cannot
@@ -587,8 +607,9 @@ Table of Contents
 
    An issuer URL or JWK Set does not establish trust.  A trusting
    authorization server accepts only configured issuers (Section 4) and
-   obtains their keys from that issuer's authorization server metadata
-   [RFC8414], never from the statement.
+   obtains their statement signing keys from the
+   software_statement_jwks_uri of that issuer's authorization server
+   metadata (Section 12), never from the statement.
 
    Rejections at a registration endpoint use the error codes of
    Section 3.2.2 of [RFC7591]: invalid_software_statement where the
@@ -596,9 +617,9 @@ Table of Contents
    validation, and unapproved_software_statement where it validates but
    is not acceptable here, because its issuer is not configured, its aud
    excludes this server, its sub or tenant falls outside the issuer's
-   scope, or its aud_tenant does not identify this request's tenant or
-   is absent where this server requires one.  Rejections elsewhere use
-   Section 10.
+   scope, its aud_tenant does not identify this request's tenant or is
+   absent where this server requires one, or its consumable_at does not
+   name registration.  Rejections elsewhere use Section 10.
 
    A trusting authorization server resolving the reviewed document MUST
    reject a document containing duplicate object member names, since
@@ -619,9 +640,10 @@ Table of Contents
 
    *  the exact iss identifier it will accept;
 
-   *  the source of that issuer's signing keys: the jwks_uri in the
-      issuer's authorization server metadata [RFC8414], reached from the
-      configured iss;
+   *  the source of that issuer's statement signing keys: the
+      software_statement_jwks_uri in the issuer's authorization server
+      metadata (Section 12), reached from the configured iss, and never
+      its jwks_uri, whose keys sign other artifacts;
 
    *  the signing algorithms it will accept from the issuer;
 
@@ -654,6 +676,14 @@ Table of Contents
    verifies (Section 3.2).  An issuer accepted for all values of sub
    can, if compromised or over-broad, mint acceptable statements about
    any client software.
+
+   Where a trusting authorization server configures an issuer whose
+   decisions are confined to one of its tenants, as a customer's own
+   issuer is, it SHOULD treat that issuer's decision as required in that
+   tenant, and so reject there a statement from another issuer about
+   software that issuer has decided on.  Otherwise a holder could
+   present a broader listing to evade the customer's withdrawal
+   (Section 8).
 
    Where an issuer attests software across many publishers, as an
    enterprise issuer does, the scope is the set of identifiers it is
@@ -749,7 +779,15 @@ Table of Contents
       digest binds the document; treating a statement inside the
       document as a second review would make acceptance depend on bytes
       the presented statement covers but no issuer separately vouched
-      for.
+      for;
+
+   *  MUST reject the registration with invalid_client_metadata where
+      the document declares token_endpoint_auth_method of none and any
+      of its redirection URIs does not use the https scheme, since a
+      loopback or private-use redirection URI delivers codes to
+      whichever local application claims it (Section 14.3).
+      Registration has no review-only form, as runtime presentation does
+      (Section 6.3.1), because the registration is the admission.
 
    Taking only the document closes the substitution the statement exists
    to prevent.  A rule that constrained only the members the document
@@ -765,11 +803,15 @@ Table of Contents
    octets it digested when it onboarded that URL.  Such a server MAY
    satisfy the resolution requirement above by comparing cimd_digest
    against the digest of the retained octets, and MUST retrieve the
-   document afresh where that comparison fails.  Retaining the octets is
-   what makes the two paths equivalent: the registered metadata is
-   derived from the same bytes the digest covers, whether they arrived
-   at onboarding or at consumption.  A server holding no such octets for
-   the identifier retrieves the document.
+   document afresh where that comparison fails.  It SHOULD revalidate
+   retained octets on the schedule the document's caching directives
+   allow, for example with a conditional request, since a statement over
+   an older document otherwise keeps matching bytes the publisher no
+   longer serves.  Retaining the octets is what makes the two paths
+   equivalent: the registered metadata is derived from the same bytes
+   the digest covers, whether they arrived at onboarding or at
+   consumption.  A server holding no such octets for the identifier
+   retrieves the document.
 
    Three failures have defined outcomes:
 
@@ -789,7 +831,7 @@ Table of Contents
       sound statement.
 
    The retrieval is client-controlled and reachable before any client is
-   registered, so the protections and bounds of Section 14.5 apply to it
+   registered, so the protections and bounds of Section 14.6 apply to it
    as they do to a presentation.
 
 5.1.  Registration Validity
@@ -822,7 +864,7 @@ Table of Contents
       The revalidation requests Section 5.2 permits are the exception.
 
    *  It SHOULD retain the expired record so that it can process a later
-      authenticated revalidation (Section 14.10).  A valid replacement
+      authenticated revalidation (Section 14.11).  A valid replacement
       restores the registration under Section 5.2, which needs no grace
       period.
 
@@ -833,7 +875,7 @@ Table of Contents
    recovery path.  A server that does not resolve status is bounded by
    the effective expiry alone.
 
-   The disposition of outstanding grants is local policy (Section 14.7).
+   The disposition of outstanding grants is local policy (Section 14.8).
 
    Should [CIMD] define an expiry the document asserts for its own
    client identifier, that value MAY only shorten the effective expiry
@@ -1069,7 +1111,7 @@ Table of Contents
    MAY reuse a recently retrieved key set within ordinary HTTP caching
    bounds, subject to a maximum reuse period of its own choosing; it
    MUST NOT let the client's cache directives alone determine how long a
-   removed key continues to verify (Section 14.5).
+   removed key continues to verify (Section 14.6).
 
 6.3.1.  Public Clients
 
@@ -1081,13 +1123,8 @@ Table of Contents
 
    A presentation at the pushed authorization request endpoint by a
    client whose reviewed document declares token_endpoint_auth_method of
-   none is bound instead by the reviewed redirection URIs.  The
-   authorization server:
-
-   *  MUST reject the presentation unless every redirection URI in the
-      reviewed document uses the https scheme, and MUST reject a
-      document carrying a private-use scheme or loopback redirection
-      URI;
+   none, and whose redirection URIs all use the https scheme, is bound
+   instead by those URIs.  The authorization server:
 
    *  MUST require PKCE [RFC7636] with the S256 method;
 
@@ -1100,11 +1137,29 @@ Table of Contents
    What admits the statement here is the reviewed document rather than
    the proven key.  An authorization code opened by such a presentation
    is delivered only to a redirection URI the issuer reviewed, so a
-   party holding a copied statement cannot receive it (Section 14.2).
+   party holding a copied statement cannot receive it (Section 14.3).
    The proven key answers the separate question of which installation
    the grant belongs to, and nothing after establishment changes: code
    redemption and refresh demonstrate possession of that same key
    (Section 6.5, Section 6.5.1).
+
+   A presentation is review-only where the reviewed document declares
+   none and carries a redirection URI that does not use the https
+   scheme, as a private-use scheme or loopback redirection URI does.
+   Desktop software commonly redirects this way, and another application
+   on the same device can claim such a URI and receive the code
+   (Section 14.3), so the reviewed redirection URIs cannot bind the
+   presenter.  A review-only presentation creates no establishment and
+   admits nothing: the authorization server proceeds as it would for the
+   same Client ID Metadata Document client presenting no statement, the
+   statement MUST NOT satisfy a policy requiring reviewed software, and
+   the server SHOULD NOT present the review to the user as an assurance
+   about the presenter.  It MAY record the statement's issuer for audit
+   and inventory, and MAY refuse the request where the statement's
+   status shows a withdrawal, since status constrains and never relaxes
+   (Section 3.2), subject to the bounds of Section 14.6.  A review-only
+   presentation does not advance the watermark of Section 7, since it
+   changes nothing for the software's other instances.
 
    This binding exists at the pushed authorization request endpoint
    alone.  A presentation at the token endpoint under Section 6.1 opens
@@ -1203,12 +1258,13 @@ Table of Contents
    of the establishment's Proven Key under the same sender-constraint
    mechanism.  It MAY, by local policy, additionally require a current
    unexpired statement, and SHOULD require one once the establishment's
-   recorded statement has expired (Section 14.7).
+   recorded statement has expired (Section 14.8).
 
-   Where the authorization server holds a refusal record for a
-   statement, it MUST treat that statement as not current wherever this
-   section requires currency, so that a withdrawn review ends grant
-   continuation on the same terms as an expiry.
+   Where the authorization server holds a refusal record for the
+   establishment's recorded statement, it MUST reject a refresh that
+   does not carry a replacement satisfying this section, whatever its
+   policy on currency otherwise: a withdrawal ends grant continuation at
+   once rather than waiting on local policy.
 
    When policy requires one, the client presents the replacement in the
    software_statement parameter of the refresh request.  The
@@ -1297,17 +1353,33 @@ Table of Contents
    broader statement defers a narrowing by opening a fresh registration
    or establishment with it.  The watermark is retained at least as long
    as the maximum statement lifetime the server honors for that issuer.
+   Because it spans every registration and establishment, the first
+   presentation of a replacement that establishes the client retires its
+   predecessor for every instance of the software at that server.
+   Instances SHOULD therefore obtain the current statement from a source
+   they share, such as an endpoint the publisher operates or a store
+   their deployment shares, rather than each holding a copy fixed when
+   it was built or installed.
 
    A trusting authorization server SHOULD use the statement's sub and
    iss to inventory the registrations and establishments derived from
    that issuer's statements about that software, and SHOULD bound their
-   number.  The safe default is one registration per (iss, sub), and per
-   tenant where the issuer carries one, at one authorization server,
-   counted across replacements, since a replacement statement carries a
-   new jti and a bound keyed on it would reset at every renewal.  On
-   repeated consumption, local policy can reject the request, treat it
-   as idempotent, or create another registration; [RFC7591] defines no
-   duplicate-registration protocol.
+   number.  An establishment counts toward a bound only once the
+   authorization server has issued an access token from it, which in a
+   redirect flow means its authorization code has been redeemed.  State
+   that a pushed authorization request created does not count, including
+   state whose code was issued but never redeemed, since anyone holding
+   a copy of a public client's statement can create it and approve it
+   with an account of their own.  The safe default is one registration
+   per (iss, sub), and per tenant where the issuer carries one, at one
+   authorization server, counted across replacements, since a
+   replacement statement carries a new jti and a bound keyed on it would
+   reset at every renewal.  On repeated consumption, local policy can
+   reject the request, treat it as idempotent, or create another
+   registration; [RFC7591] defines no duplicate-registration protocol.
+   An idempotent response MUST NOT return the existing registration's
+   credentials, such as its registration_access_token, since a repeated
+   request may come from any holder of a copy of the statement.
 
    Where the reviewed document carries jwks or jwks_uri, every
    registration derived from the statement uses that key material rather
@@ -1437,80 +1509,72 @@ Table of Contents
 
    Which code applies where:
 
-   +===========+=============================+=======================+=======================+
-   |Condition  |Registration (RFC 7591)      |Pushed authorization   |Token, including       |
-   |           |                             |request                |refresh                |
-   +===========+=============================+=======================+=======================+
-   |Malformed, |invalid_software_statement   |invalid_client         |invalid_client         |
-   |or failing |                             |                       |                       |
-   |signature  |                             |                       |                       |
-   |or claim   |                             |                       |                       |
-   |validation |                             |                       |                       |
-   +-----------+-----------------------------+-----------------------+-----------------------+
-   |Valid but  |unapproved_software_statement|invalid_client         |invalid_client         |
-   |not        |                             |                       |                       |
-   |acceptable |                             |                       |                       |
-   |here:      |                             |                       |                       |
-   |issuer not |                             |                       |                       |
-   |configured,|                             |                       |                       |
-   |aud        |                             |                       |                       |
-   |excludes   |                             |                       |                       |
-   |this       |                             |                       |                       |
-   |server, sub|                             |                       |                       |
-   |or tenant  |                             |                       |                       |
-   |outside the|                             |                       |                       |
-   |issuer's   |                             |                       |                       |
-   |scope,     |                             |                       |                       |
-   |aud_tenant |                             |                       |                       |
-   |not this   |                             |                       |                       |
-   |request's  |                             |                       |                       |
-   |tenant or  |                             |                       |                       |
-   |absent     |                             |                       |                       |
-   |where      |                             |                       |                       |
-   |required   |                             |                       |                       |
-   +-----------+-----------------------------+-----------------------+-----------------------+
-   |Expired, or|invalid_software_statement   |statement_required     |statement_required     |
-   |refused by |                             |                       |                       |
-   |a refusal  |                             |                       |                       |
-   |record,    |                             |                       |                       |
-   |including a|                             |                       |                       |
-   |status     |                             |                       |                       |
-   |resolved as|                             |                       |                       |
-   |INVALID, or|                             |                       |                       |
-   |as         |                             |                       |                       |
-   |SUSPENDED  |                             |                       |                       |
-   |where      |                             |                       |                       |
-   |policy     |                             |                       |                       |
-   |refuses it,|                             |                       |                       |
-   |or         |                             |                       |                       |
-   |superseded |                             |                       |                       |
-   |under the  |                             |                       |                       |
-   |iat floor  |                             |                       |                       |
-   |of         |                             |                       |                       |
-   |Section 7  |                             |                       |                       |
-   +-----------+-----------------------------+-----------------------+-----------------------+
-   |Required   |unapproved_software_statement|statement_required     |statement_required     |
-   |statement  |                             |                       |                       |
-   |absent     |                             |                       |                       |
-   +-----------+-----------------------------+-----------------------+-----------------------+
-   |Digest does|invalid_software_statement   |see Section 6.4        |see Section 6.4        |
-   |not match  |                             |                       |                       |
-   |the        |                             |                       |                       |
-   |retrieved  |                             |                       |                       |
-   |document   |                             |                       |                       |
-   +-----------+-----------------------------+-----------------------+-----------------------+
-   |Document   |invalid_client_metadata      |unauthorized_client or |unauthorized_client or |
-   |carries    |                             |invalid_scope          |invalid_scope          |
-   |metadata   |                             |                       |                       |
-   |this       |                             |                       |                       |
-   |server's   |                             |                       |                       |
-   |policy     |                             |                       |                       |
-   |refuses    |                             |                       |                       |
-   +-----------+-----------------------------+-----------------------+-----------------------+
-   |Retrieval  |temporarily_unavailable      |temporarily_unavailable|temporarily_unavailable|
-   |did not    |                             |                       |                       |
-   |complete   |                             |                       |                       |
-   +-----------+-----------------------------+-----------------------+-----------------------+
+   +=============+=============================+=======================+=======================+
+   |Condition    |Registration (RFC 7591)      |Pushed authorization   |Token, including       |
+   |             |                             |request                |refresh                |
+   +=============+=============================+=======================+=======================+
+   |Malformed, or|invalid_software_statement   |invalid_client         |invalid_client         |
+   |failing      |                             |                       |                       |
+   |signature or |                             |                       |                       |
+   |claim        |                             |                       |                       |
+   |validation   |                             |                       |                       |
+   +-------------+-----------------------------+-----------------------+-----------------------+
+   |Valid but not|unapproved_software_statement|invalid_client         |invalid_client         |
+   |acceptable   |                             |                       |                       |
+   |here: issuer |                             |                       |                       |
+   |not          |                             |                       |                       |
+   |configured,  |                             |                       |                       |
+   |aud excludes |                             |                       |                       |
+   |this server, |                             |                       |                       |
+   |sub or tenant|                             |                       |                       |
+   |outside the  |                             |                       |                       |
+   |issuer's     |                             |                       |                       |
+   |scope,       |                             |                       |                       |
+   |aud_tenant   |                             |                       |                       |
+   |not this     |                             |                       |                       |
+   |request's    |                             |                       |                       |
+   |tenant or    |                             |                       |                       |
+   |absent where |                             |                       |                       |
+   |required,    |                             |                       |                       |
+   |consumable_at|                             |                       |                       |
+   |excludes this|                             |                       |                       |
+   |point        |                             |                       |                       |
+   +-------------+-----------------------------+-----------------------+-----------------------+
+   |Expired, or  |invalid_software_statement   |statement_required     |statement_required     |
+   |refused by a |                             |                       |                       |
+   |refusal      |                             |                       |                       |
+   |record,      |                             |                       |                       |
+   |including a  |                             |                       |                       |
+   |status       |                             |                       |                       |
+   |resolved as  |                             |                       |                       |
+   |INVALID, or  |                             |                       |                       |
+   |as SUSPENDED |                             |                       |                       |
+   |where policy |                             |                       |                       |
+   |refuses it,  |                             |                       |                       |
+   |or superseded|                             |                       |                       |
+   |under the iat|                             |                       |                       |
+   |floor of     |                             |                       |                       |
+   |Section 7    |                             |                       |                       |
+   +-------------+-----------------------------+-----------------------+-----------------------+
+   |Required     |unapproved_software_statement|statement_required     |statement_required     |
+   |statement    |                             |                       |                       |
+   |absent       |                             |                       |                       |
+   +-------------+-----------------------------+-----------------------+-----------------------+
+   |Digest does  |invalid_software_statement   |see Section 6.4        |see Section 6.4        |
+   |not match the|                             |                       |                       |
+   |retrieved    |                             |                       |                       |
+   |document     |                             |                       |                       |
+   +-------------+-----------------------------+-----------------------+-----------------------+
+   |Document     |invalid_client_metadata      |unauthorized_client or |unauthorized_client or |
+   |carries      |                             |invalid_scope          |invalid_scope          |
+   |metadata this|                             |                       |                       |
+   |server's     |                             |                       |                       |
+   |policy       |                             |                       |                       |
+   |refuses      |                             |                       |                       |
+   +-------------+-----------------------------+-----------------------+-----------------------+
+   |Retrieval did|temporarily_unavailable      |temporarily_unavailable|temporarily_unavailable|
+   |not complete |                             |                       |                       |
+   +-------------+-----------------------------+-----------------------+-----------------------+
 
                                   Table 1
 
@@ -1624,6 +1688,20 @@ Table of Contents
    This specification defines the following authorization server
    metadata [RFC8414] values:
 
+   software_statement_jwks_uri:  REQUIRED for an authorization server
+      that issues software statements.  URL of a JWK Set containing the
+      keys with which it signs software statements and no other keys.
+      The URL MUST use the https scheme, as [RFC8414] requires of
+      jwks_uri, and a trusting authorization server MUST validate the
+      server's certificate when retrieving it, since a substituted key
+      set would let a network attacker sign statements.  The keys in it
+      MUST NOT appear in the JWK Set at the server's jwks_uri, and the
+      server MUST NOT sign anything other than software statements with
+      them.  A trusting authorization server verifies statements only
+      against this set (Section 4), so a key that signs another
+      artifact, such as a Status List Token, cannot be taken for a
+      statement signing key.  This member describes the issuing role.
+
    software_statement_presentation_supported:  OPTIONAL.  A JSON array
       naming the endpoints at which the authorization server accepts a
       software statement presented at runtime (Section 6.1).  Defined
@@ -1696,8 +1774,8 @@ Table of Contents
 
    A statement consumed at registration is a reusable bearer artifact
    until it expires, so an issuer relies on narrow audience and
-   lifetime, and the bounds of Section 7 limit what a stolen statement
-   can create.
+   lifetime, or excludes registration with consumable_at (Section 3),
+   and the bounds of Section 7 limit what a stolen statement can create.
 
    Attesting jwks_uri attests the location, not its contents: a
    compromised key host can add keys that satisfy the proof with no
@@ -1710,22 +1788,37 @@ Table of Contents
    constraint, the grant bindings of Section 6.5, and the registration-
    validity model on top of them.
 
-14.2.  Copied Statements and Public Clients
+14.2.  Servers That Do Not Implement This Specification
+
+   A statement carries no client metadata, so an [RFC7591] server that
+   verified one without implementing this specification would take every
+   metadata value from the registration request, which is the
+   substitution Section 5 exists to prevent: the issuer's approval would
+   attach to an attacker's redirection URIs and keys.  Keeping statement
+   signing keys at software_statement_jwks_uri and out of jwks_uri
+   (Section 12) is what stops this.  A server that discovers an issuer's
+   keys through [RFC8414] finds none that verify a statement, and a
+   server configured with the statement key set has been configured for
+   this specification.
+
+14.3.  Copied Statements and Public Clients
 
    A public client's presentation (Section 6.3.1) admits a statement
    without proof of a key the reviewed document carries, so a party
    holding a copied statement can open a pushed authorization request in
    the reviewed software's name.  What it cannot do is complete the
    grant.  The authorization code is delivered only to a redirection URI
-   the issuer reviewed, and requiring every such URI to use the https
-   scheme is what makes that binding hold: a private-use scheme or
-   loopback redirection URI can be claimed by other software on the same
-   device, and would deliver the code to the holder of the copy.
+   the issuer reviewed, and the https requirement on documents bound by
+   their redirection URIs is what makes that binding hold: a private-use
+   scheme or loopback redirection URI can be claimed by other software
+   on the same device, and would deliver the code to the holder of the
+   copy.  A document carrying such a URI is therefore presented review-
+   only (Section 6.3.1).
 
    The residual exposure is a consent prompt carrying the reviewed
    software's name and branding, raised by a party that cannot receive
    what the user approves.  An authorization server SHOULD rate-limit
-   presentations per statement identity and per subject (Section 14.5),
+   presentations per statement identity and per subject (Section 14.6),
    and an issuer bounds the exposure through audience, lifetime, and
    status (Section 3).
 
@@ -1736,7 +1829,7 @@ Table of Contents
    closes the gap by giving the instance a key a third party vouches
    for.
 
-14.3.  Tenant Confusion at a Multi-Tenant Consumer
+14.4.  Tenant Confusion at a Multi-Tenant Consumer
 
    Where a trusting authorization server serves several tenants and
    evaluates anything tenant-specific, the tenant it decides against and
@@ -1765,7 +1858,7 @@ Table of Contents
    at the consumer or carries the customer as instance identity
    ([CLIENT-INSTANCE]).
 
-14.4.  Renewal Authenticates the Credential
+14.5.  Renewal Authenticates the Credential
 
    Renewing a registration proves possession of the registration's own
    credential and the currency of a statement sharing the governing iss
@@ -1783,7 +1876,7 @@ Table of Contents
    presenter to the reviewed document, by a key it carries or, for a
    public client, by the redirection URIs it lists.
 
-14.5.  External Retrieval and Resource Exhaustion
+14.6.  External Retrieval and Resource Exhaustion
 
    Runtime presentation can cause the authorization server to retrieve
    the Client ID Metadata Document, a jwks_uri it names, or keys and
@@ -1814,7 +1907,7 @@ Table of Contents
    the authorization server MUST reject the request and MUST NOT fall
    back to a weaker proof.
 
-14.6.  Registration Fraud and Impersonation
+14.7.  Registration Fraud and Impersonation
 
    Open registration permits client_name, logo_uri, and client_uri
    values that imitate trusted software on consent screens.  Requiring a
@@ -1831,7 +1924,7 @@ Table of Contents
    misleads review can obtain a genuine statement for fraudulent
    metadata, so issuer verification depth remains decisive ([ISSUANCE]).
 
-14.7.  Enforcement Bounds
+14.8.  Enforcement Bounds
 
    Expiry is enforced at every presentation and every statement-governed
    registration, so a lapsed statement stops new runtime establishment
@@ -1841,10 +1934,11 @@ Table of Contents
    statement on refresh under Section 6.5.1 is the control that makes
    issuer non-renewal end runtime-established grants, and a deployment
    that does not adopt it retains grants for the life of their refresh
-   tokens whatever the statement lifetime; registration-backed grants
-   remain subject to the server's grant policy after the registration
-   expires.  A narrowed re-review takes effect when the client publishes
-   the narrower document and obtains a statement over it.  Detection of
+   tokens whatever the statement lifetime, although a withdrawal ends
+   them regardless (Section 6.5.1); registration-backed grants remain
+   subject to the server's grant policy after the registration expires.
+   A narrowed re-review takes effect when the client publishes the
+   narrower document and obtains a statement over it.  Detection of
    post-issuance metadata change rests on cimd_digest, which covers
    exact bytes but requires the server to hold the current ones, by
    retrieval or as retained octets (Section 5).  The bounded statement
@@ -1863,7 +1957,7 @@ Table of Contents
    SHOULD stagger expiries or renew ahead of the boundary to avoid
    synchronized lapses.
 
-14.8.  Status Resolution
+14.9.  Status Resolution
 
    Resolving status adds a dependency on the issuer and a fetch the
    client does not control.  [STATUSLIST] aggregates many statements
@@ -1876,17 +1970,17 @@ Table of Contents
    governs.
 
    A status list is signed by the issuer, and a server MUST obtain its
-   verification keys the same way it obtains statement signing keys
-   (Section 4), never from the list itself.  Because a server accepts
-   any key in that set as a statement signing key for the issuer, a key
-   that signs the list can sign statements too, and an issuer protects
-   it as one.  An issuer that publishes status for some statements and
-   not others gives a consumer no way to tell an unpublished status from
-   a withdrawn one, which is why [ISSUANCE] requires such an issuer to
-   carry the claim in every statement from the point it begins
-   publishing.
+   verification keys from the jwks_uri of the issuer's authorization
+   server metadata [RFC8414], reached from the configured iss, never
+   from the list itself.  Those keys come from the issuer's jwks_uri,
+   apart from its statement key set (Section 12), so a key that signs
+   the list cannot sign statements.  An issuer that publishes status for
+   some statements and not others gives a consumer no way to tell an
+   unpublished status from a withdrawn one, which is why [ISSUANCE]
+   requires such an issuer to carry the claim in every statement from
+   the point it begins publishing.
 
-14.9.  Document Resolution
+14.10.  Document Resolution
 
    Every presentation resolves the Client ID Metadata Document its
    statement names (Section 6.4), which inherits the resolution
@@ -1896,7 +1990,7 @@ Table of Contents
    the bytes it holds are the reviewed ones, whether it retrieved them
    itself or retained them (Section 3.1, Section 5).
 
-14.10.  Observable State
+14.11.  Observable State
 
    A retained expired registration is distinguishable from an unknown
    client, because recovery requires the server to authenticate the
@@ -1919,7 +2013,7 @@ Table of Contents
    Neither discloses issuer trust, subject scope, or attester policy,
    which Section 10 keeps from unauthenticated requesters.
 
-14.11.  Statement Handling
+14.12.  Statement Handling
 
    A software statement remains a sensitive artifact in transit and at
    rest: possession alone does not enable presentation, but statements
@@ -2041,6 +2135,15 @@ Table of Contents
 
    Specification Document(s):  This specification, Section 3
 
+   Claim Name:  consumable_at
+
+   Claim Description:  Points at which a software statement may be
+      consumed
+
+   Change Controller:  IESG
+
+   Specification Document(s):  This specification, Section 3
+
 16.5.  OAuth Extensions Error Registry
 
    This specification requests registration of the following error codes
@@ -2126,6 +2229,15 @@ Table of Contents
    Metadata Description:  JSON array of grant type identifiers on which
       the authorization server accepts a runtime presentation, beyond
       those the specification names.
+
+   Change Controller:  IESG
+
+   Specification Document(s):  This specification, Section 12
+
+   Metadata Name:  software_statement_jwks_uri
+
+   Metadata Description:  URL of the JWK Set containing only the keys
+      with which the authorization server signs software statements.
 
    Change Controller:  IESG
 

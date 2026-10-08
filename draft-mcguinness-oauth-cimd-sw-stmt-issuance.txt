@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                          6 October 2026
-Expires: 9 April 2027
+Intended status: Standards Track                          8 October 2026
+Expires: 11 April 2027
 
 
                     CIMD Software Statement Issuance
@@ -48,7 +48,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 April 2027.
+   This Internet-Draft will expire on 11 April 2027.
 
 Copyright Notice
 
@@ -961,10 +961,14 @@ Table of Contents
    The authorization server MAY accept a statement that has expired, and
    SHOULD bound how long after expiry it will do so, since a client
    absent for an extended period is asking to be re-established rather
-   than renewed.  Whether renewal requires fresh review is issuer
-   policy; the request is a new issuance decision, and the issuer re-
-   evaluates the current document as it would for any other request
-   (Section 4.1).
+   than renewed.  Where the current document's digest equals the subject
+   statement's cimd_digest, whether renewal requires fresh review is
+   issuer policy.  Where it differs, the issuer MUST apply the decision
+   it would apply to a first issuance for that document, and MUST NOT
+   renew on the strength of the prior statement alone: a changed
+   document is a new trust state (Section 4.1), and renewal by whoever
+   can change it would otherwise launder the change into the issuer's
+   signature.
 
    Renewal needs no credential beyond the statement the client already
    holds, which is what keeps automated renewal from depending on an
@@ -1141,12 +1145,21 @@ Table of Contents
       superseded statement does not withdraw its replacement, and
       withdrawing a replacement does not restore its predecessor; and
 
-   *  MUST sign the Status List Token with a key a consumer obtains the
-      way it obtains statement signing keys, through the issuer's
-      authorization server metadata [RFC8414].  A consumer accepts any
-      key in that set for statements, so the key that signs the list is
-      in effect a statement signing key and is protected as one
-      ([STATEMENT]).
+   *  MUST sign the Status List Token with a key published at the
+      jwks_uri of its authorization server metadata [RFC8414], never
+      with a statement signing key ([STATEMENT]), and MUST include exp
+      in every Status List Token it publishes, so that an older token
+      cannot stand in for a newer one indefinitely, and MUST give each
+      token it publishes at a given list URI an iat later than that of
+      any token it published there before, so that a consumer can tell
+      the newer of two apart.
+
+   An issuer that issues a replacement over a document that no longer
+   carries a key, redirection URI, or scope the earlier document carried
+   SHOULD withdraw the earlier statement, since what was removed may be
+   why the document changed, and a consumer that has not yet seen the
+   replacement would otherwise accept the earlier statement until it
+   expires.
 
    Status does not replace lifetime.  A consumer is not obliged to
    resolve status, so an issuer chooses exp on the assumption that none
@@ -1165,7 +1178,9 @@ Table of Contents
    An authorization server that issues software statements under this
    specification advertises true for
    client_id_metadata_document_supported, as defined by [CIMD], and
-   publishes software_statement_signing_alg_values_supported below.
+   publishes software_statement_signing_alg_values_supported below, and
+   publishes its statement signing keys only at
+   software_statement_jwks_uri ([STATEMENT]).
 
    An issuer that may defer a request advertises true for
    deferred_token_response_supported, as defined by [DTR] (Section 9),
@@ -1245,7 +1260,10 @@ Table of Contents
    statement's audience until expiry.  The approval interface therefore
    SHOULD present:
 
-   *  the client identifier URL;
+   *  the client identifier URL, with its origin shown as the client's
+      identity and display metadata such as client_name and logo_uri
+      marked as asserted by the client, since a look-alike document can
+      carry another vendor's name;
 
    *  the document content it will vouch for, identified by its digest;
 
@@ -1379,8 +1397,11 @@ Table of Contents
    is safe only alongside the holder binding Section 8.1 requires: the
    client authenticates with a key both the reviewed document and the
    current one carry, which a party holding only a stolen copy cannot
-   do, and which a party able to change the current document cannot
-   supply either.  Binding renewal to that key also keeps automated
+   do.  Where both documents carry their keys inline, a party able to
+   change the current document cannot supply one either; where they name
+   a jwks_uri, whoever controls that location can, which is why a
+   changed document gets the decision a first issuance gets
+   (Section 8.1).  Binding renewal to that key also keeps automated
    renewal from needing a long-lived reusable initial access token,
    which would be a standing credential to mint statements
    (Section 13.5).
@@ -1393,7 +1414,10 @@ Table of Contents
 13.7.  Signing Keys and Algorithms
 
    Compromise of a software-statement signing key enables an attacker to
-   mint statements for every audience that trusts that key.
+   mint statements for every audience that trusts that key.  Keeping
+   those keys at software_statement_jwks_uri, apart from every key that
+   signs anything else ([STATEMENT]), confines that power to the keys
+   that need it.
 
    *  Issuers SHOULD protect signing keys according to the scope of
       their trust relationships and support controlled key rotation.
@@ -1419,7 +1443,9 @@ Table of Contents
    authorization server, and approval by a party authorized only for a
    personal or organizational scope MUST NOT produce a statement whose
    audience exceeds that scope, or whose aud_tenant names a tenant
-   outside it.
+   outside it.  An issuer SHOULD limit what an approver may approve to
+   client identifiers under publisher namespaces it has enrolled, so
+   that a look-alike document cannot reach approval at all.
 
    An audit record SHOULD bind each decision, whether approval or
    denial, to the metadata digest (Section 4.1) of the document the
@@ -1584,7 +1610,7 @@ Table of Contents
               id-metadata-document>.
 
    [DTR]      "Deferred Token Response", n.d.,
-              <https://datatracker.ietf.org/doc/draft-gerber-oauth-
+              <https://datatracker.ietf.org/doc/draft-ietf-oauth-
               deferred-token-response>.
 
    [FORM-POST]

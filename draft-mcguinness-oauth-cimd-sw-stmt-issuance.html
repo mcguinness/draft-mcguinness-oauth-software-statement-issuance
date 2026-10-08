@@ -1053,7 +1053,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 9 April 2027</td>
+<td class="center">Expires 11 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1066,12 +1066,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-cimd-sw-stmt-issuance-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-06" class="published">6 October 2026</time>
+<time datetime="2026-10-08" class="published">8 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-09">9 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-11">11 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1108,7 +1108,7 @@ svg {
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 9 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 11 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1935,7 +1935,7 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3A
 <p id="section-8.1-1">A client renews by presenting its current or most recent software statement as the subject token. The authorization server <span class="bcp14">MUST</span> verify that it issued the statement, that the statement's <code>sub</code> equals the request's <code>client_id</code>, and that the client authenticated with a key carried both by the document the statement's <code>cimd_digest</code> names and by the current document. A key the publisher has removed since review cannot renew, and neither can one added since; a client rotating keys inline renews while its document carries the old key and the new one. For a document naming <code>jwks_uri</code>, both carry the same location, so the binding is to whatever that location serves (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>). An issuer offering renewal therefore retains the octets of each document it issues a statement over. That authentication is the holder binding: a statement is otherwise a bearer artifact, and without it whoever held a copy could renew. A public client holds no such key and cannot renew this way; it obtains a replacement through the redirect flow.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
 <p id="section-8.1-2">A replacement carries the subject statement's <code>tenant</code> where it carried one, and its <code>aud_tenant</code> while the decision is still confined to that tenant, since <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> matches a replacement to the statement it replaces by <code>iss</code>, <code>sub</code>, and <code>tenant</code>.<a href="#section-8.1-2" class="pilcrow">¶</a></p>
 <p id="section-8.1-3">An issuer that publishes status <span class="bcp14">MUST NOT</span> accept as subject token a statement whose own published status is other than <code>VALID</code>. Renewing a statement it has withdrawn would reissue the decision that withdrawal ended.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
-<p id="section-8.1-4">The authorization server <span class="bcp14">MAY</span> accept a statement that has expired, and <span class="bcp14">SHOULD</span> bound how long after expiry it will do so, since a client absent for an extended period is asking to be re-established rather than renewed. Whether renewal requires fresh review is issuer policy; the request is a new issuance decision, and the issuer re-evaluates the current document as it would for any other request (<a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>).<a href="#section-8.1-4" class="pilcrow">¶</a></p>
+<p id="section-8.1-4">The authorization server <span class="bcp14">MAY</span> accept a statement that has expired, and <span class="bcp14">SHOULD</span> bound how long after expiry it will do so, since a client absent for an extended period is asking to be re-established rather than renewed. Where the current document's digest equals the subject statement's <code>cimd_digest</code>, whether renewal requires fresh review is issuer policy. Where it differs, the issuer <span class="bcp14">MUST</span> apply the decision it would apply to a first issuance for that document, and <span class="bcp14">MUST NOT</span> renew on the strength of the prior statement alone: a changed document is a new trust state (<a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>), and renewal by whoever can change it would otherwise launder the change into the issuer's signature.<a href="#section-8.1-4" class="pilcrow">¶</a></p>
 <p id="section-8.1-5">Renewal needs no credential beyond the statement the client already holds, which is what keeps automated renewal from depending on an out-of-band credential outliving every statement it renews (<a href="#security-considerations" class="auto internal xref">Section 13</a>).<a href="#section-8.1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -2061,10 +2061,11 @@ Pragma: no-cache
           <p id="section-11-3.2.1"><span class="bcp14">MUST</span> assign each statement its own index and <span class="bcp14">MUST NOT</span> reuse an index across statements. Withdrawing a statement sets that statement's index and affects no other. A replacement obtained through <a href="#renewal" class="auto internal xref">Section 8.1</a> occupies its own index, so withdrawing a superseded statement does not withdraw its replacement, and withdrawing a replacement does not restore its predecessor; and<a href="#section-11-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-11-3.3">
-          <p id="section-11-3.3.1"><span class="bcp14">MUST</span> sign the Status List Token with a key a consumer obtains the way it obtains statement signing keys, through the issuer's authorization server metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>. A consumer accepts any key in that set for statements, so the key that signs the list is in effect a statement signing key and is protected as one (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>).<a href="#section-11-3.3.1" class="pilcrow">¶</a></p>
+          <p id="section-11-3.3.1"><span class="bcp14">MUST</span> sign the Status List Token with a key published at the <code>jwks_uri</code> of its authorization server metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>, never with a statement signing key (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>), and <span class="bcp14">MUST</span> include <code>exp</code> in every Status List Token it publishes, so that an older token cannot stand in for a newer one indefinitely, and <span class="bcp14">MUST</span> give each token it publishes at a given list URI an <code>iat</code> later than that of any token it published there before, so that a consumer can tell the newer of two apart.<a href="#section-11-3.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-11-4">Status does not replace lifetime. A consumer is not obliged to resolve status, so an issuer chooses <code>exp</code> on the assumption that none does, and treats status as what shortens a decision rather than what bounds it.<a href="#section-11-4" class="pilcrow">¶</a></p>
+<p id="section-11-4">An issuer that issues a replacement over a document that no longer carries a key, redirection URI, or scope the earlier document carried <span class="bcp14">SHOULD</span> withdraw the earlier statement, since what was removed may be why the document changed, and a consumer that has not yet seen the replacement would otherwise accept the earlier statement until it expires.<a href="#section-11-4" class="pilcrow">¶</a></p>
+<p id="section-11-5">Status does not replace lifetime. A consumer is not obliged to resolve status, so an issuer chooses <code>exp</code> on the assumption that none does, and treats status as what shortens a decision rather than what bounds it.<a href="#section-11-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authorization-server-metadata">
@@ -2073,7 +2074,7 @@ Pragma: no-cache
 <a href="#section-12" class="section-number selfRef">12. </a><a href="#name-authorization-server-metada" class="section-name selfRef">Authorization Server Metadata</a>
       </h2>
 <p id="section-12-1">The issuing authorization server is a role, not necessarily a general-purpose OAuth deployment. An issuer offering only token exchange can consist of a token endpoint, an authorization server metadata document, and signing keys. It can operate solely as an attestation service, without an authorization endpoint, access tokens, or protected resources.<a href="#section-12-1" class="pilcrow">¶</a></p>
-<p id="section-12-2">An authorization server that issues software statements under this specification advertises <code>true</code> for <code>client_id_metadata_document_supported</code>, as defined by <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span>, and publishes <code>software_statement_signing_alg_values_supported</code> below.<a href="#section-12-2" class="pilcrow">¶</a></p>
+<p id="section-12-2">An authorization server that issues software statements under this specification advertises <code>true</code> for <code>client_id_metadata_document_supported</code>, as defined by <span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span>, and publishes <code>software_statement_signing_alg_values_supported</code> below, and publishes its statement signing keys only at <code>software_statement_jwks_uri</code> (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>).<a href="#section-12-2" class="pilcrow">¶</a></p>
 <p id="section-12-3">An issuer that may defer a request advertises <code>true</code> for <code>deferred_token_response_supported</code>, as defined by <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> (<a href="#deferred-processing" class="auto internal xref">Section 9</a>), and, because deferrals are cancellable, lists <code>urn:ietf:params:oauth:token-type:deferral-code</code> in <code>revocation_endpoint_token_type_values_supported</code> as <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> requires. A synchronous issuer, which answers every request with a statement or a terminal denial, advertises neither and need not implement <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>.<a href="#section-12-3" class="pilcrow">¶</a></p>
 <p id="section-12-4">An authorization server supporting the redirect flow advertises:<a href="#section-12-4" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -2122,7 +2123,7 @@ Pragma: no-cache
 <p id="section-13.1-4">An erroneous approval affects every authorization server in the statement's audience until expiry. The approval interface therefore <span class="bcp14">SHOULD</span> present:<a href="#section-13.1-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-13.1-5.1">
-            <p id="section-13.1-5.1.1">the client identifier URL;<a href="#section-13.1-5.1.1" class="pilcrow">¶</a></p>
+            <p id="section-13.1-5.1.1">the client identifier URL, with its origin shown as the client's identity and display metadata such as <code>client_name</code> and <code>logo_uri</code> marked as asserted by the client, since a look-alike document can carry another vendor's name;<a href="#section-13.1-5.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-13.1-5.2">
             <p id="section-13.1-5.2.1">the document content it will vouch for, identified by its digest;<a href="#section-13.1-5.2.1" class="pilcrow">¶</a></p>
@@ -2186,7 +2187,7 @@ Pragma: no-cache
         <h3 id="name-renewal-by-prior-statement">
 <a href="#section-13.6" class="section-number selfRef">13.6. </a><a href="#name-renewal-by-prior-statement" class="section-name selfRef">Renewal by Prior Statement</a>
         </h3>
-<p id="section-13.6-1">A statement is a bearer artifact, so accepting one as a subject token is safe only alongside the holder binding <a href="#renewal" class="auto internal xref">Section 8.1</a> requires: the client authenticates with a key both the reviewed document and the current one carry, which a party holding only a stolen copy cannot do, and which a party able to change the current document cannot supply either. Binding renewal to that key also keeps automated renewal from needing a long-lived reusable initial access token, which would be a standing credential to mint statements (<a href="#te-considerations" class="auto internal xref">Section 13.5</a>).<a href="#section-13.6-1" class="pilcrow">¶</a></p>
+<p id="section-13.6-1">A statement is a bearer artifact, so accepting one as a subject token is safe only alongside the holder binding <a href="#renewal" class="auto internal xref">Section 8.1</a> requires: the client authenticates with a key both the reviewed document and the current one carry, which a party holding only a stolen copy cannot do. Where both documents carry their keys inline, a party able to change the current document cannot supply one either; where they name a <code>jwks_uri</code>, whoever controls that location can, which is why a changed document gets the decision a first issuance gets (<a href="#renewal" class="auto internal xref">Section 8.1</a>). Binding renewal to that key also keeps automated renewal from needing a long-lived reusable initial access token, which would be a standing credential to mint statements (<a href="#te-considerations" class="auto internal xref">Section 13.5</a>).<a href="#section-13.6-1" class="pilcrow">¶</a></p>
 <p id="section-13.6-2">An issuer accepting expired statements <span class="bcp14">SHOULD</span> bound how long after expiry it will do so. Without a bound, a client absent long enough for its review to be meaningless can still renew rather than being re-established.<a href="#section-13.6-2" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -2195,7 +2196,7 @@ Pragma: no-cache
         <h3 id="name-signing-keys-and-algorithms">
 <a href="#section-13.7" class="section-number selfRef">13.7. </a><a href="#name-signing-keys-and-algorithms" class="section-name selfRef">Signing Keys and Algorithms</a>
         </h3>
-<p id="section-13.7-1">Compromise of a software-statement signing key enables an attacker to mint statements for every audience that trusts that key.<a href="#section-13.7-1" class="pilcrow">¶</a></p>
+<p id="section-13.7-1">Compromise of a software-statement signing key enables an attacker to mint statements for every audience that trusts that key. Keeping those keys at <code>software_statement_jwks_uri</code>, apart from every key that signs anything else (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>), confines that power to the keys that need it.<a href="#section-13.7-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-13.7-2.1">
             <p id="section-13.7-2.1.1">Issuers <span class="bcp14">SHOULD</span> protect signing keys according to the scope of their trust relationships and support controlled key rotation.<a href="#section-13.7-2.1.1" class="pilcrow">¶</a></p>
@@ -2212,7 +2213,7 @@ Pragma: no-cache
 <a href="#section-13.8" class="section-number selfRef">13.8. </a><a href="#name-approver-identity-and-audit" class="section-name selfRef">Approver Identity and Audit</a>
         </h3>
 <p id="section-13.8-1">The software statement attests to metadata; it does not identify the human or system that approved issuance. Deployments that require approver attribution retain it in an authorization server audit record or define an explicit statement claim and its privacy semantics. Approver identity cannot be inferred from the signature alone.<a href="#section-13.8-1" class="pilcrow">¶</a></p>
-<p id="section-13.8-2">Approval authority is a policy decision with audience-wide effect: an approved statement is accepted at every authorization server in its audience, not only within the approver's own scope. The policy governing who may approve issuance <span class="bcp14">MUST</span> be at least as restrictive as the policy governing manual client establishment at the issuing authorization server, and approval by a party authorized only for a personal or organizational scope <span class="bcp14">MUST NOT</span> produce a statement whose audience exceeds that scope, or whose <code>aud_tenant</code> names a tenant outside it.<a href="#section-13.8-2" class="pilcrow">¶</a></p>
+<p id="section-13.8-2">Approval authority is a policy decision with audience-wide effect: an approved statement is accepted at every authorization server in its audience, not only within the approver's own scope. The policy governing who may approve issuance <span class="bcp14">MUST</span> be at least as restrictive as the policy governing manual client establishment at the issuing authorization server, and approval by a party authorized only for a personal or organizational scope <span class="bcp14">MUST NOT</span> produce a statement whose audience exceeds that scope, or whose <code>aud_tenant</code> names a tenant outside it. An issuer <span class="bcp14">SHOULD</span> limit what an approver may approve to client identifiers under publisher namespaces it has enrolled, so that a look-alike document cannot reach approval at all.<a href="#section-13.8-2" class="pilcrow">¶</a></p>
 <p id="section-13.8-3">An audit record <span class="bcp14">SHOULD</span> bind each decision, whether approval or denial, to the metadata digest (<a href="#metadata-snapshot" class="auto internal xref">Section 4.1</a>) of the document the deciding party evaluated, the policy under which the decision was made, the identity of that party, and the time of decision. A recorded denial carrying its grounds has the same audit value as a recorded approval. Portable, independently verifiable decision records are out of scope for this specification.<a href="#section-13.8-3" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -2475,7 +2476,7 @@ Pragma: no-cache
 <dd class="break"></dd>
 <dt id="DTR">[DTR]</dt>
         <dd>
-<span class="refTitle">"Deferred Token Response"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-gerber-oauth-deferred-token-response">https://datatracker.ietf.org/doc/draft-gerber-oauth-deferred-token-response</a>&gt;</span>. </dd>
+<span class="refTitle">"Deferred Token Response"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-ietf-oauth-deferred-token-response">https://datatracker.ietf.org/doc/draft-ietf-oauth-deferred-token-response</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="FORM-POST">[FORM-POST]</dt>
         <dd>
