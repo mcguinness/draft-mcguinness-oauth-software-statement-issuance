@@ -420,7 +420,7 @@ The server considers only statements whose `sub` equals the document's client id
 A pulled statement never travels in a request, so it needs no pushed authorization request to stay out of the front channel. The presenter is bound as for a presented statement ({{sender-constraint}}), at the point the request allows:
 
 * At the token endpoint, the request's client authentication or DPoP proof binds it, as for a presentation there.
-* At the authorization endpoint, binding completes at code redemption, before any token is issued. A confidential client authenticates there with a key the document carries, and that key becomes the establishment's Proven Key. A public client's authorization request is subject to {{public-client-presentation}}, including its PKCE and `dpop_jkt` requirements, and redemption proves the `dpop_jkt` key.
+* At the authorization endpoint, binding completes at code redemption, before any token is issued. A confidential client authenticates there with a key carried by the octets the server digested, not one only a later retrieval of the document carries, and that key becomes the establishment's Proven Key. A public client's authorization request is subject to {{public-client-presentation}}, including its PKCE and `dpop_jkt` requirements, and redemption proves the `dpop_jkt` key.
 * A public client opening a new grant at the token endpoint has nothing to bind, so a statement pulled for it is review-only ({{public-client-presentation}}), as is one pulled for a document whose redirection URIs that section does not accept. Code redemption and refresh continue an establishment and keep the binding it already has ({{grant-lifecycle}}, {{refresh}}).
 
 Where retrieval does not complete, or no statement remains, the server proceeds as it would for a document that names no location: it applies the policy it applies to a Client ID Metadata Document client it has not reviewed, and rejects as {{errors}} defines where that policy requires reviewed software. A retrieval failure is never a withdrawal.
@@ -512,7 +512,8 @@ When a replacement is needed, the client presents it in the `software_statement`
 
 * MUST validate under {{validation}}, including its audience where it carries one;
 * MUST have the recorded statement's `iss` and `sub`, and its `tenant` claim where the recorded statement carried one;
-* MUST have an `iat` later than the recorded statement's `iat`; and
+* MUST have an `iat` later than the recorded statement's `iat`;
+* MUST name, by its `cimd_digest`, the document currently served at its `sub`, which the server confirms by retrieval or by revalidating octets it holds; and
 * MUST authorize the establishment's Proven Key ({{sender-constraint}}) or, for an establishment created under {{public-client-presentation}}, name a document that still satisfies that section.
 
 The refreshed access MUST fall within the metadata of the document the replacement names.
