@@ -2,7 +2,7 @@
 
 This is a non-normative sketch, not a draft. It describes how the specifications in this repository could compose with OpenID Federation 1.0 (Final, 17 February 2026), and marks the one place where they cannot. If it were adopted it would become a short profile, roughly one section of normative text per profile below, adding no endpoint and no artifact beyond a Trust Mark type. Section numbers refer to OpenID Federation 1.0.
 
-The summary is that the two compose on trust and stop at metadata. Federation supplies exactly what [the statement draft](draft-mcguinness-oauth-cimd-sw-stmt.md) declares out of scope, and the statement draft's metadata rule is incompatible with Resolved Metadata by construction.
+The summary is that the two compose on trust and stop at metadata. Federation supplies exactly what [the statement draft](../draft-mcguinness-oauth-cimd-sw-stmt.md) declares out of scope, and the statement draft's metadata rule is incompatible with Resolved Metadata by construction.
 
 The reason the two meet at all is worth stating before the profiles. Federation's metadata travels inside signed JWTs, so it needs no digest to be authentic. A digest matters where metadata is an unsigned, mutable JSON document fetched over HTTPS, which is what a Client ID Metadata Document is. A federation whose members identify clients that way has no means today of saying which version of such a document a reviewer looked at, and that is the gap these profiles fill. It is the same gap outside a federation, which is why the statement draft exists at all.
 
