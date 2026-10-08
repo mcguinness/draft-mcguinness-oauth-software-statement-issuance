@@ -94,7 +94,7 @@ Because a statement carries no client metadata ({{STATEMENT}}), the binding that
 * MUST validate the document as {{CIMD}} requires, including that its `client_id` member matches the client identifier URL it is held for, which is the statement's `sub`;
 * MUST verify that the digest of the retrieved representation equals `cimd_digest`, and MUST derive the registered metadata by parsing the same octets it digested, not a second retrieval or a cached copy it has not digested;
 * MUST take every client metadata value from that document, and MUST NOT take any client metadata value from the registration request, whether or not the document carries that member. A request MAY carry metadata, as {{RFC7591}} clients do; it does not contribute to the registration. The registered `client_id` is assigned as {{RFC7591}} provides, and the document's own `client_id` member is the URL recorded as `sub`;
-* MUST NOT consume a statement of this profile from a `software_statement` member of the reviewed document, which {{CIMD}} permits the document to carry, and MUST NOT treat that member as satisfying any requirement of this specification. A statement of this profile cannot describe the document that carries it, since its digest would have to cover its own bytes, so one found there names an earlier version; the member may also carry statements of other kinds, which this specification does not evaluate;
+* never consumes a statement from a `software_statement` member of the reviewed document, which {{STATEMENT}} forbids at every consumption point;
 
 * MUST reject the registration with `invalid_client_metadata` where any of the document's redirection URIs could be claimed by another application on the same device ({{STATEMENT}}), whatever authentication method the document declares, since such a URI delivers codes to whichever local application claims it ({{STATEMENT}}). Registration has no review-only form, as runtime presentation does ({{STATEMENT}}), because the registration is the admission.
 
@@ -150,7 +150,7 @@ When an expired registration sends a request containing a replacement, the autho
 
 A request under an expired registration that carries no replacement is rejected with `invalid_client` at the token and pushed authorization request endpoints, and with `statement_required` at the authorization endpoint ({{errors}}). Such a rejection MUST NOT by itself trigger the refresh-token family revocation of {{RFC9700}}; a client recovers by delivering a valid replacement.
 
-A request that carries a replacement which fails the rules above is rejected with `statement_required` at the token and pushed authorization request endpoints, and with the registration column of {{errors}} at the registration management endpoint, whether or not the registration has already expired, so that a client learns immediately rather than by a later outage and can tell a bad replacement from a missing one. A rejected delivery leaves the recorded statement unchanged. A registration request without an {{RFC7592}} registration access token creates a new registration and never renews an existing one.
+A request that carries a replacement which fails the rules above is rejected with `statement_required` at the token and pushed authorization request endpoints, and with the codes of {{errors}} at the registration management endpoint, whether or not the registration has already expired, so that a client learns immediately rather than by a later outage and can tell a bad replacement from a missing one. A rejected delivery leaves the recorded statement unchanged. A registration request without an {{RFC7592}} registration access token creates a new registration and never renews an existing one.
 
 # Statements from an Established Client {#registered-delivery}
 
@@ -181,7 +181,7 @@ Which code applies at the registration endpoint:
 | Retrieval did not complete | `temporarily_unavailable` |
 | Review-only client where reviewed software is required ({{STATEMENT}}) | `invalid_client_metadata` ({{dcr-presentation}}) |
 
-A registration management request ({{RFC7592}}) carrying a failing replacement uses the same codes as the registration column. An authorization server SHOULD use HTTP status code 503 with `temporarily_unavailable` and 400 with the others.
+A registration management request ({{RFC7592}}) carrying a failing replacement uses the same codes as the table above. An authorization server SHOULD use HTTP status code 503 with `temporarily_unavailable` and 400 with the others.
 
 A request under an expired statement-governed registration that does not restore it is rejected as {{revalidation}} describes. Registration validity is reported as `invalid_client` at the token and pushed authorization request endpoints, because the registration rather than the grant is what lapsed, and as `statement_required` at the authorization endpoint, which tells the client to deliver a replacement through the pushed authorization request endpoint ({{STATEMENT}}). Neither rejection indicates refresh-token replay ({{RFC9700}}).
 
@@ -217,19 +217,19 @@ This specification defines the following authorization server metadata {{RFC8414
 
 ## Statements at Registration {#statement-bearer}
 
-A statement consumed at registration is a reusable bearer artifact until it expires, so an issuer relies on narrow audience and lifetime, and a statement permits registration only where `consumable_at` names it ({{STATEMENT}}), and the bounds of {{STATEMENT}} limit what a stolen statement can create.
+A statement consumed at registration is a reusable bearer artifact until it expires, so an issuer relies on narrow audience and lifetime, and a statement permits registration only where `consumable_at` names it ({{STATEMENT}}), and the repeated-consumption bounds of {{STATEMENT}} and {{repeated-registration}} limit what a stolen statement can create.
 
 ## Renewal Authenticates the Credential
 
 Renewing a registration proves possession of the registration's own credential and the currency of a statement sharing the governing `iss` and `sub`. It does not prove that the renewing party is the reviewed software: an attacker holding a stolen client credential can renew indefinitely with any current statement for that software, which circulates by design to every deployment of it. Renewal keeps the review current, not the credential honest.
 
-Deployments SHOULD pair statement-governed registrations with credential rotation, sender-constrained client authentication, and the limits of {{STATEMENT}}, and SHOULD treat a credential compromise as requiring re-registration rather than renewal. Runtime presentation does not share this gap, because every presentation binds the presenter to the reviewed document, by a key it carries or, for a public client, by the redirection URIs it lists.
+Deployments SHOULD pair statement-governed registrations with credential rotation, sender-constrained client authentication, and the repeated-consumption limits of {{STATEMENT}} and {{repeated-registration}}, and SHOULD treat a credential compromise as requiring re-registration rather than renewal. Runtime presentation does not share this gap, because every presentation binds the presenter to the reviewed document, by a key it carries or, for a public client, by the redirection URIs it lists.
 
 ## Registration Fraud and Impersonation {#registration-fraud}
 
 Open registration permits `client_name`, `logo_uri`, and `client_uri` values that imitate trusted software on consent screens. Requiring a statement replaces self-asserted branding with issuer-reviewed values. Servers that render such values on consent screens SHOULD prefer those from a reviewed document and SHOULD apply heightened scrutiny to registrations that claim user-visible branding without a statement.
 
-Statement-gated registration also makes each rotated identity require another issuer decision, rather than letting a discarded client return at no cost; the per-`sub` bounds of {{STATEMENT}} limit registrations. Neither control makes metadata true: a client that misleads review can obtain a genuine statement for fraudulent metadata, so issuer verification depth remains decisive ({{ISSUANCE}}).
+Statement-gated registration also makes each rotated identity require another issuer decision, rather than letting a discarded client return at no cost; the per-`sub` bounds of {{repeated-registration}} limit registrations. Neither control makes metadata true: a client that misleads review can obtain a genuine statement for fraudulent metadata, so issuer verification depth remains decisive ({{ISSUANCE}}).
 
 ## Enforcement Bounds {#enforcement-bounds}
 
