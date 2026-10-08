@@ -158,7 +158,7 @@ For a replacement, the authorization server MUST:
 
 Renewing on the statement alone would leave the registration carrying metadata the new review never covered, so a removed key, redirection URI, or scope would survive its own withdrawal.
 
-On success, the replacement becomes the governing statement: the authorization server MUST replace the recorded statement identity, `iat`, `exp`, and derived metadata with the replacement's in a single atomic update, and concurrent deliveries resolve to the most recently issued statement.
+On success, the replacement becomes the governing statement: the authorization server MUST replace the recorded identity, `iat`, `exp`, and derived metadata with the replacement's in a single atomic update, and concurrent deliveries resolve to the most recently issued statement.
 
 When a request under an expired registration contains a replacement, the authorization server MUST authenticate the client against the retained registration and evaluate the replacement before applying the expiry rejection. A valid replacement therefore restores the registration; an omitted or invalid replacement does not.
 
@@ -205,7 +205,7 @@ Registration expiry is reported as `invalid_client` at the token and pushed auth
 
 ## Revalidating a Statement-Governed Registration
 
-The following non-normative example shows a registered client, `client_id` `s6BhdRkqt3`, renewing its registration by delivering a replacement statement on an ordinary refresh, authenticated under its registered `private_key_jwt` method:
+The following non-normative example shows a registered client, `client_id` `s6BhdRkqt3`, renewing its registration by delivering a replacement statement on an ordinary refresh, authenticated under its registered `private_key_jwt` method (line breaks are for display purposes only):
 
 ~~~ http
 POST /token HTTP/1.1
