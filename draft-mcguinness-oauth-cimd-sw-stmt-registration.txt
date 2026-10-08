@@ -439,45 +439,43 @@ Table of Contents
    assigns.  Rejections at other endpoints use the error responses of
    [STATEMENT].
 
-   +===================================+===============================+
-   | Condition                         | Registration endpoint         |
-   +===================================+===============================+
-   | Malformed, or failing             | invalid_software_statement    |
-   | signature or claim validation     |                               |
-   +-----------------------------------+-------------------------------+
-   | Valid but not acceptable          | unapproved_software_statement |
-   | here: issuer not configured,      |                               |
-   | aud excludes this server, sub     |                               |
-   | outside the issuer's scope,       |                               |
-   | aud_tenant not this request's     |                               |
-   | tenant or absent where            |                               |
-   | required, consumable_at           |                               |
-   | excludes this point               |                               |
-   +-----------------------------------+-------------------------------+
-   | Expired, or refused by a          | invalid_software_statement    |
-   | refusal record, including a       |                               |
-   | status resolved as INVALID,       |                               |
-   | or as SUSPENDED where policy      |                               |
-   | refuses it, or superseded         |                               |
-   | under the iat floor of            |                               |
-   | [STATEMENT]                       |                               |
-   +-----------------------------------+-------------------------------+
-   | Required statement absent         | unapproved_software_statement |
-   +-----------------------------------+-------------------------------+
-   | Digest does not match the         | invalid_software_statement    |
-   | retrieved document                |                               |
-   +-----------------------------------+-------------------------------+
-   | Document carries metadata         | invalid_client_metadata       |
-   | this server's policy refuses      |                               |
-   +-----------------------------------+-------------------------------+
-   | Retrieval did not complete        | temporarily_unavailable       |
-   +-----------------------------------+-------------------------------+
-   | Document with a redirection       | invalid_client_metadata       |
-   | URI another application could     |                               |
-   | claim (Section 3)                 |                               |
-   +-----------------------------------+-------------------------------+
+   +==================================+===============================+
+   | Condition                        | Registration endpoint         |
+   +==================================+===============================+
+   | Malformed, or failing signature  | invalid_software_statement    |
+   | or claim validation              |                               |
+   +----------------------------------+-------------------------------+
+   | Valid but not acceptable here:   | unapproved_software_statement |
+   | issuer not configured, aud       |                               |
+   | excludes this server, sub        |                               |
+   | outside the issuer's scope,      |                               |
+   | aud_tenant not this request's    |                               |
+   | tenant or absent where required, |                               |
+   | statement_uses excludes this use |                               |
+   +----------------------------------+-------------------------------+
+   | Expired, or refused by a refusal | invalid_software_statement    |
+   | record, including a status       |                               |
+   | resolved as INVALID, or as       |                               |
+   | SUSPENDED where policy refuses   |                               |
+   | it, or superseded under the iat  |                               |
+   | floor of [STATEMENT]             |                               |
+   +----------------------------------+-------------------------------+
+   | Required statement absent        | unapproved_software_statement |
+   +----------------------------------+-------------------------------+
+   | Digest does not match the        | invalid_software_statement    |
+   | retrieved document               |                               |
+   +----------------------------------+-------------------------------+
+   | Document carries metadata this   | invalid_client_metadata       |
+   | server's policy refuses          |                               |
+   +----------------------------------+-------------------------------+
+   | Retrieval did not complete       | temporarily_unavailable       |
+   +----------------------------------+-------------------------------+
+   | Document with a redirection URI  | invalid_client_metadata       |
+   | another application could claim  |                               |
+   | (Section 3)                      |                               |
+   +----------------------------------+-------------------------------+
 
-                                  Table 1
+                                 Table 1
 
    A registration management request ([RFC7592]) carrying a failing
    replacement uses the same codes.  An authorization server SHOULD use
@@ -540,7 +538,7 @@ Table of Contents
    A statement consumed at registration is a reusable bearer artifact
    until it expires.  An issuer limits that exposure with a narrow
    audience and a short lifetime, and a statement permits registration
-   only where its consumable_at claim names registration ([STATEMENT]).
+   only where its statement_uses claim names registration ([STATEMENT]).
    The repeated-consumption bounds of [STATEMENT] and Section 5 limit
    what a stolen statement can create.
 

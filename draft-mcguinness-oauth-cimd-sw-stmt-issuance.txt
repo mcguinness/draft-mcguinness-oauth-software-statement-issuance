@@ -1140,7 +1140,7 @@ Table of Contents
    *  is over a document that no longer carries a key, redirection URI,
       or scope the earlier document carried;
 
-   *  has a narrower aud, aud_tenant, or consumable_at; or
+   *  has a narrower aud, aud_tenant, or statement_uses; or
 
    *  has a shorter remaining lifetime.
 

@@ -356,7 +356,7 @@ Table of Contents
       consumer's configured trust in the issuer and its identifier scope
       (Section 4).  Omitting the claim lets one review serve every
       authorization server that trusts the issuer, but also lets any
-      holder of a copy use it at any of them.  Where consumable_at
+      holder of a copy use it at any of them.  Where statement_uses
       permits registration, a holder can always choose registration,
       which requires no key.  An issuer SHOULD therefore name an
       audience, and omit it only where it accepts that any server
@@ -377,20 +377,19 @@ Table of Contents
       between those readings.  A listing review that applies wherever
       its aud reaches carries no aud_tenant.
 
-   consumable_at:  OPTIONAL.  A JSON array naming the points at which
-      the statement may be consumed: registration ([REGISTRATION]) and
+   statement_uses:  OPTIONAL.  A JSON array identifying the permitted
+      uses of the statement: registration ([REGISTRATION]) and
       presentation (Section 5).  A trusting authorization server MUST
-      reject a statement at a point the array does not name, treating a
-      member it does not recognize as naming no point it serves.  Where
-      the claim is absent, the statement may be consumed only by
-      presentation; an issuer that intends a statement for registration
-      includes registration.  Because registration requires no key and a
-      statement published for pulling is readable by anyone
-      (Section 5.2), a statement is usable at registration only where
-      its issuer says so ([REGISTRATION]).  A delivery renewing a
-      registration ([REGISTRATION]) is consumption at registration; a
-      refresh replacement (Section 5.6.1) and a pulled statement are
-      presentation.
+      reject a statement for a use the array does not name, treating a
+      member it does not recognize as naming no use it serves.  If the
+      claim is absent, only presentation is permitted; an issuer that
+      intends a statement for registration includes registration.
+      Because registration requires no key and a statement published for
+      pulling is readable by anyone (Section 5.2), a statement is usable
+      at registration only where its issuer says so ([REGISTRATION]).  A
+      delivery renewing a registration ([REGISTRATION]) is a use at
+      registration; a refresh replacement (Section 5.6.1) and a pulled
+      statement are presentation.
 
    iat:  REQUIRED.  A NumericDate value representing the time at which
       the software statement was issued.  An issuer MUST NOT issue two
@@ -526,8 +525,8 @@ Table of Contents
       assertion it has validated, and never from a value the client
       chooses;
 
-   *  verify that consumable_at names the point at which the statement
-      is being consumed or, where the claim is absent, that the point is
+   *  verify that statement_uses names the use being made of the
+      statement or, where the claim is absent, that the use is
       presentation;
 
    *  verify that sub is a client identifier URL conforming to [CIMD],
@@ -931,7 +930,7 @@ Table of Contents
    method (Section 5.4.1).
 
    A statement whose reviewed document carries no key material can be
-   consumed at registration where its consumable_at claim permits
+   consumed at registration where its statement_uses claim permits
    ([REGISTRATION]) and, where the document declares
    token_endpoint_auth_method of none, at the pushed authorization
    request endpoint under Section 5.4.1.  Endorsement of a key the
@@ -1344,9 +1343,9 @@ Table of Contents
    |tenant or      |                         |                         |
    |absent where   |                         |                         |
    |required,      |                         |                         |
-   |consumable_at  |                         |                         |
+   |statement_uses |                         |                         |
    |excludes this  |                         |                         |
-   |point          |                         |                         |
+   |use            |                         |                         |
    +---------------+-------------------------+-------------------------+
    |Expired, or    | statement_required      | statement_required      |
    |refused by a   |                         |                         |
@@ -1880,10 +1879,9 @@ Table of Contents
 
    Specification Document(s):  This specification, Section 3
 
-   Claim Name:  consumable_at
+   Claim Name:  statement_uses
 
-   Claim Description:  Points at which a software statement may be
-      consumed
+   Claim Description:  Permitted uses of a software statement
 
    Change Controller:  IESG
 

@@ -1450,7 +1450,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 </td>
           </tr>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">Valid but not acceptable here: issuer not configured, <code>aud</code> excludes this server, <code>sub</code> outside the issuer's scope, <code>aud_tenant</code> not this request's tenant or absent where required, <code>consumable_at</code> excludes this point</td>
+            <td class="text-left" rowspan="1" colspan="1">Valid but not acceptable here: issuer not configured, <code>aud</code> excludes this server, <code>sub</code> outside the issuer's scope, <code>aud_tenant</code> not this request's tenant or absent where required, <code>statement_uses</code> excludes this use</td>
             <td class="text-left" rowspan="1" colspan="1">
               <code>unapproved_software_statement</code>
 </td>
@@ -1555,7 +1555,7 @@ client-assertion-type%3Ajwt-bearer
         <h3 id="name-statements-at-registration">
 <a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-statements-at-registration" class="section-name selfRef">Statements at Registration</a>
         </h3>
-<p id="section-9.1-1">A statement consumed at registration is a reusable bearer artifact until it expires. An issuer limits that exposure with a narrow audience and a short lifetime, and a statement permits registration only where its <code>consumable_at</code> claim names registration (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>). The repeated-consumption bounds of <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> and <a href="#repeated-registration" class="auto internal xref">Section 5</a> limit what a stolen statement can create.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+<p id="section-9.1-1">A statement consumed at registration is a reusable bearer artifact until it expires. An issuer limits that exposure with a narrow audience and a short lifetime, and a statement permits registration only where its <code>statement_uses</code> claim names registration (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>). The repeated-consumption bounds of <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> and <a href="#repeated-registration" class="auto internal xref">Section 5</a> limit what a stolen statement can create.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="renewal-authenticates-the-credential">
