@@ -411,9 +411,9 @@ At the token endpoint, the client includes the parameter in an eligible token re
 A client can publish its statements rather than present them. Its Client ID Metadata Document then carries the following client metadata member:
 
 `software_statements_uri`:
-: OPTIONAL. URL at which the client publishes software statements about itself. It MUST use the `https` scheme. A request to it returns a JSON object whose `software_statements` member is an array of statements ({{profiles}}), each a string in JWS compact serialization. The URL is part of the document, so the metadata digest covers it ({{metadata-digest}}): a party that changes where statements are found changes the document every statement names.
+: OPTIONAL. URL, in a Client ID Metadata Document, at which the client publishes software statements about itself; the member has no meaning in a registration request. It MUST use the `https` scheme. A request to it returns a JSON object whose `software_statements` member is an array of statements ({{profiles}}), each a string in JWS compact serialization. The URL is part of the document, so the metadata digest covers it ({{metadata-digest}}): a party that changes where statements are found changes the document every statement names.
 
-An authorization server that supports pulled statements MAY retrieve this URL when it resolves the document of a client that presented no statement. Retrieval follows the rules {{CIMD}} sets for the document itself, including its prohibition on automatically following redirects, and the protections and bounds of {{external-retrieval}}; the server bounds the response size as it bounds the document's.
+An authorization server that supports pulled statements MAY retrieve this URL when it resolves the document of a client that presented no statement. The server retrieves it with a `GET` request sending `Accept: application/json`, does not automatically follow redirects, accepts only a `200` response with a JSON media type, and applies the protections {{CIMD}} sets for URLs a document contains and the bounds of {{external-retrieval}}. It bounds the response size and the number of statements it examines separately from the document's, since several issuers' statements outgrow a document-sized bound and a host can pad the array, and it discards statements from issuers it has not configured before verifying any signature. It caches a successful response no longer than it caches the document, and does not cache a failure, as {{CIMD}} requires of the document. The document and this URL are both retrieved before any statement exists to validate, so the ordering of {{processing}} applies from the first statement verified onward.
 
 The server considers only statements whose `sub` equals the document's client identifier, that validate under {{validation}}, that permit presentation ({{profiles}}), and whose `cimd_digest` equals the digest of the document it resolved. It ignores the rest: anyone able to publish at the URL can place anything there, and what counts is an issuer's signature over the current document. Where its trust configuration requires an issuer for this client ({{issuer-trust}}), the server applies only that issuer's statement, and where none remains the client is not reviewed; otherwise, where more than one remains, it applies any of them, taking the latest `iat` from each issuer, subject to the watermark of {{multi-instance}}. A pulled statement the server does not apply does not advance the watermark. The server then continues from step 4 of {{processing}}, with the pulled statement in place of a presented one and the document already resolved; the `client_id` rule of step 2 is satisfied by the selection above.
 
@@ -712,7 +712,7 @@ Runtime presentation can cause the authorization server to retrieve the Client I
 
 Presentation reaches these retrievals before any client is registered or any user has interacted, so the work is available to an unauthenticated requester holding one acceptable statement. An authorization server SHOULD therefore bound it:
 
-* rate-limit presentations per statement identity, per subject, and per source, and bound the establishments it will create from one statement ({{multi-instance}}), before spending retrieval or storage on a new presentation;
+* rate-limit presentations per statement identity, per subject, and per source, and pulls ({{pulled-statements}}) per client identifier and per source, and bound the establishments it will create from one statement ({{multi-instance}}), before spending retrieval or storage on a new presentation;
 * bound JWT size and parsing work, concurrent retrievals, response size, and response time; and
 * cache successful retrieval results within the document's caching directives, and back off after a failure rather than cache it, since {{CIMD}} forbids caching error responses.
 
@@ -750,7 +750,7 @@ A software statement remains a sensitive artifact in transit and at rest: posses
 
 # Privacy Considerations
 
-A presentation or delivery reveals to the authorization server the client's issuer relationship and, where the statement carries an `aud` claim, the other authorization servers the client intends to establish relationships with. Omitting that claim discloses nothing beyond the review ({{ISSUANCE}}). The pushed authorization request requirement of {{authorization-requests}} keeps statements out of browser history, referrers, and front-channel logs. A central issuer additionally learns, through renewal requests, which of its statements are in active use; issuance and renewal logs deserve the same care as the statements themselves. A server pulling statements ({{pulled-statements}}) reveals to the host of `software_statements_uri` that it is resolving that client, which retrieving the document already reveals to the document's host.
+A presentation or delivery reveals to the authorization server the client's issuer relationship and, where the statement carries an `aud` claim, the other authorization servers the client intends to establish relationships with. Omitting that claim discloses nothing beyond the review ({{ISSUANCE}}). The pushed authorization request requirement of {{authorization-requests}} keeps statements out of browser history, referrers, and front-channel logs. A central issuer additionally learns, through renewal requests, which of its statements are in active use; issuance and renewal logs deserve the same care as the statements themselves. A server pulling statements ({{pulled-statements}}) reveals to the host of `software_statements_uri` that it is resolving that client, which retrieving the document reveals to the document's host; where the URL is on another origin, that origin learns it too. Published statements are readable by anyone, so their `aud` and `aud_tenant` disclose which servers and tenants a review names, and a statement whose audience is sensitive is presented rather than published.
 
 # IANA Considerations {#iana}
 
@@ -915,7 +915,7 @@ Client Metadata Name:
 : `software_statements_uri`
 
 Client Metadata Description:
-: URL at which a client publishes software statements about itself, for an authorization server to retrieve.
+: URL, in a Client ID Metadata Document, at which the client publishes software statements about itself for an authorization server to retrieve; not meaningful in a registration request.
 
 Change Controller:
 : IESG
