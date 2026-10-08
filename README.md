@@ -48,6 +48,10 @@ The repository also hosts "Shared Signals Events for CIMD Software Statements", 
 
 [Sketch: Pulling the Review, and an MCP Profile](mcp-profile-sketch.md) takes the ecosystem where Client ID Metadata Documents are the preferred client identity, MCP, which has deprecated dynamic registration and whose desktop clients redirect to loopback. It sketches a server fetching a review instead of a client carrying one, from a location the document names or from the issuer, which removes most of the machinery a carried statement needs, and a profile that composes with MCP's Enterprise-Managed Authorization: the identity provider's assertion answers whether this user may use the client now, and the statement answers who reviewed the software. Non-normative.
 
+## MCP Profile
+
+[Reviewed Client Software](mcp/reviewed-client-software.mdx) is a draft MCP authorization extension, written in the format of MCP's extension repository for proposal there. MCP clients publish statements at the `software_statements_uri` their metadata document names; MCP authorization servers pull and validate them, bind them to the presenter or treat them as review-only for loopback desktop clients, and compose them with Enterprise-Managed Authorization.
+
 ## Related Drafts
 
 * [OAuth Client ID Metadata Document](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/) (normative dependency)
