@@ -1117,10 +1117,12 @@ Table of Contents
       PKCE and dpop_jkt requirements, and redemption proves the dpop_jkt
       key.
 
-   *  A public client at the token endpoint has nothing to bind, so a
-      statement pulled for it is review-only (Section 6.4.1), as is one
-      pulled for a document whose redirection URIs that section does not
-      accept.
+   *  A public client opening a new grant at the token endpoint has
+      nothing to bind, so a statement pulled for it is review-only
+      (Section 6.4.1), as is one pulled for a document whose redirection
+      URIs that section does not accept.  Code redemption and refresh
+      continue an establishment and keep the binding it already has
+      (Section 6.6, Section 6.6.1).
 
    Where retrieval does not complete, or no statement remains, the
    server proceeds as it would for a document that names no location: it
@@ -1129,10 +1131,14 @@ Table of Contents
    policy requires reviewed software.  A retrieval failure is never a
    withdrawal.
 
-   On refresh, a server that created an establishment from a pulled
-   statement and requires a current statement (Section 6.6.1) pulls
-   again, and treats the newest statement it obtains as the replacement
-   under the rules of that section.
+   On refresh, where Section 6.6.1 needs a replacement for an
+   establishment created from a pulled statement, the server pulls again
+   and considers only statements with the recorded statement's iss and
+   sub, and its tenant where the recorded statement carried one.  It
+   applies the newest of those as the replacement under that section.
+   Where the newest is the recorded statement itself, nothing is
+   replaced, and currency rests on that statement as Section 6.6.1
+   describes.
 
    [CIMD] also permits a document to carry a software_statement member,
    which a consumer ignores (Section 5).  A document cannot carry a
@@ -1346,18 +1352,24 @@ Table of Contents
    of the establishment's Proven Key under the same sender-constraint
    mechanism.  It MAY, by local policy, additionally require a current
    unexpired statement, and SHOULD require one once the establishment's
-   recorded statement has expired (Section 14.8).
+   recorded statement has expired (Section 14.8).  The recorded
+   statement satisfies that requirement while it is unexpired and no
+   refusal record covers it: currency is a check on the statement the
+   establishment already holds, and a replacement is needed only when
+   that check fails.
 
    Where the authorization server holds a refusal record for the
-   establishment's recorded statement, it MUST reject a refresh that
-   does not carry a replacement satisfying this section, whatever its
-   policy on currency otherwise: a withdrawal ends grant continuation at
-   once rather than waiting on local policy.
+   establishment's recorded statement, it MUST reject a refresh that is
+   not accompanied by a replacement satisfying this section, presented
+   or pulled, whatever its policy on currency otherwise: a withdrawal
+   ends grant continuation at once rather than waiting on local policy.
 
-   When policy requires one, the client presents the replacement in the
+   When a replacement is needed, the client presents it in the
    software_statement parameter of the refresh request, or, for an
    establishment created from a pulled statement, the server pulls one
-   (Section 6.2).  The replacement:
+   (Section 6.2).  A statement with the recorded statement's iss and jti
+   is not a replacement: offered again, it is rechecked as above.  The
+   replacement:
 
    *  MUST validate under Section 3.2, including its audience where it
       carries one;
@@ -1378,9 +1390,9 @@ Table of Contents
    reviewed metadata, and trust decision are replaced in a single atomic
    update, and concurrent deliveries resolve to the most recently issued
    statement.  A refresh that fails these requirements, or omits a
-   statement that policy requires, is rejected with statement_required
-   and leaves the establishment unchanged.  The operation never rotates
-   the establishment's key; a client that needs a new key performs a new
+   replacement that is needed, is rejected with statement_required and
+   leaves the establishment unchanged.  The operation never rotates the
+   establishment's key; a client that needs a new key performs a new
    presentation.
 
 6.7.  Statements from an Established Client
