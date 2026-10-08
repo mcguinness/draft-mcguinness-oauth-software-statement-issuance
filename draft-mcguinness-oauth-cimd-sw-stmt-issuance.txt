@@ -1080,7 +1080,8 @@ Table of Contents
 
    The client consumes the issued statement, the value of access_token,
    as described in [STATEMENT]: through an [RFC7591] registration
-   request or by runtime presentation ([STATEMENT]).
+   request, by runtime presentation, or by publishing it at its
+   software_statements_uri for servers to pull ([STATEMENT]).
 
    The access_token member is a security-token container ([RFC8693]),
    not an OAuth access token: the software statement is consumed only as
@@ -1814,11 +1815,11 @@ Appendix A.  Design Rationale
 
    *Deliberately deferred capabilities.* This version omits several
    capabilities, each with an extension point: callback delivery for
-   deferral, a canonicalized digest, and CIMD-native conveyance of an
-   issued statement, and partial review, by which an issuer would vouch
-   for particular members rather than a whole document.  Consumption-
-   side extensions, including endorsed instance keys, are named by
-   [STATEMENT].
+   deferral, a canonicalized digest, and partial review, by which an
+   issuer would vouch for particular members rather than a whole
+   document.  [STATEMENT] defines how a client publishes an issued
+   statement for servers to pull, and names the consumption-side
+   extensions, including endorsed instance keys.
 
 Acknowledgments
 
