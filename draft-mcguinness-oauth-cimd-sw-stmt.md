@@ -218,8 +218,8 @@ An issuer computes the digest over the document it evaluated, and a trusting aut
 
 Three retrieval conditions affect the comparison:
 
-* {{CIMD}} recommends reading no more than a bounded number of octets and treating a longer response as an error. A digest computed over a truncated read is not the digest of the document, so a trusting authorization server MUST treat a response exceeding its configured bound as a retrieval failure rather than digesting what it read.
-* A shared cache may hold a variant selected for some other request. A server MUST NOT compare a digest against a representation it did not itself retrieve, or store under this section, or retain as {{REGISTRATION}} permits. A `304 Not Modified` response confirms that the stored octets are still current, and that their digest still applies, only where it carries a strong entity tag equal to the one stored with those octets. A conditional request with `If-None-Match` is evaluated with weak comparison (Section 13.1.2 of {{RFC9110}}), so a `304` without such a tag does not show the octets are unchanged, and the server retrieves the body again.
+* {{CIMD}} recommends reading no more than a bounded number of octets and treating a longer response as an error. A digest computed over a truncated read is not the digest of the document, so a trusting authorization server MUST treat a response exceeding its configured bound as a retrieval failure rather than digesting what it read. Retrying cannot succeed, so the request is rejected with `invalid_client` rather than `temporarily_unavailable` ({{errors}}).
+* A shared cache may hold a variant selected for some other request. A server MUST NOT compare a digest against any representation other than one it retrieved itself, stored under this section, or retained as {{REGISTRATION}} permits. A `304 Not Modified` response confirms that the stored octets are still current, and that their digest still applies, only where it carries a strong entity tag equal to the one stored with those octets. A conditional request with `If-None-Match` is evaluated with weak comparison (Section 13.1.2 of {{RFC9110}}), so a `304` without such a tag does not show the octets are unchanged, and the server retrieves the body again.
 * Issuer and trusting authorization server must obtain identical octets; any condition that makes retrieval depend on who is asking defeats the comparison.
 
 ## Validating a Statement {#validation}
@@ -251,7 +251,7 @@ A trusting authorization server resolving the reviewed document MUST reject a do
 
 ## Change After Review {#version-changes}
 
-A review covers the document that `cimd_digest` identifies. At registration, a digest mismatch is fatal ({{REGISTRATION}}), because the registration would otherwise record metadata no issuer reviewed. At runtime, a mismatch is a policy input rather than an automatic failure: the statement still names a document the issuer reviewed, and the authorization server decides how to treat the change. Either way, the remedy is re-issuance against the current document.
+A review covers the document that `cimd_digest` identifies. At registration, a digest mismatch is fatal ({{REGISTRATION}}), because the registration would otherwise record metadata no issuer reviewed. At runtime, a mismatch is a policy input rather than an automatic failure: the statement still names a document the issuer reviewed, and the authorization server decides how to treat the change. At registration and at runtime alike, the remedy is re-issuance against the current document.
 
 Because an issuer reviews the document it retrieves from the client identifier URL, a changed document is always served before any statement over it exists; a publisher shortens that gap by arranging prompt review. The statement's bounded lifetime limits how stale a review can become: drift that the digest comparison never observes still expires with the statement.
 
@@ -355,7 +355,7 @@ The server considers only statements that:
 
 It ignores the rest, since anyone able to publish at the URL can place anything there.
 
-Where its trust configuration requires an issuer for this client ({{issuer-trust}}), the server applies only that issuer's statement, and where none remains, the client is not reviewed. Otherwise, where more than one statement remains, the server applies any of them, taking the latest `iat` from each issuer, subject to the watermark of {{multi-instance}}. A pulled statement the server does not apply does not advance the watermark. The server then continues from step 4 of {{processing}}, with the pulled statement in place of a presented one and the document already resolved; the selection above satisfies the `client_id` rule of step 2.
+Where its trust configuration requires an issuer for this client ({{issuer-trust}}), the server applies only that issuer's statement, and where none remains, the client is not reviewed. Otherwise, where more than one statement remains, the server keeps only the latest `iat` from each issuer and applies any one of those, subject to the watermark of {{multi-instance}}. A pulled statement the server does not apply does not advance the watermark. The server then continues from step 4 of {{processing}}, with the pulled statement in place of a presented one and the document already resolved; the selection above satisfies the `client_id` rule of step 2.
 
 The presenter of a pulled statement is bound as for a presented statement ({{sender-constraint}}), at the point the request allows:
 
@@ -407,7 +407,7 @@ A review-only presentation creates no establishment, admits nothing, and does no
 
 For a review-only presentation, the authorization server MAY record the statement's issuer for audit and inventory. For such a presentation, it MAY refuse the request where the statement's status shows a withdrawal, since status constrains and never relaxes ({{validation}}), subject to the bounds of {{external-retrieval}}.
 
-A presentation at the token endpoint under {{runtime-presentation}} opens no redirect and has nothing to bind it, so an authorization server MUST reject one from a client whose reviewed document carries no key material. A statement pulled for such a client at the token endpoint is instead review-only ({{pulled-statements}}).
+A presentation at the token endpoint under {{runtime-presentation}} opens no redirect and has nothing to bind it, so an authorization server MUST reject one from a client whose reviewed document carries no key material, with `invalid_client`. A statement pulled for such a client at the token endpoint is instead review-only ({{pulled-statements}}).
 
 ## Reviewed Metadata {#effective-metadata}
 
@@ -417,7 +417,7 @@ A match means the served document is the reviewed one, and its members are the c
 
 The request is evaluated against that metadata: a `redirect_uri` MUST match a redirection URI in the document, and any requested grant type, response type, or scope MUST fall within it. A document that omits `scope` sets no ceiling on scope beyond the server's own policy. A grant or response type the authorization server supports but the document does not authorize fails with `unauthorized_client`; a scope outside the document fails with `invalid_scope`.
 
-A presentation refused because a bound of {{multi-instance}} is reached is rejected with `invalid_client`; its statement and proof are sound, so the authorization server SHOULD say so in `error_description`, and the client can retry once earlier establishments are released.
+A presentation refused because the bound on establishments of {{multi-instance}} is reached is rejected with `invalid_client`; its statement and proof are sound, so the authorization server SHOULD say so in `error_description`, and the client can retry once earlier establishments are released.
 
 ## Grant Lifecycle {#grant-lifecycle}
 
@@ -446,11 +446,11 @@ A statement MUST be unexpired when presented. Expiry after presentation does not
 
 ### Refresh {#refresh}
 
-On refresh-token use the authorization server MUST verify possession of the establishment's proven key under the same sender-constraint mechanism. It MAY, by local policy, additionally require a current unexpired statement, and SHOULD require one once the establishment's recorded statement has expired ({{enforcement-bounds}}). The recorded statement satisfies that requirement while it is unexpired and no refusal record covers it; a replacement is needed only once the recorded statement no longer does.
+On refresh-token use the authorization server MUST verify possession of the establishment's proven key under the same sender-constraint mechanism. It MAY, by local policy, additionally require a current unexpired statement, and SHOULD require one once the establishment's recorded statement has expired ({{enforcement-bounds}}). The recorded statement satisfies that requirement while it is unexpired and no refusal record covers it; a replacement is needed only once the recorded statement expires or a refusal record covers it.
 
 Where the authorization server holds a refusal record for the establishment's recorded statement, it MUST reject a refresh without a presented or pulled replacement satisfying this section, whatever its policy on currency otherwise: a withdrawal ends grant continuation at once rather than waiting on local policy. A server that resolves status for the recorded statement's issuer SHOULD check that statement at each refresh against a Status List Token it holds within that token's validity, so that a withdrawal the server has resolved reaches open grants and not only new ones.
 
-When a replacement is needed, the client presents it in the `software_statement` parameter of the refresh request, or, for an establishment created from a pulled statement, the server pulls one ({{pulled-statements}}). A statement with the recorded statement's `iss` and `jti` is not a replacement: offered again, it is rechecked as above. The replacement:
+When a replacement is needed, the client presents it in the `software_statement` parameter of the refresh request, or, for an establishment created from a pulled statement, the server pulls one ({{pulled-statements}}). A statement with the recorded statement's `iss` and `jti` is not a replacement: if the client offers it again, the server rechecks it as the recorded statement, under the first paragraph of this section. The replacement:
 
 * MUST validate under {{validation}}, including its audience where it carries one;
 * MUST have the recorded statement's `iss` and `sub`;
@@ -531,10 +531,11 @@ The codes apply as follows:
 | Malformed, or failing signature or claim validation | `invalid_client` | `invalid_client` |
 | Valid but not acceptable here: issuer not configured, `aud` excludes this server, `sub` outside the issuer's scope, `aud_tenant` not this request's tenant or absent where required, `statement_uses` excludes this use | `invalid_client` | `invalid_client` |
 | Expired, or refused by a refusal record, including a status resolved as `INVALID`, or as `SUSPENDED` where policy refuses it, or superseded under the `iat` floor of {{multi-instance}} | `statement_required` | `statement_required` |
-| Required statement absent | `statement_required` | `statement_required` |
+| Required statement absent, including one from an issuer required for the tenant ({{issuer-trust}}) | `statement_required` | `statement_required` |
 | Digest does not match the retrieved document | see {{effective-metadata}} | see {{effective-metadata}} |
 | Document carries metadata this server's policy refuses | `unauthorized_client` or `invalid_scope` | `unauthorized_client` or `invalid_scope` |
 | Retrieval did not complete | `temporarily_unavailable` | `temporarily_unavailable` |
+| Document exceeds the server's size bound ({{metadata-digest}}) | `invalid_client` | `invalid_client` |
 | Review-only client where reviewed software is required ({{public-client-presentation}}) | `unauthorized_client` | `unauthorized_client` |
 
 An authorization server SHOULD use HTTP status code 503 with `temporarily_unavailable` and 400 with the others, so that a client can distinguish a condition worth retrying from one that needs a new statement.
@@ -543,9 +544,9 @@ At the pushed authorization request endpoint, these codes are carried in the err
 
 A statement is never presented at the authorization endpoint ({{authorization-requests}}), though one may be pulled there ({{pulled-statements}}). There, a review-only client is rejected with `unauthorized_client`, and a client whose pulled statements could not be retrieved is rejected with `temporarily_unavailable`, in each case where reviewed software is required ({{public-client-presentation}}, {{pulled-statements}}).
 
-Otherwise, at the authorization endpoint, where this server requires a statement for a client that has none established, or where the client's statement-governed registration has expired without a replacement ({{REGISTRATION}}), the authorization server MUST return `statement_required` in the authorization error response {{RFC6749}}. The code tells the client to obtain a statement and return through the pushed authorization request endpoint; without the code, a client cannot tell a missing review from a policy it will never satisfy.
+Apart from those two cases, at the authorization endpoint, where this server requires a statement for a client that has none established, or where the client's statement-governed registration has expired without a replacement ({{REGISTRATION}}), the authorization server MUST return `statement_required` in the authorization error response {{RFC6749}}. The code tells the client to obtain a statement and return through the pushed authorization request endpoint; without the code, a client cannot tell a missing review from a policy it will never satisfy.
 
-The authorization server redirects with the error only after resolving the client's Client ID Metadata Document, or for an expired registration consulting the retained registration ({{REGISTRATION}}), and validating the request's `redirect_uri` against it. Where it cannot resolve either, and so cannot validate the redirection URI, the authorization server MUST NOT redirect and reports the error to the resource owner instead.
+The authorization server redirects with the error only after resolving the client's Client ID Metadata Document, or for an expired registration consulting the retained registration ({{REGISTRATION}}), and validating the request's `redirect_uri` against it. Where it cannot resolve the document or, for an expired registration, the retained registration, and so cannot validate the redirection URI, the authorization server MUST NOT redirect and reports the error to the resource owner instead.
 
 Where the proof mechanism defines a recoverable error of its own, such as a DPoP nonce challenge {{RFC9449}}, that error takes precedence over the generic errors above.
 
@@ -667,7 +668,7 @@ Presentation reaches these retrievals before any client is registered or any use
 * bound JWT size and parsing work, concurrent retrievals, response size, and response time; and
 * cache successful retrieval results within the document's caching directives, and back off after a failure rather than cache it, since {{CIMD}} forbids caching error responses.
 
-A retrieval failure leaves the relevant metadata or proof unverified, so the authorization server MUST reject the request and MUST NOT fall back to a weaker proof.
+A retrieval failure leaves the relevant metadata or proof unverified, so the authorization server MUST reject the request and MUST NOT fall back to a weaker proof. A failed pull of statements is the exception: it leaves the client unreviewed, as {{pulled-statements}} describes.
 
 ## Enforcement Bounds {#enforcement-bounds}
 
