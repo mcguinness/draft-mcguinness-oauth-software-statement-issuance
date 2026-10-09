@@ -257,7 +257,7 @@ Because an issuer reviews the document it retrieves from the client identifier U
 
 # Issuer Trust Establishment {#issuer-trust}
 
-A trusting authorization server accepts statements only from configured issuers. Trust is established out of band, for example through a marketplace publisher program or shared enterprise operation; this specification defines no in-band issuer discovery or trust decision.
+A trusting authorization server accepts statements only from configured issuers. Trust is established out of band, for example through a marketplace publisher program or shared enterprise operation. This specification defines no in-band issuer discovery or trust decision.
 
 For each trusted issuer, a trusting authorization server records at least:
 
@@ -273,9 +273,9 @@ These inputs, not the signature alone, define acceptance. A trusting authorizati
 
 Issuer trust SHOULD be scoped as well as explicit. Trust configuration SHOULD constrain each issuer to the client identifier namespaces it is expected to attest, for example URLs under the domains of the software publishers it serves. A statement whose `sub` falls outside the issuer's configured scope MUST be rejected even when its signature verifies ({{validation}}). Without such a scope, a compromised or over-broad issuer can mint acceptable statements about any client software. For an issuer attesting software across many publishers, as an enterprise issuer does, the scope is the set of identifiers it is configured for rather than a single domain.
 
-Where a trusting authorization server configures an issuer whose decisions are confined to one of its tenants, as a customer's own issuer is, it SHOULD record with that configuration the client identifier namespaces for which the issuer's decision is required in that tenant. For a client in such a namespace, only a current statement from that issuer establishes reviewed software in that tenant, whatever other issuers' statements say.
+Where a trusting authorization server configures an issuer whose decisions are confined to one of its tenants, it SHOULD record with that configuration the client identifier namespaces for which the issuer's decision is required in that tenant. A customer's own issuer is an example. For a client in such a namespace, only a current statement from that issuer establishes reviewed software in that tenant, whatever other issuers' statements say.
 
-A server that records such a requirement MUST NOT admit software in a covered namespace in that tenant without a current statement from the required issuer, whatever its policy for clients it has not reviewed, since otherwise withholding the statement would restore access the customer withdrew. The requirement is configured rather than inferred from the statements the server sees, so a holder cannot evade a customer's withdrawal by presenting or publishing only a broader listing ({{deployment-model}}). A required issuer configured for software whose documents are presented review-only ({{public-client-presentation}}) excludes that software from the tenant, since no statement admits it there.
+A server that records such a requirement MUST NOT admit software in a covered namespace in that tenant without a current statement from the required issuer, whatever its policy for clients it has not reviewed. Without this rule, withholding the statement would restore access the customer withdrew. The requirement is configured rather than inferred from the statements the server sees, so a holder cannot evade a customer's withdrawal by presenting or publishing only a broader listing ({{deployment-model}}). A required issuer configured for software whose documents are presented review-only ({{public-client-presentation}}) excludes that software from the tenant, since no statement admits it there.
 
 ## Issuer and Consumer as One Server {#same-server}
 
@@ -288,13 +288,13 @@ Such a server MUST apply the conditions it would apply to a presentation, since 
 * the document at `sub` has been obtained; and
 * that document's digest equals the one recorded ({{metadata-digest}}).
 
-A client dealing only with the server that reviewed it therefore presents nothing; portability matters only to other servers.
+A client dealing only with the server that reviewed it therefore presents nothing. Portability matters only to other servers.
 
 ## Multi-Tenant Issuers {#multi-tenant-issuers}
 
-Where the tenants of a reviewer serving several customers are independently trusted reviewing authorities, the reviewer MUST issue under a distinct `iss` for each. Each tenant's decisions, keys, statuses, and watermark then stay separate, and a consumer configures trust per tenant as {{issuer-trust}} describes. A statement carries no claim naming the issuer's tenant.
+Where the tenants of a reviewer serving several customers are independently trusted reviewing authorities, the reviewer MUST issue under a distinct `iss` for each. Each tenant's decisions, keys, statuses, and watermark then stay separate, and a trusting authorization server configures trust per tenant as {{issuer-trust}} describes. A statement carries no claim naming the issuer's tenant.
 
-If several such authorities issue under one `iss`, their statements about the same software are indistinguishable by `iss` and `sub`, so the watermark of {{multi-instance}} treats the later as superseding the earlier: one customer's renewal invalidates the other's review for no reason that customer can observe.
+If several such authorities issue under one `iss`, their statements about the same software are indistinguishable by `iss` and `sub`. The watermark of {{multi-instance}} then treats the later as superseding the earlier: one customer's renewal invalidates the other customer's review for no reason that customer can observe.
 
 # Runtime Presentation {#cimd-presentation}
 
@@ -305,11 +305,11 @@ The client presents its statement in the request, or publishes it where its docu
 A client presents a software statement by including the following parameter in a token request or a pushed authorization request:
 
 `software_statement`:
-: REQUIRED for presentation. The software statement ({{profiles}}). It is consumed as a runtime presentation, a refresh replacement ({{refresh}}), or, where {{REGISTRATION}} is implemented, a revalidation delivery under it; a request carrying the parameter in any other role is rejected with `invalid_request`. The authorization server MUST verify that it accepts the statement's issuer for the subject ({{issuer-trust}}), and MUST reject a request repeating the parameter with `invalid_request`.
+: REQUIRED for presentation. The software statement ({{profiles}}). It is consumed as a runtime presentation, a refresh replacement ({{refresh}}), or, where {{REGISTRATION}} is implemented, a revalidation delivery under that specification. A request carrying the parameter in any other role is rejected with `invalid_request`. The authorization server MUST verify that it accepts the statement's issuer for the subject ({{issuer-trust}}), and MUST reject a request repeating the parameter with `invalid_request`.
 
-The request's `client_id` is the client's Client ID Metadata Document URL. It MUST exactly equal the statement's `sub`; the authorization server MUST reject a presentation where they differ, with `invalid_client`. The effective `client_id` is the statement's `sub`, and the authorization server assigns none.
+The request's `client_id` is the client's Client ID Metadata Document URL. It MUST exactly equal the statement's `sub`. The authorization server MUST reject a presentation where they differ, with `invalid_client`. The effective `client_id` is the statement's `sub`, and the authorization server assigns none.
 
-The request MUST also carry the proof required by {{sender-constraint}}: client authentication under a method the reviewed document specifies, a DPoP proof with a key that document carries, or, for a public client, the PKCE and `dpop_jkt` binding of {{public-client-presentation}}. A successful presentation establishes the client for the request and for the grant state derived from it ({{grant-lifecycle}}).
+The request MUST also carry the proof required by {{sender-constraint}}. That proof is client authentication under a method the reviewed document specifies, a DPoP proof with a key that document carries, or, for a public client, the PKCE and `dpop_jkt` binding of {{public-client-presentation}}. A successful presentation establishes the client for the request and for the grant state derived from it ({{grant-lifecycle}}).
 
 At the token endpoint, a runtime presentation is valid on a request using:
 
@@ -317,13 +317,13 @@ At the token endpoint, a runtime presentation is valid on a request using:
 * the JWT or SAML assertion grants of {{RFC7521}}; or
 * another grant an authorization server names in `software_statement_presentation_grant_types_supported` ({{authorization-server-metadata}}).
 
-Authorization-code redemption and refresh-token use continue an existing grant and follow {{grant-lifecycle}} and {{refresh}} instead. A request that asks an authorization server to issue a software statement, rather than to consume one, MUST NOT carry the `software_statement` parameter; {{ISSUANCE}} defines the response type, grant type, and requested token type that identify such a request.
+Authorization-code redemption and refresh-token use continue an existing grant and follow {{grant-lifecycle}} and {{refresh}} instead. A request that asks an authorization server to issue a software statement, rather than to consume one, MUST NOT carry the `software_statement` parameter. {{ISSUANCE}} defines the response type, grant type, and requested token type that identify such a request.
 
 An authorization server advertises support through `software_statement_presentation_supported` ({{authorization-server-metadata}}).
 
 ### Authorization Endpoint {#authorization-requests}
 
-Presentation in an authorization request MUST use a pushed authorization request {{RFC9126}}; a pulled statement, which never travels in a request, needs none ({{pulled-statements}}). The pushed authorization request endpoint processes the statement and its proof as {{processing}} describes. The subsequent authorization request MUST use a `client_id` exactly equal to the establishment's `sub` and MUST NOT include the `software_statement` parameter. A statement therefore never appears in a front-channel URL.
+Presentation in an authorization request MUST use a pushed authorization request {{RFC9126}}. A pulled statement, which never travels in a request, needs no pushed authorization request ({{pulled-statements}}). The pushed authorization request endpoint processes the statement and its proof as {{processing}} describes. The subsequent authorization request MUST use a `client_id` exactly equal to the establishment's `sub` and MUST NOT include the `software_statement` parameter. A statement therefore never appears in a front-channel URL.
 
 ### Token Endpoint
 
@@ -334,7 +334,7 @@ The client includes the parameter in an eligible token request ({{runtime-presen
 A client can publish its statements rather than present them. Its Client ID Metadata Document then carries the following client metadata member:
 
 `software_statements_uri`:
-: OPTIONAL. URL, in a Client ID Metadata Document, at which the client publishes software statements about itself; the member has no meaning in a registration request. It MUST use the `https` scheme. A request to it returns a JSON object whose `software_statements` member is an array of statements ({{profiles}}), each a string in JWS compact serialization. The metadata digest covers this member ({{metadata-digest}}), so changing where statements are found changes the document every statement names.
+: OPTIONAL. URL, in a Client ID Metadata Document, at which the client publishes software statements about itself. The member has no meaning in a registration request. The URL MUST use the `https` scheme. A request to it returns a JSON object whose `software_statements` member is an array of statements ({{profiles}}), each a string in JWS compact serialization. The metadata digest covers this member ({{metadata-digest}}), so changing where statements are found changes the document every statement names.
 
 An authorization server that supports pulled statements MAY retrieve this URL when it resolves the document of a client that presented no statement. In retrieving it, the server:
 
@@ -355,17 +355,17 @@ The server considers only statements that:
 
 It ignores the rest, since anyone able to publish at the URL can place anything there.
 
-Where its trust configuration requires an issuer for this client ({{issuer-trust}}), the server applies only that issuer's statement, and where none remains, the client is not reviewed. Otherwise, where more than one statement remains, it applies any of them, taking the latest `iat` from each issuer, subject to the watermark of {{multi-instance}}. A pulled statement the server does not apply does not advance the watermark. The server then continues from step 4 of {{processing}}, with the pulled statement in place of a presented one and the document already resolved; the selection above satisfies the `client_id` rule of step 2.
+Where its trust configuration requires an issuer for this client ({{issuer-trust}}), the server applies only that issuer's statement, and where none remains, the client is not reviewed. Otherwise, where more than one statement remains, the server applies any of them, taking the latest `iat` from each issuer, subject to the watermark of {{multi-instance}}. A pulled statement the server does not apply does not advance the watermark. The server then continues from step 4 of {{processing}}, with the pulled statement in place of a presented one and the document already resolved. The selection above satisfies the `client_id` rule of step 2.
 
 The presenter of a pulled statement is bound as for a presented statement ({{sender-constraint}}), at the point the request allows:
 
 * At the token endpoint, the request's client authentication or DPoP proof binds it, as for a presentation there.
 * At the authorization endpoint, binding completes at code redemption, before any token is issued. A confidential client authenticates there with a key carried by the octets the server digested, not one that only a later retrieval of the document carries, and that key becomes the establishment's proven key. A public client's authorization request is subject to {{public-client-presentation}}, including PKCE and `dpop_jkt`, and redemption proves the `dpop_jkt` key.
-* A public client opening a new grant at the token endpoint has nothing to bind, so a statement pulled for it is review-only ({{public-client-presentation}}), as is one pulled for a document whose redirection URIs that section does not accept. Code redemption and refresh continue an establishment and keep the binding it already has ({{grant-lifecycle}}, {{refresh}}).
+* A public client opening a new grant at the token endpoint has nothing to bind, so a statement pulled for it is review-only ({{public-client-presentation}}). So is one pulled for a document whose redirection URIs that section does not accept. Code redemption and refresh continue an establishment and keep the binding it already has ({{grant-lifecycle}}, {{refresh}}).
 
 Where retrieval does not complete or no statement remains, the server applies its policy for Client ID Metadata Document clients it has not reviewed. Where that policy requires reviewed software, it rejects the request with `temporarily_unavailable` if retrieval did not complete and with `statement_required` if no statement remains. A retrieval failure is never a withdrawal.
 
-On refresh, where {{refresh}} needs a replacement for an establishment created from a pulled statement, the server pulls again and applies, as the replacement under that section, the newest statement with the recorded statement's `iss` and `sub`. Where the newest is the recorded statement itself, nothing is replaced, and currency rests on that statement as {{refresh}} describes. If the re-pull does not complete or yields no replacement, the refresh fails as {{refresh}} provides; a reviewed grant never continues under the policy for clients the server has not reviewed.
+On refresh, where {{refresh}} needs a replacement for an establishment created from a pulled statement, the server pulls again. It applies the newest statement with the recorded statement's `iss` and `sub` as the replacement under that section. Where the newest is the recorded statement itself, nothing is replaced, and currency rests on that statement as {{refresh}} describes. If the re-pull does not complete or yields no replacement, the refresh fails as {{refresh}} provides. A reviewed grant never continues under the policy for clients the server has not reviewed.
 
 An authorization server advertises support through `software_statement_pull_supported` ({{authorization-server-metadata}}).
 
@@ -381,31 +381,31 @@ On receiving a presentation, the authorization server proceeds as follows, rejec
 
 ## Sender Constraint {#sender-constraint}
 
-A runtime presentation MUST be sender-constrained by a key the statement attests or, under {{public-client-presentation}}, by the key the presenter binds through `dpop_jkt`. The presenter proves possession of that key through the applicable client authentication method or a DPoP proof {{RFC9449}}, and the proof MUST be bound to the current request and validated with the replay protections of that mechanism.
+A runtime presentation MUST be sender-constrained by a key the statement attests or, under {{public-client-presentation}}, by the key the presenter binds through `dpop_jkt`. The presenter proves possession of that key through the applicable client authentication method or a DPoP proof {{RFC9449}}. The proof MUST be bound to the current request and validated with the replay protections of that mechanism.
 
 Except as {{public-client-presentation}} provides, the proven key MUST appear in the `jwks` or at the `jwks_uri` of the reviewed document ({{effective-metadata}}). Where the reviewed document specifies a client authentication method, the presenter MUST use it, and where the grant type requires client authentication a DPoP proof does not satisfy that requirement ({{RFC9449}}). The authorization server MUST reject a presentation without such a proof, or whose proven key the reviewed document does not carry. A document carrying a redirection URI another application could claim is presented review-only whatever its authentication method ({{public-client-presentation}}).
 
-A statement whose reviewed document carries no key material can be consumed at registration where its `statement_uses` claim permits ({{REGISTRATION}}) and, where the document declares `token_endpoint_auth_method` of `none`, at the pushed authorization request endpoint under {{public-client-presentation}}. Endorsement of a key the statement does not name, by a client attester or by an issuer the statement delegates to, is left to extensions ({{extensions}}).
+A statement whose reviewed document carries no key material can be consumed at registration where its `statement_uses` claim permits ({{REGISTRATION}}). Where the document declares `token_endpoint_auth_method` of `none`, such a statement can also be consumed at the pushed authorization request endpoint under {{public-client-presentation}}. Endorsement of a key the statement does not name, by a client attester or by an issuer the statement delegates to, is left to extensions ({{extensions}}).
 
-A key at the document's `jwks_uri` is retrieved at presentation time; if retrieval fails, the key is unverified and the presentation is rejected with `temporarily_unavailable`. A server MAY reuse a recently retrieved key set within ordinary HTTP caching bounds, subject to a maximum reuse period of its own choosing; it MUST NOT let the client's cache directives alone determine how long a removed key continues to verify ({{external-retrieval}}).
+A key at the document's `jwks_uri` is retrieved at presentation time. If retrieval fails, the key is unverified and the presentation is rejected with `temporarily_unavailable`. A server MAY reuse a recently retrieved key set within ordinary HTTP caching bounds, subject to a maximum reuse period of its own choosing. It MUST NOT let the client's cache directives alone determine how long a removed key continues to verify ({{external-retrieval}}).
 
 ### Public Clients {#public-client-presentation}
 
 Software distributed to end users cannot hold a key its reviewed document carries, since a key in a distributed binary is in every copy and identifies the software, not the installation. Such a document declares `token_endpoint_auth_method` of `none` and carries no key material.
 
-A presentation at the pushed authorization request endpoint, or a pulled statement at the authorization endpoint ({{pulled-statements}}), is bound instead by its reviewed redirection URIs where the client's reviewed document declares `token_endpoint_auth_method` of `none` and none of its redirection URIs is one another application could claim (see below). For such a presentation, the authorization server:
+A presentation at the pushed authorization request endpoint, or a pulled statement at the authorization endpoint ({{pulled-statements}}), is bound instead by its reviewed redirection URIs. This binding applies where the client's reviewed document declares `token_endpoint_auth_method` of `none` and none of its redirection URIs is one another application could claim (see below). For such a presentation, the authorization server:
 
 * MUST require PKCE {{RFC7636}} with the `S256` method;
 * MUST require the presenter to bind a key it holds, through the `dpop_jkt` parameter {{RFC9449}}, and records that key as the proven key of the establishment ({{grant-lifecycle}}); and
 * MUST NOT require that key to appear in the reviewed document.
 
-The reviewed document, not the proven key, admits the statement here: an authorization code opened by such a presentation is delivered only to a redirection URI the issuer reviewed, so a holder of a copied statement cannot receive it ({{public-client-security}}). The proven key identifies the installation the grant belongs to; code redemption and refresh demonstrate possession of that same key ({{grant-lifecycle}}, {{refresh}}).
+The reviewed document, not the proven key, admits the statement here. An authorization code opened by such a presentation is delivered only to a redirection URI the issuer reviewed, so a holder of a copied statement cannot receive the code ({{public-client-security}}). The proven key identifies the installation the grant belongs to. Code redemption and refresh demonstrate possession of that same key ({{grant-lifecycle}}, {{refresh}}).
 
-A presentation is review-only where the reviewed document carries any redirection URI that another application on the same device could claim: a non-`https` URI, such as a private-use scheme or an `http` loopback redirection URI, or an `https` URI whose host is a loopback address or `localhost`. Desktop software commonly redirects this way. One such URI makes the whole document review-only, whatever authentication method it declares: the application that claims the URI receives the code ({{public-client-security}}), so neither the reviewed redirection URIs nor a key shipped in every copy of the software can bind the presenter.
+A presentation is review-only where the reviewed document carries any redirection URI that another application on the same device could claim. Such a URI is a non-`https` URI, for example a private-use scheme or an `http` loopback redirection URI, or an `https` URI whose host is a loopback address or `localhost`. Desktop software commonly redirects this way. One such URI makes the whole document review-only, whatever authentication method it declares. The application that claims the URI receives the code ({{public-client-security}}), so neither the reviewed redirection URIs nor a key shipped in every copy of the software can bind the presenter.
 
-A review-only presentation creates no establishment, admits nothing, and does not advance the watermark of {{multi-instance}}, since it changes nothing for the software's other instances; the authorization server proceeds as it would for the same Client ID Metadata Document client presenting no statement. The statement of a review-only presentation MUST NOT satisfy a policy requiring reviewed software, and the authorization server SHOULD NOT present that review to the user as an assurance about the presenter. Where the server's policy requires reviewed software, it rejects a review-only client with `unauthorized_client`, since no statement can make such a client reviewed.
+A review-only presentation creates no establishment, admits nothing, and does not advance the watermark of {{multi-instance}}, since it changes nothing for the software's other instances. The authorization server proceeds as it would for the same Client ID Metadata Document client presenting no statement. The statement of a review-only presentation MUST NOT satisfy a policy requiring reviewed software, and the authorization server SHOULD NOT present that review to the user as an assurance about the presenter. Where the server's policy requires reviewed software, it rejects a review-only client with `unauthorized_client`, since no statement can make such a client reviewed.
 
-For a review-only presentation, the authorization server MAY record the statement's issuer for audit and inventory, and MAY refuse the request where the statement's status shows a withdrawal, since status constrains and never relaxes ({{validation}}), subject to the bounds of {{external-retrieval}}.
+For a review-only presentation, the authorization server MAY record the statement's issuer for audit and inventory. For such a presentation, it MAY refuse the request where the statement's status shows a withdrawal, since status constrains and never relaxes ({{validation}}), subject to the bounds of {{external-retrieval}}.
 
 A presentation at the token endpoint under {{runtime-presentation}} opens no redirect and has nothing to bind it, so an authorization server MUST reject one from a client whose reviewed document carries no key material. A statement pulled for such a client at the token endpoint is instead review-only ({{pulled-statements}}).
 
