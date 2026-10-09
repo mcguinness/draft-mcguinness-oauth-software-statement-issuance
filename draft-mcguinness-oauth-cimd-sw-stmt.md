@@ -668,7 +668,7 @@ Presentation reaches these retrievals before any client is registered or any use
 * bound JWT size and parsing work, concurrent retrievals, response size, and response time; and
 * cache successful retrieval results within the document's caching directives, and back off after a failure rather than cache it, since {{CIMD}} forbids caching error responses.
 
-A retrieval failure leaves the relevant metadata or proof unverified, so the authorization server MUST reject the request and MUST NOT fall back to a weaker proof. A failed pull of statements is the exception: it leaves the client unreviewed, as {{pulled-statements}} describes.
+A retrieval failure leaves the relevant metadata or proof unverified, so the authorization server MUST reject the request and MUST NOT fall back to a weaker proof. A failed pull of statements for a request that opens a new grant is the exception: it leaves the client unreviewed, as {{pulled-statements}} describes. A failed pull of a replacement that a refresh requires is not an exception: the refresh fails, and the grant never continues under the policy for clients the server has not reviewed ({{refresh}}).
 
 ## Enforcement Bounds {#enforcement-bounds}
 
