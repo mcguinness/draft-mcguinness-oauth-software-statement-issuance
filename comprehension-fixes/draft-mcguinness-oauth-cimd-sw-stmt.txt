@@ -484,8 +484,11 @@ Table of Contents
       over a truncated read is not the digest of the document, so a
       trusting authorization server MUST treat a response exceeding its
       configured bound as a retrieval failure rather than digesting what
-      it read.  Retrying cannot succeed, so the request is rejected with
-      invalid_client rather than temporarily_unavailable (Section 9).
+      it read.  For a runtime presentation, retrying cannot succeed, so
+      the request is rejected with invalid_client rather than
+      temporarily_unavailable (Section 9), except on refresh-token use,
+      where Section 5.6.1 takes precedence.  [REGISTRATION] defines the
+      rejection at a registration endpoint.
 
    *  A shared cache may hold a variant selected for some other request.
       A server MUST NOT compare a digest against any representation
@@ -1716,8 +1719,12 @@ Table of Contents
 
    A retrieval failure leaves the relevant metadata or proof unverified,
    so the authorization server MUST reject the request and MUST NOT fall
-   back to a weaker proof.  A failed pull of statements is the
-   exception: it leaves the client unreviewed, as Section 5.2 describes.
+   back to a weaker proof.  A failed pull of statements for a request
+   that opens a new grant is the exception: it leaves the client
+   unreviewed, as Section 5.2 describes.  A failed pull of a replacement
+   that a refresh requires is not an exception: the refresh fails, and
+   the grant never continues under the policy for clients the server has
+   not reviewed (Section 5.6.1).
 
 13.6.  Enforcement Bounds
 
