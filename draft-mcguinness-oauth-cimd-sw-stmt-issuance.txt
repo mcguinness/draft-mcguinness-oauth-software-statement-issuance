@@ -1103,10 +1103,10 @@ Table of Contents
 
    An issuing authorization server that ends decisions before their
    expiry publishes statement status as [STATUSLIST] defines, and
-   carries the status claim in the statements it issues, as the Status
-   Publication section of [STATEMENT] requires.  Withdrawing a statement
-   does not withdraw a replacement obtained through Section 5.1, and
-   withdrawing a replacement does not restore its predecessor.
+   carries the status claim in the statements it issues, as [STATUS]
+   defines.  Withdrawing a statement does not withdraw a replacement
+   obtained through Section 5.1, and withdrawing a replacement does not
+   restore its predecessor.
 
 12.  Authorization Server Metadata
 
@@ -1646,6 +1646,10 @@ Table of Contents
               and F. Skokan, "OAuth 2.0 Pushed Authorization Requests",
               RFC 9126, DOI 10.17487/RFC9126, September 2021,
               <https://www.rfc-editor.org/rfc/rfc9126>.
+
+   [STATUS]   "CIMD Software Statement Status", n.d.,
+              <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
+              cimd-sw-stmt-status>.
 
    [TRUST-FRAMEWORK]
               "OAuth Identity Assertion Trust Framework", n.d.,

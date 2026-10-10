@@ -8,23 +8,21 @@ Intended status: Standards Track                         10 October 2026
 Expires: 13 April 2027
 
 
-           Shared Signals Events for CIMD Software Statements
-           draft-mcguinness-oauth-cimd-sw-stmt-signals-latest
+                     CIMD Software Statement Status
+           draft-mcguinness-oauth-cimd-sw-stmt-status-latest
 
 Abstract
 
-   A software statement records a reviewer's decision about client
-   software.  An issuer withdraws that decision before the statement
-   expires by publishing a status through Token Status List, which a
-   trusting authorization server resolves on the list's own schedule, so
-   that schedule determines how quickly a withdrawal takes effect.  This
-   specification profiles the Shared Signals Framework so that an issuer
-   can notify the servers relying on its statements that a status has
-   changed, prompting them to resolve it at once.  The status list
-   remains the authority; an event only says when to look.  A receiver
-   that misses every event reaches the same result on its ordinary
-   schedule, so the mechanism reduces latency without becoming necessary
-   for correctness.
+   This specification defines how the status of a CIMD software
+   statement is published and checked.  Token Status List supplies the
+   authoritative status: an issuer publishes it, and a trusting
+   authorization server resolves it on the list's own schedule and
+   refuses a withdrawn statement.  Optional Shared Signals events tell
+   the servers relying on an issuer's statements that a status has
+   changed, prompting them to check at once.  An event only says when to
+   look, so a server that misses every event reaches the same result on
+   its ordinary schedule.  CIMD Software Statement requires no status
+   mechanism; this specification supplies one.
 
 Status of This Memo
 
@@ -61,35 +59,43 @@ Table of Contents
 
    1.  Introduction
    2.  Conventions and Definitions
-   3.  Relationship to the Statement Family
-   4.  Subject Identification
-   5.  Event Types
-     5.1.  Status Changed
-   6.  Receiver Processing
-   7.  Stream Configuration
-   8.  Security Considerations
-     8.1.  What an Event Cannot Do
-     8.2.  Status Remains the Authority
-     8.3.  Key Separation and Compromise
-     8.4.  Relationship to Scheduled Resolution
-   9.  Privacy Considerations
-   10. IANA Considerations
-     10.1.  OAuth URI Registry
-     10.2.  SET Payload Claims
-   11. References
-     11.1.  Normative References
-     11.2.  Informative References
+   3.  Token Status List
+     3.1.  The status Claim
+     3.2.  Status Publication
+     3.3.  Status Resolution
+   4.  Event Issuer Trust and Keys
+   5.  Subject Identification
+   6.  Event Types
+     6.1.  Status Changed
+   7.  Receiver Processing
+   8.  Stream Configuration
+   9.  Security Considerations
+     9.1.  Status Resolution Schedule
+     9.2.  What an Event Cannot Do
+     9.3.  Status Remains the Authority
+     9.4.  Key Separation and Compromise
+     9.5.  Relationship to Scheduled Resolution
+   10. Privacy Considerations
+   11. IANA Considerations
+     11.1.  OAuth URI Registry
+     11.2.  SET Payload Claims
+   12. References
+     12.1.  Normative References
+     12.2.  Informative References
    Acknowledgments
    Author's Address
 
 1.  Introduction
 
    [STATEMENT] defines a software statement, in which an issuer vouches
-   for a reviewed Client ID Metadata Document, and the status claim by
-   which a statement locates itself in the issuer's Status List Token
-   [STATUSLIST].  An issuer withdraws a decision before its expiry by
-   setting that status, and a trusting authorization server learns of
-   the change when it next resolves the list.
+   for a reviewed Client ID Metadata Document.  It lets an issuer
+   withdraw a decision before its expiry, and has a trusting
+   authorization server that learns of a withdrawal hold a refusal
+   record, but it requires and defines no withdrawal mechanism.  This
+   specification defines two.  Section 3 profiles Token Status List
+   [STATUSLIST]: an issuer withdraws a decision by setting the
+   statement's status, and a trusting authorization server learns of the
+   change when it next resolves the list.
 
    Responsiveness therefore depends on the fetch interval.  For a
    withdrawal to take effect within minutes, every consumer has to poll
@@ -98,25 +104,30 @@ Table of Contents
    The parties already have a configured relationship: a trusting
    authorization server records each issuer's identifier, key source,
    scope, and lifetime policy in order to accept its statements at all
-   ([STATEMENT]).  This specification uses that relationship to carry a
-   notification over the Shared Signals Framework [SSF].  The issuing
-   authorization server transmits, the trusting authorization server
-   receives, and events are Security Event Tokens [RFC8417] delivered by
-   the push [RFC8935] or poll [RFC8936] delivery methods.
+   ([STATEMENT]).  As an optional addition to the status list, this
+   specification uses that relationship to carry a notification over the
+   Shared Signals Framework [SSF].  The issuing authorization server
+   transmits, the trusting authorization server receives, and events are
+   Security Event Tokens [RFC8417] delivered by the push [RFC8935] or
+   poll [RFC8936] delivery methods.
 
    An event carries no decision: it reports that the issuer changed a
    status, and the receiver resolves that status as it would have later
    anyway.  The status list remains the authority on whether a statement
-   stands.  Section 6 makes two properties normative: an event can only
+   stands.  Section 7 makes two properties normative: an event can only
    prompt a resolution and never itself increases what a client may do,
    and a receiver that misses events enforces status and expiry exactly
    as it would without them.
 
-   This specification defines the subject identification, the event, its
-   payload claims, and the receiver's processing rules.  It defines no
-   new endpoint, transport, subject identifier format, durable receiver
-   record, or trust establishment mechanism.  [STATEMENT] does not
-   depend on it.
+   The events are optional.  An issuer and a trusting authorization
+   server can use the status list without them, and the requirements of
+   Section 4 through Section 8 apply only to implementations that
+   support the events.  For the events, this specification defines the
+   subject identification, the event, its payload claims, and the
+   receiver's processing rules.  It defines no new endpoint, transport,
+   subject identifier format, durable receiver record, or trust
+   establishment mechanism.  [STATEMENT] does not depend on this
+   specification.
 
 2.  Conventions and Definitions
 
@@ -131,9 +142,9 @@ Table of Contents
    defined by [RFC8417].  Subject identifier formats are defined by
    [RFC9493].  Status List Token, and the validation that resolves a
    status, are defined by [STATUSLIST].  The software statement, its
-   claims including status, its validation, issuer trust configuration,
-   and runtime presentation are defined by [STATEMENT], and registration
-   validity by [REGISTRATION].
+   claims, its validation, issuer trust configuration, runtime
+   presentation, withdrawal, and Refusal Record are defined by
+   [STATEMENT], and registration validity by [REGISTRATION].
 
    Issuing Authorization Server and Trusting Authorization Server are
    defined by [STATEMENT].  For the events defined here, the issuing
@@ -141,7 +152,100 @@ Table of Contents
    ([STATEMENT]), acts as a Transmitter, and a trusting authorization
    server that has configured it acts as a Receiver.
 
-3.  Relationship to the Statement Family
+3.  Token Status List
+
+   An issuer may use Token Status List [STATUSLIST] as the withdrawal
+   mechanism of [STATEMENT] for its statements.  A trusting
+   authorization server may resolve those statuses for any issuer it has
+   configured.
+
+3.1.  The status Claim
+
+   A statement locates itself in the issuer's Status List Token with the
+   status claim, as [STATUSLIST] defines it.  It lets an issuer end a
+   decision before exp without a trusting authorization server
+   contacting the issuer for each statement.  Section 3.2 requires an
+   issuer that publishes status to carry the claim in every statement it
+   issues from then on, since a trusting authorization server cannot
+   otherwise distinguish a statement that omits the claim from one whose
+   issuer publishes no status.
+
+3.2.  Status Publication
+
+   An issuing authorization server that ends decisions before their
+   expiry publishes statement status as [STATUSLIST] defines and carries
+   the status claim in the statements it issues ([STATEMENT]).  The
+   statement records what was decided; the status list records whether
+   that decision still stands.
+
+   An issuer that publishes status:
+
+   *  MUST publish it for every statement it issues under a given iss
+      from the point it begins publishing, not for a subset, so that a
+      trusting authorization server can read an absent claim as meaning
+      the issuer publishes no status.  Statements issued before that
+      point carry no claim, so the inference holds once those have
+      expired;
+
+   *  MUST assign each statement its own index and MUST NOT reuse an
+      index across statements.  Withdrawing a statement then affects no
+      other, including its replacement: withdrawing a superseded
+      statement does not withdraw its replacement, and withdrawing a
+      replacement does not restore its predecessor;
+
+   *  MUST sign the Status List Token with a key published at the
+      jwks_uri of its authorization server metadata [RFC8414], never
+      with a statement signing key ([STATEMENT]);
+
+   *  MUST include exp in every Status List Token it publishes, so that
+      an older token cannot stand in for a newer one indefinitely; and
+
+   *  MUST give each Status List Token it publishes at a given list URI
+      an iat later than that of any token it published there before, so
+      that a trusting authorization server can tell the newer of two
+      apart.
+
+3.3.  Status Resolution
+
+   Where the statement carries status and the trusting authorization
+   server resolves statuses for that issuer, it MUST reject a statement
+   whose status is INVALID, and MUST apply its configured policy for
+   that issuer to a statement whose status is SUSPENDED.  A status of
+   INVALID, or of SUSPENDED where that policy refuses the statement, is
+   a withdrawal: the server holds a refusal record ([STATEMENT]).  The
+   refusal ends only when a later resolution returns a status that no
+   longer refuses the statement.  Token Status List defines no other
+   expiry for a withdrawal, and neither a failed resolution nor the
+   expiry of a Status List Token the server holds ends the refusal.  A
+   rejection on status uses the refusal-record row of the error
+   responses of [STATEMENT], because re-presenting the same statement
+   cannot succeed while that status stands.
+
+   Where a trusting authorization server resolves statuses for an
+   issuer, resolution follows [STATUSLIST], including its caching rules
+   and its requirement to reject where the referenced index lies outside
+   the list.  Such a server MAY therefore decide from a Status List
+   Token it already holds within that token's validity, including when
+   it checks a recorded statement at refresh ([STATEMENT]).  A server
+   MUST NOT replace a Status List Token it holds with one whose iat is
+   earlier, and MUST treat one whose iat is equal but whose contents
+   differ as a resolution failure.  A host serving an older token could
+   otherwise restore a status the issuer has withdrawn.  An issuer gives
+   each token it publishes at a list URI a later iat than the last
+   (Section 3.2).
+
+   A statement carrying no status, or whose status the server cannot
+   resolve, is bounded by exp, as [STATEMENT] provides for any
+   withdrawal mechanism.
+
+   A status list is signed by the issuer, and a server MUST obtain the
+   list's verification keys from the jwks_uri of the issuer's
+   authorization server metadata [RFC8414], reached from the configured
+   iss, never from the list itself.  That key set is separate from the
+   issuer's statement key set ([STATEMENT]), so a key that signs the
+   list cannot sign statements.
+
+4.  Event Issuer Trust and Keys
 
    An event bears only on the statements the transmitting issuer has
    made about the named subject, never on statements another issuer made
@@ -176,7 +280,7 @@ Table of Contents
    value a statement's aud carries; a stream audience negotiated under
    [SSF] does not replace it.
 
-4.  Subject Identification
+5.  Subject Identification
 
    The subject of every event defined here is client software,
    identified by the sub of the statements the event concerns.  Events
@@ -190,7 +294,7 @@ Table of Contents
    ordinarily does for software it has never seen presented, and such an
    event requires nothing of it.
 
-5.  Event Types
+6.  Event Types
 
    Each event is a member of the SET events claim, whose value is the
    event payload object.  All payloads share these claims:
@@ -201,20 +305,20 @@ Table of Contents
       specification requires it and narrows it to the status change.  It
       is informational, for logging and audit: a receiver does not use
       it to order, bound, or scope anything, since the resolved status
-      governs (Section 6).
+      governs (Section 7).
 
    software_statement_jti:  OPTIONAL.  The jti of a single statement
       whose status changed.  Where absent, the event does not name the
-      statements whose status changed (Section 6).
+      statements whose status changed (Section 7).
 
    reason_admin:  OPTIONAL.  A JSON object whose members are language
       tags [RFC5646] and whose values are human-readable explanations
       intended for an administrator, as [CAEP] defines the member.
 
-5.1.  Status Changed
+6.1.  Status Changed
 
    The event type identifier is urn:ietf:params:oauth:event-
-   type:software-statement-status-changed (Section 10.1), used as a
+   type:software-statement-status-changed (Section 11.1), used as a
    member name of the SET events claim.
 
    The event reports that the issuer has changed the published status of
@@ -236,24 +340,24 @@ Table of Contents
    forged or replayed event could then assert a status the issuer never
    published.
 
-6.  Receiver Processing
+7.  Receiver Processing
 
    A trusting authorization server that receives an event defined here
    MUST:
 
    1.  verify the SET as [RFC8417] requires, including its typ, and
        verify that its issuer is configured and its keys were obtained
-       as Section 3 requires;
+       as Section 4 requires;
 
    2.  reject an event whose aud does not contain its issuer identifier
-       (Section 3), and an event whose type it does not recognize;
+       (Section 4), and an event whose type it does not recognize;
 
-   3.  resolve the subject (Section 4); and
+   3.  resolve the subject (Section 5); and
 
    4.  resolve the status of the affected statements from the issuer's
        Status List Token as [STATUSLIST] defines, without waiting for
        the schedule it would otherwise have used, and apply the resolved
-       status under the rules of [STATEMENT].
+       status as Section 3.3 defines.
 
    The affected statements are the one the event's
    software_statement_jti names or, where the event names none, the
@@ -289,7 +393,7 @@ Table of Contents
       lifetime, or otherwise increase what a client may do.  A receiver
       MUST ignore any payload member that would have such an effect.
       What a client may do follows from a valid statement and its
-      resolved status, as [STATEMENT] defines.
+      resolved status, as [STATEMENT] and Section 3.3 define.
 
    *  A receiver MUST continue to resolve status on its own schedule,
       and to enforce statement expiry, independently of this mechanism.
@@ -300,23 +404,24 @@ Table of Contents
    receiver applies its own grant and token lifetime policy, as it does
    when a statement expires or its status changes.
 
-7.  Stream Configuration
+8.  Stream Configuration
 
-   An issuing authorization server supporting this specification
+   An issuing authorization server that supports the events defined here
    publishes Transmitter configuration metadata as [SSF] defines,
    discoverable from the issuer identifier the trusting authorization
    server has already configured.  Stream creation, subject management,
    verification, and delivery follow [SSF]; this specification adds no
    configuration mechanism.
 
-   A trusting authorization server SHOULD create one stream per
-   configured issuer, covering every subject that issuer attests rather
-   than an enumerated set.  A receiver cannot enumerate subjects: under
-   runtime presentation ([STATEMENT]) it holds no state for software
-   until its first presentation, by which time an event about that
-   software would already have been missed.
+   A trusting authorization server that supports these events SHOULD
+   create one stream per configured issuer that offers them, covering
+   every subject that issuer attests rather than an enumerated set.  A
+   receiver cannot enumerate subjects: under runtime presentation
+   ([STATEMENT]) it holds no state for software until its first
+   presentation, by which time an event about that software would
+   already have been missed.
 
-   A transmitter supporting this specification MUST therefore advertise
+   A transmitter supporting these events MUST therefore advertise
    default_subjects as ALL in its transmitter configuration [SSF], so
    that a stream carries every subject appropriate to it without the
    receiver adding any.  The subjects appropriate to a stream are those
@@ -329,9 +434,20 @@ Table of Contents
    since a stream delivering nothing because it was misconfigured is
    otherwise indistinguishable from an issuer with nothing to report.
 
-8.  Security Considerations
+9.  Security Considerations
 
-8.1.  What an Event Cannot Do
+9.1.  Status Resolution Schedule
+
+   Resolving status adds a dependency on the issuer and a retrieval the
+   client does not control.  Because [STATUSLIST] aggregates many
+   statements into one list, a retrieval tells the issuer only that some
+   trusting authorization server is checking.  A server SHOULD retrieve
+   the list on the list's own schedule rather than once per request, so
+   that its request timing does not disclose the client population it
+   serves.  Per-request resolution would also make every request the
+   statement governs depend on issuer availability.
+
+9.2.  What an Event Cannot Do
 
    An event names no status, so a forged, replayed, or reordered event
    cannot change whether any statement stands.  Its only effect is a
@@ -345,7 +461,7 @@ Table of Contents
    MUST NOT let event-driven resolution displace its scheduled
    resolution.
 
-8.2.  Status Remains the Authority
+9.3.  Status Remains the Authority
 
    Because a receiver resolves status independently, an attacker who
    suppresses events, by disrupting delivery or the transmitter, delays
@@ -358,15 +474,15 @@ Table of Contents
 
    A receiver SHOULD alert on stream loss rather than assume quiescence,
    since the absence of events looks the same on a healthy stream and a
-   suppressed one.  Periodic stream verification (Section 7) makes the
+   suppressed one.  Periodic stream verification (Section 8) makes the
    difference observable.
 
-8.3.  Key Separation and Compromise
+9.4.  Key Separation and Compromise
 
    A receiver verifies statements only against the issuer's statement
    key set ([STATEMENT]), Status List Tokens only against the issuer's
    jwks_uri, and SETs only against the Transmitter configuration's
-   jwks_uri, which Section 3 requires to differ from both.  This
+   jwks_uri, which Section 4 requires to differ from both.  This
    separation holds only while the transmitter publishes no SET key in
    either of the other key sets.
 
@@ -377,23 +493,23 @@ Table of Contents
    trust in the issuer or its scope as [STATEMENT] describes, which also
    ends event acceptance.
 
-8.4.  Relationship to Scheduled Resolution
+9.5.  Relationship to Scheduled Resolution
 
    [STATUSLIST] resolution costs a fetch and depends on the status
-   endpoint's availability.  This specification changes neither and adds
-   no second source of status: it only shortens the interval between an
-   issuer's change and a receiver's next fetch, for deployments where
-   that interval matters more than the cost of maintaining a stream.  A
+   endpoint's availability.  The events change neither and add no second
+   source of status: they only shorten the interval between an issuer's
+   change and a receiver's next fetch, for deployments where that
+   interval matters more than the cost of maintaining a stream.  A
    deployment that finds its scheduled interval acceptable does not need
    it.
 
-9.  Privacy Considerations
+10.  Privacy Considerations
 
    Subject identifiers in these events name software an issuer has
    reviewed and, in aggregate, describe an organization's approved
    software estate.  A transmitter SHOULD scope each stream to the
    subjects of statements whose aud is absent or names the receiving
-   authorization server (Section 7), and a receiver SHOULD apply to
+   authorization server (Section 8), and a receiver SHOULD apply to
    event logs the handling it applies to statements ([STATEMENT]).
 
    Because this specification defines no durable receiver-side record,
@@ -401,9 +517,9 @@ Table of Contents
    issuer's own published status.  A receiver that logs events does
    create such a record, and SHOULD bound its retention accordingly.
 
-10.  IANA Considerations
+11.  IANA Considerations
 
-10.1.  OAuth URI Registry
+11.1.  OAuth URI Registry
 
    [RFC8417] identifies an event type by a URI and establishes no
    registry of event types, and no urn:ietf:params:secevent sub-
@@ -422,21 +538,21 @@ Table of Contents
 
    Change Controller:  IESG
 
-   Specification Document(s):  This specification, Section 5.1
+   Specification Document(s):  This specification, Section 6.1
 
-10.2.  SET Payload Claims
+11.2.  SET Payload Claims
 
    This specification defines the payload claim software_statement_jti
-   for the event payload of Section 5.  Under Section 2 of [RFC8417],
+   for the event payload of Section 6.  Under Section 2 of [RFC8417],
    payload claims need not be registered as JWT claims and are defined
    by the specification profiling the event; no IANA registry of them
    exists, so no registration is requested, and the claim is scoped to
    the event type that carries it.  The reason_admin member is used as
-   [CAEP] defines it, and event_timestamp as Section 5 narrows it.
+   [CAEP] defines it, and event_timestamp as Section 6 narrows it.
 
-11.  References
+12.  References
 
-11.1.  Normative References
+12.1.  Normative References
 
    [CIMD]     "OAuth Client ID Metadata Document", n.d.,
               <https://datatracker.ietf.org/doc/draft-ietf-oauth-client-
@@ -500,7 +616,7 @@ Table of Contents
               <https://datatracker.ietf.org/doc/draft-ietf-oauth-status-
               list>.
 
-11.2.  Informative References
+12.2.  Informative References
 
    [CAEP]     "OpenID Continuous Access Evaluation Profile 1.0", n.d.,
               <https://openid.net/specs/openid-caep-1_0.html>.

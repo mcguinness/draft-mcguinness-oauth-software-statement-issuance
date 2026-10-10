@@ -252,12 +252,13 @@ Table of Contents
    client can rely on the signal (Section 8) before it registers:
 
    *  It MUST record the governing statement's iss, jti, sub, and iat,
-      and its status claim where it carries one, with the registration,
-      and the registration's effective expiry: the earlier of the
-      statement's exp and its iat plus the maximum statement lifetime
-      the server records for that issuer in its issuer trust
-      configuration ([STATEMENT]).  The effective expiry is what a
-      renewal extends and what registration_expires_at reports.
+      and any claim by which a withdrawal mechanism locates it, such as
+      status, with the registration, and the registration's effective
+      expiry: the earlier of the statement's exp and its iat plus the
+      maximum statement lifetime the server records for that issuer in
+      its issuer trust configuration ([STATEMENT]).  The effective
+      expiry is what a renewal extends and what registration_expires_at
+      reports.
 
    *  The registration is valid until that effective expiry.
 
@@ -273,14 +274,12 @@ Table of Contents
       replacement restores the registration (Section 3.2), no grace
       period is needed.
 
-   The effective expiry is an upper bound.  Where the server resolves
-   status for the governing statement's issuer and that status resolves
-   as INVALID, or as SUSPENDED where its policy for that issuer refuses
-   it ([STATEMENT]), the registration ceases to be valid as it does at
-   its effective expiry, and Section 3.2 is the recovery path; the
-   client learns of the withdrawal only from the rejection.  A server
-   that does not resolve status is bounded by the effective expiry
-   alone.
+   The effective expiry is an upper bound.  Where the server holds a
+   refusal record for the governing statement ([STATEMENT]), the
+   registration ceases to be valid as it does at its effective expiry,
+   and Section 3.2 is the recovery path; the client learns of the
+   withdrawal only from the rejection.  A server that uses no withdrawal
+   mechanism is bounded by the effective expiry alone.
 
    The disposition of outstanding grants is local policy (Section 9.4).
 
@@ -453,12 +452,9 @@ Table of Contents
    | tenant or absent where required, |                               |
    | statement_uses excludes this use |                               |
    +----------------------------------+-------------------------------+
-   | Expired, or refused by a refusal | invalid_software_statement    |
-   | record, including a status       |                               |
-   | resolved as INVALID, or as       |                               |
-   | SUSPENDED where policy refuses   |                               |
-   | it, or superseded under the iat  |                               |
-   | floor of [STATEMENT]             |                               |
+   | Expired, refused by a refusal    | invalid_software_statement    |
+   | record, or superseded under the  |                               |
+   | iat floor of [STATEMENT]         |                               |
    +----------------------------------+-------------------------------+
    | Required statement absent        | unapproved_software_statement |
    +----------------------------------+-------------------------------+
