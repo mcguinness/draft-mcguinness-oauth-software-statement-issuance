@@ -215,11 +215,13 @@ Table of Contents
       (Section 3.4) or from its own operator.  Wherever this
       specification requires a statement to be current, a statement
       matching a refusal record is not current.  A refusal derived from
-      a withdrawal mechanism lasts only as long as that mechanism
-      reports the withdrawal: a later report supersedes it, and a server
-      MUST NOT retain such a refusal once the mechanism no longer
-      supports it.  A refusal its operator entered persists on the
-      operator's own terms.
+      a withdrawal mechanism lasts until a later authoritative result
+      from that mechanism supersedes it, or until an expiry the
+      mechanism itself defines for the withdrawal, and a server MUST NOT
+      retain such a refusal once it is superseded or expired in that
+      way.  A failure to consult the mechanism, or cached evidence that
+      has lapsed, neither supersedes nor expires a refusal.  A refusal
+      its operator entered persists on the operator's own terms.
 
 3.  The Software Statement
 

@@ -1103,7 +1103,7 @@ Table of Contents
 
    An issuing authorization server that ends decisions before their
    expiry publishes statement status as [STATUSLIST] defines, and
-   carries the status claim in the statements it issues, as [WITHDRAWAL]
+   carries the status claim in the statements it issues, as [STATUS]
    defines.  Withdrawing a statement does not withdraw a replacement
    obtained through Section 5.1, and withdrawing a replacement does not
    restore its predecessor.
@@ -1647,6 +1647,10 @@ Table of Contents
               RFC 9126, DOI 10.17487/RFC9126, September 2021,
               <https://www.rfc-editor.org/rfc/rfc9126>.
 
+   [STATUS]   "CIMD Software Statement Status", n.d.,
+              <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
+              cimd-sw-stmt-status>.
+
    [TRUST-FRAMEWORK]
               "OAuth Identity Assertion Trust Framework", n.d.,
               <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
@@ -1656,11 +1660,6 @@ Table of Contents
               "Open Banking UK Dynamic Client Registration Specification
               v3.3", n.d., <https://openbankinguk.github.io/dcr-docs-
               pub/v3.3/dynamic-client-registration.html>.
-
-   [WITHDRAWAL]
-              "Token Status List and Shared Signals for CIMD Software
-              Statements", n.d., <https://datatracker.ietf.org/doc/
-              draft-mcguinness-oauth-cimd-sw-stmt-withdrawal>.
 
 Appendix A.  Design Rationale
 

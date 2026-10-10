@@ -8,23 +8,21 @@ Intended status: Standards Track                         10 October 2026
 Expires: 13 April 2027
 
 
-   Token Status List and Shared Signals for CIMD Software Statements
-         draft-mcguinness-oauth-cimd-sw-stmt-withdrawal-latest
+                     CIMD Software Statement Status
+           draft-mcguinness-oauth-cimd-sw-stmt-status-latest
 
 Abstract
 
-   CIMD Software Statement lets an issuer withdraw a review before the
-   statement expires, and defines how an authorization server treats a
-   withdrawal it learns of, but leaves the withdrawal mechanism open.
-   This specification defines two complementary mechanisms.  Token
-   Status List carries the status of each statement: an issuer publishes
-   it, and a trusting authorization server resolves it on the list's own
-   schedule and refuses a withdrawn statement.  A Shared Signals event
-   tells the servers relying on an issuer's statements that a status has
-   changed, prompting them to resolve it at once.  The status list
-   remains the authority; an event only says when to look, so a receiver
-   that misses every event reaches the same result on its ordinary
-   schedule.
+   This specification defines how the status of a CIMD software
+   statement is published and checked.  Token Status List supplies the
+   authoritative status: an issuer publishes it, and a trusting
+   authorization server resolves it on the list's own schedule and
+   refuses a withdrawn statement.  Optional Shared Signals events tell
+   the servers relying on an issuer's statements that a status has
+   changed, prompting them to check at once.  An event only says when to
+   look, so a server that misses every event reaches the same result on
+   its ordinary schedule.  CIMD Software Statement requires no status
+   mechanism; this specification supplies one.
 
 Status of This Memo
 
@@ -106,11 +104,12 @@ Table of Contents
    The parties already have a configured relationship: a trusting
    authorization server records each issuer's identifier, key source,
    scope, and lifetime policy in order to accept its statements at all
-   ([STATEMENT]).  This specification uses that relationship to carry a
-   notification over the Shared Signals Framework [SSF].  The issuing
-   authorization server transmits, the trusting authorization server
-   receives, and events are Security Event Tokens [RFC8417] delivered by
-   the push [RFC8935] or poll [RFC8936] delivery methods.
+   ([STATEMENT]).  As an optional addition to the status list, this
+   specification uses that relationship to carry a notification over the
+   Shared Signals Framework [SSF].  The issuing authorization server
+   transmits, the trusting authorization server receives, and events are
+   Security Event Tokens [RFC8417] delivered by the push [RFC8935] or
+   poll [RFC8936] delivery methods.
 
    An event carries no decision: it reports that the issuer changed a
    status, and the receiver resolves that status as it would have later
@@ -120,11 +119,15 @@ Table of Contents
    and a receiver that misses events enforces status and expiry exactly
    as it would without them.
 
-   For the events, this specification defines the subject
-   identification, the event, its payload claims, and the receiver's
-   processing rules.  It defines no new endpoint, transport, subject
-   identifier format, durable receiver record, or trust establishment
-   mechanism.  [STATEMENT] does not depend on this specification.
+   The events are optional.  An issuer and a trusting authorization
+   server can use the status list without them, and the requirements of
+   Section 4 through Section 8 apply only to implementations that
+   support the events.  For the events, this specification defines the
+   subject identification, the event, its payload claims, and the
+   receiver's processing rules.  It defines no new endpoint, transport,
+   subject identifier format, durable receiver record, or trust
+   establishment mechanism.  [STATEMENT] does not depend on this
+   specification.
 
 2.  Conventions and Definitions
 
@@ -209,11 +212,14 @@ Table of Contents
    whose status is INVALID, and MUST apply its configured policy for
    that issuer to a statement whose status is SUSPENDED.  A status of
    INVALID, or of SUSPENDED where that policy refuses the statement, is
-   a withdrawal: the server holds a refusal record ([STATEMENT]), which
-   lasts only as long as that status.  A rejection on status uses the
-   refusal-record row of the error responses of [STATEMENT], because re-
-   presenting the same statement cannot succeed while that status
-   stands.
+   a withdrawal: the server holds a refusal record ([STATEMENT]).  The
+   refusal ends only when a later resolution returns a status that no
+   longer refuses the statement.  Token Status List defines no other
+   expiry for a withdrawal, and neither a failed resolution nor the
+   expiry of a Status List Token the server holds ends the refusal.  A
+   rejection on status uses the refusal-record row of the error
+   responses of [STATEMENT], because re-presenting the same statement
+   cannot succeed while that status stands.
 
    Where a trusting authorization server resolves statuses for an
    issuer, resolution follows [STATUSLIST], including its caching rules
@@ -400,21 +406,22 @@ Table of Contents
 
 8.  Stream Configuration
 
-   An issuing authorization server supporting this specification
+   An issuing authorization server that supports the events defined here
    publishes Transmitter configuration metadata as [SSF] defines,
    discoverable from the issuer identifier the trusting authorization
    server has already configured.  Stream creation, subject management,
    verification, and delivery follow [SSF]; this specification adds no
    configuration mechanism.
 
-   A trusting authorization server SHOULD create one stream per
-   configured issuer, covering every subject that issuer attests rather
-   than an enumerated set.  A receiver cannot enumerate subjects: under
-   runtime presentation ([STATEMENT]) it holds no state for software
-   until its first presentation, by which time an event about that
-   software would already have been missed.
+   A trusting authorization server that supports these events SHOULD
+   create one stream per configured issuer that offers them, covering
+   every subject that issuer attests rather than an enumerated set.  A
+   receiver cannot enumerate subjects: under runtime presentation
+   ([STATEMENT]) it holds no state for software until its first
+   presentation, by which time an event about that software would
+   already have been missed.
 
-   A transmitter supporting this specification MUST therefore advertise
+   A transmitter supporting these events MUST therefore advertise
    default_subjects as ALL in its transmitter configuration [SSF], so
    that a stream carries every subject appropriate to it without the
    receiver adding any.  The subjects appropriate to a stream are those
@@ -489,10 +496,10 @@ Table of Contents
 9.5.  Relationship to Scheduled Resolution
 
    [STATUSLIST] resolution costs a fetch and depends on the status
-   endpoint's availability.  This specification changes neither and adds
-   no second source of status: it only shortens the interval between an
-   issuer's change and a receiver's next fetch, for deployments where
-   that interval matters more than the cost of maintaining a stream.  A
+   endpoint's availability.  The events change neither and add no second
+   source of status: they only shorten the interval between an issuer's
+   change and a receiver's next fetch, for deployments where that
+   interval matters more than the cost of maintaining a stream.  A
    deployment that finds its scheduled interval acceptable does not need
    it.
 
