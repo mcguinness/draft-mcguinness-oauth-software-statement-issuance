@@ -13,14 +13,14 @@ New to the drafts? Start with the [FAQ](https://github.com/mcguinness/draft-mcgu
 | **CIMD Software Statement** | The statement and its digest binding, validation, issuer trust, and runtime admission by a statement presented in a request or pulled from where the client's document points | [HTML](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt.html), [TXT](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt.txt) |
 | CIMD Software Statement Registration | Consuming a statement in an RFC 7591 registration: metadata taken from the reviewed document, validity bounded by the statement, and renewal by a replacement statement | [HTML](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-registration.html), [TXT](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-registration.txt) |
 | CIMD Software Statement Issuance | How a client obtains a statement: token exchange, a redirect flow returning a `software_statement_code`, and asynchronous review under Deferred Token Response | [HTML](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-issuance.html), [TXT](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-issuance.txt) |
-| Token Status List and Shared Signals for CIMD Software Statements | Optional withdrawal mechanisms: Token Status List as the authority on whether a statement stands, and a Shared Signals event telling an authorization server to check at once rather than on its next scheduled check | [HTML](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-withdrawal.html), [TXT](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-withdrawal.txt) |
+| CIMD Software Statement Status | Optional withdrawal mechanisms: Token Status List as the authority on whether a statement stands, and a Shared Signals event telling an authorization server to check at once rather than on its next scheduled check | [HTML](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-status.html), [TXT](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-status.txt) |
 
 The statement draft is the core. The other three build on it, and it depends on none of them.
 
 The statement and registration drafts are planned for submission; their Datatracker pages will be available after first submission:
 [statement](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt/),
 [registration](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-registration/).
-The issuance and withdrawal drafts are working drafts kept here for discussion and are not planned for submission yet.
+The issuance and status drafts are working drafts kept here for discussion and are not planned for submission yet.
 
 ## MCP Profile
 
@@ -44,10 +44,10 @@ These documents explore deployments and edge cases. They are non-normative and n
 Dependencies:
 
 * [OAuth Client ID Metadata Document](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/), for every draft
-* [Token Status List](https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list/), for the withdrawal draft only
+* [Token Status List](https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list/), for the status draft only
 * [Identity Assertion Authorization Grant](https://datatracker.ietf.org/doc/draft-ietf-oauth-identity-assertion-authz-grant/), for the `aud_tenant` claim
 * [Deferred Token Response](https://datatracker.ietf.org/doc/draft-ietf-oauth-deferred-token-response/), for asynchronous issuance only
-* [OpenID Shared Signals Framework](https://openid.net/specs/openid-sharedsignals-framework-1_0.html), for the withdrawal draft only
+* [OpenID Shared Signals Framework](https://openid.net/specs/openid-sharedsignals-framework-1_0.html), for the status draft only
 
 Related work:
 

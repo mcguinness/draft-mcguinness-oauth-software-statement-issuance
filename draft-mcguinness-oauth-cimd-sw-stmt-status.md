@@ -1,7 +1,7 @@
 ---
-title: "Token Status List and Shared Signals for CIMD Software Statements"
-abbrev: oauth-cimd-sw-stmt-withdrawal
-docname: draft-mcguinness-oauth-cimd-sw-stmt-withdrawal-latest
+title: "CIMD Software Statement Status"
+abbrev: oauth-cimd-sw-stmt-status
+docname: draft-mcguinness-oauth-cimd-sw-stmt-status-latest
 category: std
 
 ipr: trust200902
@@ -58,7 +58,7 @@ informative:
 
 --- abstract
 
-CIMD Software Statement lets an issuer withdraw a review before the statement expires, and defines how an authorization server treats a withdrawal it learns of, but leaves the withdrawal mechanism open. This specification defines two complementary mechanisms. Token Status List carries the status of each statement: an issuer publishes it, and a trusting authorization server resolves it on the list's own schedule and refuses a withdrawn statement. A Shared Signals event tells the servers relying on an issuer's statements that a status has changed, prompting them to resolve it at once. The status list remains the authority; an event only says when to look, so a receiver that misses every event reaches the same result on its ordinary schedule.
+This specification defines how the status of a CIMD software statement is published and checked. Token Status List supplies the authoritative status: an issuer publishes it, and a trusting authorization server resolves it on the list's own schedule and refuses a withdrawn statement. Optional Shared Signals events tell the servers relying on an issuer's statements that a status has changed, prompting them to check at once. An event only says when to look, so a server that misses every event reaches the same result on its ordinary schedule. CIMD Software Statement requires no status mechanism; this specification supplies one.
 
 --- middle
 

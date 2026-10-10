@@ -125,7 +125,7 @@ sequenceDiagram
 | Presenting as a public client | Statement | Public Clients |
 | Binding the grant to one install | Statement | Grant Lifecycle |
 | Ending open grants on withdrawal | Statement | Refresh |
-| Withdrawal before expiry | Statement, Withdrawal | Withdrawal; Token Status List |
+| Withdrawal before expiry | Statement, Status | Withdrawal; Token Status List |
 | Reaching the third party | Not in this family | Identity Assertion Authorization Grant |
 
 ## What is still missing
