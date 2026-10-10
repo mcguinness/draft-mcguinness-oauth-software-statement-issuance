@@ -1573,7 +1573,7 @@ client-assertion-type%3Ajwt-bearer
 <a href="#section-9.3" class="section-number selfRef">9.3. </a><a href="#name-registration-fraud-and-impe" class="section-name selfRef">Registration Fraud and Impersonation</a>
         </h3>
 <p id="section-9.3-1">Open registration permits <code>client_name</code>, <code>logo_uri</code>, and <code>client_uri</code> values that imitate trusted software on consent screens. Requiring a statement replaces self-asserted branding with issuer-reviewed values. Servers that render such values on consent screens <span class="bcp14">SHOULD</span> prefer those from a reviewed document and <span class="bcp14">SHOULD</span> apply heightened scrutiny to registrations that claim user-visible branding without a statement.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
-<p id="section-9.3-2">Requiring a statement for registration also means each new client identity needs another issuer decision, so a discarded client cannot return at no cost, and the per-<code>sub</code> bounds of <a href="#repeated-registration" class="auto internal xref">Section 5</a> limit how many registrations one piece of software obtains. Neither control makes metadata true: a client that misleads review can obtain a genuine statement for fraudulent metadata, so a statement is only as reliable as the issuer's verification (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>).<a href="#section-9.3-2" class="pilcrow">¶</a></p>
+<p id="section-9.3-2">Requiring a statement for registration also means each new client identity needs another issuer decision, so a discarded client cannot return at no cost, and the per-<code>sub</code> bounds of <a href="#repeated-registration" class="auto internal xref">Section 5</a> limit how many registrations one piece of software obtains. Neither control makes metadata true: a client that misleads review can obtain a genuine statement for fraudulent metadata, so a statement is only as reliable as the issuer's verification.<a href="#section-9.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="enforcement-bounds">
@@ -1793,10 +1793,6 @@ client-assertion-type%3Ajwt-bearer
 <dt id="AU-CDR">[AU-CDR]</dt>
         <dd>
 <span class="refTitle">"Consumer Data Standards"</span>, <span>n.d.</span>, <span>&lt;<a href="https://consumerdatastandardsaustralia.github.io/standards/">https://consumerdatastandardsaustralia.github.io/standards/</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="ISSUANCE">[ISSUANCE]</dt>
-        <dd>
-<span class="refTitle">"CIMD Software Statement Issuance"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-issuance">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-issuance</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC7592">[RFC7592]</dt>
         <dd>

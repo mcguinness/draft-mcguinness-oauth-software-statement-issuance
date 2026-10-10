@@ -2053,39 +2053,7 @@ Pragma: no-cache
       <h2 id="name-status-publication">
 <a href="#section-11" class="section-number selfRef">11. </a><a href="#name-status-publication" class="section-name selfRef">Status Publication</a>
       </h2>
-<p id="section-11-1">An issuing authorization server that ends decisions before their expiry publishes statement status as <span>[<a href="#STATUSLIST" class="cite xref">STATUSLIST</a>]</span> defines and carries the <code>status</code> claim in the statements it issues (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>). The statement records what was decided; the status list records whether that decision still stands.<a href="#section-11-1" class="pilcrow">¶</a></p>
-<p id="section-11-2">An issuer that publishes status:<a href="#section-11-2" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-11-3.1">
-          <p id="section-11-3.1.1"><span class="bcp14">MUST</span> publish it for every statement it issues under a given <code>iss</code> from the point it begins publishing, not for a subset, so that a consumer can read an absent claim as meaning the issuer publishes no status. Statements issued before that point carry no claim, so the inference holds once those have expired;<a href="#section-11-3.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-3.2">
-          <p id="section-11-3.2.1"><span class="bcp14">MUST</span> assign each statement its own index and <span class="bcp14">MUST NOT</span> reuse an index across statements. Withdrawing a statement then affects no other, including a replacement obtained through <a href="#renewal" class="auto internal xref">Section 5.1</a>: withdrawing a superseded statement does not withdraw its replacement, and withdrawing a replacement does not restore its predecessor;<a href="#section-11-3.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-3.3">
-          <p id="section-11-3.3.1"><span class="bcp14">MUST</span> sign the Status List Token with a key published at the <code>jwks_uri</code> of its authorization server metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>, never with a statement signing key (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>);<a href="#section-11-3.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-3.4">
-          <p id="section-11-3.4.1"><span class="bcp14">MUST</span> include <code>exp</code> in every Status List Token it publishes, so that an older token cannot stand in for a newer one indefinitely; and<a href="#section-11-3.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-3.5">
-          <p id="section-11-3.5.1"><span class="bcp14">MUST</span> give each Status List Token it publishes at a given list URI an <code>iat</code> later than that of any token it published there before, so that a consumer can tell the newer of two apart.<a href="#section-11-3.5.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
-<p id="section-11-4">An issuer that issues a replacement narrower than the statement it replaces <span class="bcp14">SHOULD</span> withdraw the earlier statement. A replacement is narrower when it:<a href="#section-11-4" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-11-5.1">
-          <p id="section-11-5.1.1">is over a document that no longer carries a key, redirection URI, or scope the earlier document carried;<a href="#section-11-5.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-5.2">
-          <p id="section-11-5.2.1">has a narrower <code>aud</code>, <code>aud_tenant</code>, or <code>statement_uses</code>; or<a href="#section-11-5.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-11-5.3">
-          <p id="section-11-5.3.1">has a shorter remaining lifetime.<a href="#section-11-5.3.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
-<p id="section-11-6">What was removed may be why the replacement was issued; a consumer that has not yet seen the replacement, or at which it does not validate, would otherwise accept the earlier statement until it expires.<a href="#section-11-6" class="pilcrow">¶</a></p>
-<p id="section-11-7">Status does not replace lifetime. A consumer is not obliged to resolve status, so an issuer chooses <code>exp</code> assuming none does; status shortens a decision but does not bound it.<a href="#section-11-7" class="pilcrow">¶</a></p>
+<p id="section-11-1">An issuing authorization server that ends decisions before their expiry publishes statement status as <span>[<a href="#STATUSLIST" class="cite xref">STATUSLIST</a>]</span> defines, and carries the <code>status</code> claim in the statements it issues, as the Status Publication section of <span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span> requires. Withdrawing a statement does not withdraw a replacement obtained through <a href="#renewal" class="auto internal xref">Section 5.1</a>, and withdrawing a replacement does not restore its predecessor.<a href="#section-11-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authorization-server-metadata">
@@ -2094,7 +2062,7 @@ Pragma: no-cache
 <a href="#section-12" class="section-number selfRef">12. </a><a href="#name-authorization-server-metada" class="section-name selfRef">Authorization Server Metadata</a>
       </h2>
 <p id="section-12-1">The issuing authorization server is a role, not necessarily a general-purpose OAuth deployment: an issuer offering only token exchange can consist of a token endpoint, an authorization server metadata document, and signing keys, with no authorization endpoint, access tokens, or protected resources.<a href="#section-12-1" class="pilcrow">¶</a></p>
-<p id="section-12-2">An authorization server that issues software statements under this specification advertises <code>true</code> for <code>client_id_metadata_document_supported</code> (<span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span>), publishes <code>software_statement_signing_alg_values_supported</code> (below), and publishes its statement signing keys only at <code>software_statement_jwks_uri</code> (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>).<a href="#section-12-2" class="pilcrow">¶</a></p>
+<p id="section-12-2">An authorization server that issues software statements under this specification advertises <code>true</code> for <code>client_id_metadata_document_supported</code> (<span>[<a href="#CIMD" class="cite xref">CIMD</a>]</span>), publishes <code>software_statement_signing_alg_values_supported</code> (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>), and publishes its statement signing keys only at <code>software_statement_jwks_uri</code> (<span>[<a href="#STATEMENT" class="cite xref">STATEMENT</a>]</span>).<a href="#section-12-2" class="pilcrow">¶</a></p>
 <p id="section-12-3">An issuer that may defer a request (<a href="#deferred-processing" class="auto internal xref">Section 9</a>) advertises <code>true</code> for <code>deferred_token_response_supported</code> (<span>[<a href="#DTR" class="cite xref">DTR</a>]</span>) and, because deferrals are cancellable, lists <code>urn:ietf:params:oauth:token-type:deferral-code</code> in <code>revocation_endpoint_token_type_values_supported</code>, as <span>[<a href="#DTR" class="cite xref">DTR</a>]</span> requires. A synchronous issuer advertises neither and need not implement <span>[<a href="#DTR" class="cite xref">DTR</a>]</span>.<a href="#section-12-3" class="pilcrow">¶</a></p>
 <p id="section-12-4">An authorization server supporting the redirect flow advertises:<a href="#section-12-4" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -2113,15 +2081,9 @@ Pragma: no-cache
 <p id="section-12-8">This specification defines the following additional authorization server metadata members:<a href="#section-12-8" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-12-9">
         <dt id="section-12-9.1">
-<code>software_statement_signing_alg_values_supported</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-12-9.2">
-          <p id="section-12-9.2.1"><span class="bcp14">REQUIRED</span> for an authorization server that issues software statements under this specification. A JSON array containing the asymmetric JWS <code>alg</code> values that the authorization server can use to sign software statements. The array <span class="bcp14">MUST NOT</span> contain <code>none</code> or a symmetric algorithm. This member describes the issuing role; an authorization server that only accepts software statements does not publish it.<a href="#section-12-9.2.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-12-9.3">
 <code>software_statement_subject_token_types_supported</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-12-9.4">
-          <p id="section-12-9.4.1"><span class="bcp14">REQUIRED</span> for an authorization server that supports the token exchange profile (<a href="#token-exchange-profile" class="auto internal xref">Section 5</a>), and absent otherwise. A JSON array of the <code>subject_token_type</code> values the authorization server accepts when <code>requested_token_type</code> is <code>urn:ietf:params:oauth:token-type:software-statement</code>. Publishing this member signals support for the profile; listing <code>urn:ietf:params:oauth:token-type:software-statement</code> among its values advertises renewal by prior statement (<a href="#renewal" class="auto internal xref">Section 5.1</a>).<a href="#section-12-9.4.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-12-9.2">
+          <p id="section-12-9.2.1"><span class="bcp14">REQUIRED</span> for an authorization server that supports the token exchange profile (<a href="#token-exchange-profile" class="auto internal xref">Section 5</a>), and absent otherwise. A JSON array of the <code>subject_token_type</code> values the authorization server accepts when <code>requested_token_type</code> is <code>urn:ietf:params:oauth:token-type:software-statement</code>. Publishing this member signals support for the profile; listing <code>urn:ietf:params:oauth:token-type:software-statement</code> among its values advertises renewal by prior statement (<a href="#renewal" class="auto internal xref">Section 5.1</a>).<a href="#section-12-9.2.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2424,12 +2386,12 @@ Pragma: no-cache
 <span class="break"></span><dl class="dlParallel" id="section-15.5-2">
           <dt id="section-15.5-2.1">Metadata Name:</dt>
           <dd style="margin-left: 1.5em" id="section-15.5-2.2">
-            <p id="section-15.5-2.2.1"><code>software_statement_signing_alg_values_supported</code><a href="#section-15.5-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-15.5-2.2.1"><code>software_statement_subject_token_types_supported</code><a href="#section-15.5-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.5-2.3">Metadata Description:</dt>
           <dd style="margin-left: 1.5em" id="section-15.5-2.4">
-            <p id="section-15.5-2.4.1">JSON array containing the asymmetric JWS algorithms supported by the authorization server for signing software statements.<a href="#section-15.5-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-15.5-2.4.1">JSON array of subject token type values accepted for exchanging into software statements; signals support for the token exchange profile.<a href="#section-15.5-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.5-2.5">Change Controller:</dt>
@@ -2439,27 +2401,7 @@ Pragma: no-cache
           <dd class="break"></dd>
 <dt id="section-15.5-2.7">Specification Document(s):</dt>
           <dd style="margin-left: 1.5em" id="section-15.5-2.8">
-            <p id="section-15.5-2.8.1">This specification, <a href="#authorization-server-metadata" class="auto internal xref">Section 12</a><a href="#section-15.5-2.8.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.5-2.9">Metadata Name:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.5-2.10">
-            <p id="section-15.5-2.10.1"><code>software_statement_subject_token_types_supported</code><a href="#section-15.5-2.10.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.5-2.11">Metadata Description:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.5-2.12">
-            <p id="section-15.5-2.12.1">JSON array of subject token type values accepted for exchanging into software statements; signals support for the token exchange profile.<a href="#section-15.5-2.12.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.5-2.13">Change Controller:</dt>
-          <dd style="margin-left: 1.5em" id="section-15.5-2.14">
-            <p id="section-15.5-2.14.1">IESG<a href="#section-15.5-2.14.1" class="pilcrow">¶</a></p>
-</dd>
-          <dd class="break"></dd>
-<dt id="section-15.5-2.15">Specification Document(s):</dt>
-          <dd style="margin-left: 1.5em" id="section-15.5-2.16">
-            <p id="section-15.5-2.16.1">This specification, <a href="#authorization-server-metadata" class="auto internal xref">Section 12</a> and <a href="#token-exchange-profile" class="auto internal xref">Section 5</a><a href="#section-15.5-2.16.1" class="pilcrow">¶</a></p>
+            <p id="section-15.5-2.8.1">This specification, <a href="#authorization-server-metadata" class="auto internal xref">Section 12</a> and <a href="#token-exchange-profile" class="auto internal xref">Section 5</a><a href="#section-15.5-2.8.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>

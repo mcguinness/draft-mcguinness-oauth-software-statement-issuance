@@ -576,7 +576,7 @@ Table of Contents
    registrations one piece of software obtains.  Neither control makes
    metadata true: a client that misleads review can obtain a genuine
    statement for fraudulent metadata, so a statement is only as reliable
-   as the issuer's verification ([ISSUANCE]).
+   as the issuer's verification.
 
 9.4.  Enforcement Bounds
 
@@ -728,10 +728,6 @@ Table of Contents
    [AU-CDR]   "Consumer Data Standards", n.d.,
               <https://consumerdatastandardsaustralia.github.io/
               standards/>.
-
-   [ISSUANCE] "CIMD Software Statement Issuance", n.d.,
-              <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
-              cimd-sw-stmt-issuance>.
 
    [RFC7592]  Richer, J., Ed., Jones, M., Bradley, J., and M. Machulak,
               "OAuth 2.0 Dynamic Client Registration Management

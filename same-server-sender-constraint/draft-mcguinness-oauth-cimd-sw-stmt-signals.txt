@@ -138,7 +138,7 @@ Table of Contents
    Issuing Authorization Server and Trusting Authorization Server are
    defined by [STATEMENT].  For the events defined here, the issuing
    authorization server, which publishes the status of its statements
-   ([ISSUANCE]), acts as a Transmitter, and a trusting authorization
+   ([STATEMENT]), acts as a Transmitter, and a trusting authorization
    server that has configured it acts as a Receiver.
 
 3.  Relationship to the Statement Family
@@ -504,10 +504,6 @@ Table of Contents
 
    [CAEP]     "OpenID Continuous Access Evaluation Profile 1.0", n.d.,
               <https://openid.net/specs/openid-caep-1_0.html>.
-
-   [ISSUANCE] "CIMD Software Statement Issuance", n.d.,
-              <https://datatracker.ietf.org/doc/draft-mcguinness-oauth-
-              cimd-sw-stmt-issuance>.
 
    [REGISTRATION]
               "CIMD Software Statement Registration", n.d.,

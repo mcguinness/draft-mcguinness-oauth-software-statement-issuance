@@ -1157,6 +1157,9 @@ svg {
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3">
                 <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-change-after-review" class="internal xref">Change After Review</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.4">
+                <p id="section-toc.1-1.3.2.4.1"><a href="#section-3.4" class="auto internal xref">3.4</a>.  <a href="#name-status-publication" class="internal xref">Status Publication</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
@@ -1334,7 +1337,7 @@ svg {
 <p id="section-1-2">This specification defines that record and its enforcement. The software statement (Section 2.3 of <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span>) profiled here names the client by its document URL and binds the review to the document's exact octets by a digest (<a href="#metadata-digest" class="auto internal xref">Section 3.1</a>). An authorization server that trusts the statement's issuer admits the client at request time on the reviewed document, and no other, without creating a registration (<a href="#cimd-presentation" class="auto internal xref">Section 5</a>). The document remains the metadata and the statement carries the decision. One review is therefore portable across every authorization server in the statement's audience, each of which configures its own issuer trust, subject scope, grant policy, and token lifetime. An enterprise operating a statement issuer is the motivating deployment (<a href="#deployment-model" class="auto internal xref">Section 7</a>).<a href="#section-1-2" class="pilcrow">¶</a></p>
 <p id="section-1-3">The UK Open Banking Directory and the Australian Consumer Data Right Register each operate a central issuer whose statements many unrelated authorization servers consume at registration through the <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> <code>software_statement</code> parameter (<span>[<a href="#UK-OPEN-BANKING" class="cite xref">UK-OPEN-BANKING</a>]</span>, <span>[<a href="#AU-CDR" class="cite xref">AU-CDR</a>]</span>). Neither conforms to this specification: neither binds a statement to a document version the authorization server retrieves, and both carry client metadata in the statement.<a href="#section-1-3" class="pilcrow">¶</a></p>
 <p id="section-1-4"><span>[<a href="#OPENID-FED" class="cite xref">OPENID-FED</a>]</span> conveys attested metadata through trust chains: an authorization server resolves an entity to a trust anchor rather than configuring the issuer that vouched for it, and applies metadata derived by policy along that chain. This specification instead keeps the reviewed document as the metadata and leaves issuer trust to local configuration (<a href="#issuer-trust" class="auto internal xref">Section 4</a>). A federation can supply that issuer trust and carry a review as a trust mark, but resolved metadata is not the octets a digest covers, so a client's metadata comes from one source or the other, not both. Ecosystems already operating a federation should consider its registration mechanisms first.<a href="#section-1-4" class="pilcrow">¶</a></p>
-<p id="section-1-5">This specification defines the statement, its validation, issuer trust configuration (<a href="#issuer-trust" class="auto internal xref">Section 4</a>), and runtime consumption (<a href="#cimd-presentation" class="auto internal xref">Section 5</a>). <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> defines how a client obtains a statement. <span>[<a href="#REGISTRATION" class="cite xref">REGISTRATION</a>]</span> defines consumption of the same statement in an <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> registration request, where the statement's expiry bounds the registration. <span>[<a href="#REGISTRATION" class="cite xref">REGISTRATION</a>]</span> builds on this specification, which does not depend on it.<a href="#section-1-5" class="pilcrow">¶</a></p>
+<p id="section-1-5">This specification defines the statement, its validation, issuer trust configuration (<a href="#issuer-trust" class="auto internal xref">Section 4</a>), and runtime consumption (<a href="#cimd-presentation" class="auto internal xref">Section 5</a>). This specification does not define how a client obtains a statement. <span>[<a href="#REGISTRATION" class="cite xref">REGISTRATION</a>]</span> defines consumption of the same statement in an <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> registration request, where the statement's expiry bounds the registration. <span>[<a href="#REGISTRATION" class="cite xref">REGISTRATION</a>]</span> builds on this specification, which does not depend on it.<a href="#section-1-5" class="pilcrow">¶</a></p>
 <p id="section-1-6">A statement authorizes metadata, not its presenter, and nothing in this specification attests software instances or binaries. How the presenter is bound depends on the kind of client (<a href="#sender-constraint" class="auto internal xref">Section 5.4</a>):<a href="#section-1-6" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-1-7.1">
@@ -1456,7 +1459,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
       <h2 id="name-the-software-statement">
 <a href="#section-3" class="section-number selfRef">3. </a><a href="#name-the-software-statement" class="section-name selfRef">The Software Statement</a>
       </h2>
-<p id="section-3-1">The software statement is a compact JWT <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> protected by JWS <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span>. Although <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> permits a MAC, a statement issued under this specification <span class="bcp14">MUST</span> use an asymmetric digital signature so trusting servers need not receive an issuer-held symmetric key. The issuer and trusting authorization server <span class="bcp14">MUST</span> follow <span>[<a href="#RFC8725" class="cite xref">RFC8725</a>]</span> algorithm-verification guidance. The <code>none</code> algorithm and symmetric algorithms <span class="bcp14">MUST NOT</span> be used. An issuer advertises its signing algorithms in its authorization server metadata (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>).<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-1">The software statement is a compact JWT <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> protected by JWS <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span>. Although <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> permits a MAC, a statement issued under this specification <span class="bcp14">MUST</span> use an asymmetric digital signature so trusting servers need not receive an issuer-held symmetric key. The issuer and trusting authorization server <span class="bcp14">MUST</span> follow <span>[<a href="#RFC8725" class="cite xref">RFC8725</a>]</span> algorithm-verification guidance. The <code>none</code> algorithm and symmetric algorithms <span class="bcp14">MUST NOT</span> be used. An issuer advertises its signing algorithms in <code>software_statement_signing_alg_values_supported</code> (<a href="#authorization-server-metadata" class="auto internal xref">Section 11</a>).<a href="#section-3-1" class="pilcrow">¶</a></p>
 <p id="section-3-2">The JOSE header <span class="bcp14">MUST</span> include the <code>kid</code> header parameter, identifying the signing key within the issuer's statement key set (<a href="#authorization-server-metadata" class="auto internal xref">Section 11</a>). The JOSE header <span class="bcp14">MUST</span> also include the <code>typ</code> header parameter with the value <code>software-statement+jwt</code>, applying Section 3.11 of <span>[<a href="#RFC8725" class="cite xref">RFC8725</a>]</span>. This value is the media type <code>application/software-statement+jwt</code> (<a href="#media-type" class="auto internal xref">Section 15.2</a>) with the <code>application/</code> prefix omitted (Section 4.1.9 of <span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span>). Explicit typing prevents confusion with other JWTs from the same issuer. Extensions can add claims; an incompatible revision would use a new <code>typ</code> value.<a href="#section-3-2" class="pilcrow">¶</a></p>
 <p id="section-3-3">A statement asserts that its issuer evaluated the Client ID Metadata Document whose content the digest identifies, and vouches for that document to any party that accepts the issuer. The JWT payload <span class="bcp14">MUST</span> contain the following claims.<a href="#section-3-3" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-3-4">
@@ -1475,7 +1478,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <dt id="section-3-4.5">
 <code>aud</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-3-4.6">
-          <p id="section-3-4.6.1"><span class="bcp14">OPTIONAL</span>. One or more authorization server issuer identifiers (<span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>) restricting which authorization servers may accept the statement. Where the claim is present, a trusting authorization server <span class="bcp14">MUST</span> reject the statement unless one of its locally configured audience identifiers exactly matches a value in it. <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> states the corresponding constraint on an issuer: a requested audience bounds what it may name. Where the claim is absent, the statement is unrestricted, and acceptance rests on the authorization server's configured trust in the issuer and its identifier scope (<a href="#issuer-trust" class="auto internal xref">Section 4</a>). Omitting the claim lets one review serve every authorization server that trusts the issuer, but also lets any holder of a copy use it at any of them. Where <code>statement_uses</code> permits registration, a holder can always choose registration, which requires no key. An issuer <span class="bcp14">SHOULD</span> therefore name an audience, and omit it only where it accepts that any server trusting it may register the software on the strength of a copy (<span>[<a href="#REGISTRATION" class="cite xref">REGISTRATION</a>]</span>).<a href="#section-3-4.6.1" class="pilcrow">¶</a></p>
+          <p id="section-3-4.6.1"><span class="bcp14">OPTIONAL</span>. One or more authorization server issuer identifiers (<span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>) restricting which authorization servers may accept the statement. Where the claim is present, a trusting authorization server <span class="bcp14">MUST</span> reject the statement unless one of its locally configured audience identifiers exactly matches a value in it. Where the claim is absent, the statement is unrestricted, and acceptance rests on the authorization server's configured trust in the issuer and its identifier scope (<a href="#issuer-trust" class="auto internal xref">Section 4</a>). Omitting the claim lets one review serve every authorization server that trusts the issuer, but also lets any holder of a copy use it at any of them. Where <code>statement_uses</code> permits registration, a holder can always choose registration, which requires no key. An issuer <span class="bcp14">SHOULD</span> therefore name an audience, and omit it only where it accepts that any server trusting it may register the software on the strength of a copy (<span>[<a href="#REGISTRATION" class="cite xref">REGISTRATION</a>]</span>).<a href="#section-3-4.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-3-4.7">
@@ -1517,7 +1520,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <dt id="section-3-4.19">
 <code>status</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-3-4.20">
-          <p id="section-3-4.20.1"><span class="bcp14">OPTIONAL</span>. The <code>status</code> claim as <span>[<a href="#STATUSLIST" class="cite xref">STATUSLIST</a>]</span> defines it, locating this statement in the issuer's Status List Token. It lets an issuer end a decision before <code>exp</code> without a trusting authorization server contacting the issuer for each statement. <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> requires an issuer that publishes status to carry the claim in every statement it issues from then on, since a trusting authorization server cannot otherwise distinguish a statement that omits the claim from one whose issuer publishes no status.<a href="#section-3-4.20.1" class="pilcrow">¶</a></p>
+          <p id="section-3-4.20.1"><span class="bcp14">OPTIONAL</span>. The <code>status</code> claim as <span>[<a href="#STATUSLIST" class="cite xref">STATUSLIST</a>]</span> defines it, locating this statement in the issuer's Status List Token. It lets an issuer end a decision before <code>exp</code> without a trusting authorization server contacting the issuer for each statement. <a href="#status-publication" class="auto internal xref">Section 3.4</a> requires an issuer that publishes status to carry the claim in every statement it issues from then on, since a trusting authorization server cannot otherwise distinguish a statement that omits the claim from one whose issuer publishes no status.<a href="#section-3-4.20.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1586,7 +1589,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 </li>
         </ul>
 <p id="section-3.2-3">Where the statement carries <code>status</code> and the trusting authorization server resolves statuses for that issuer, it <span class="bcp14">MUST</span> reject a statement whose status is <code>INVALID</code>, and <span class="bcp14">MUST</span> apply its configured policy for that issuer to a statement whose status is <code>SUSPENDED</code>. A rejection on status uses the refusal-record row of <a href="#errors" class="auto internal xref">Section 9</a>, because re-presenting the same statement cannot succeed while that status stands.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
-<p id="section-3.2-4">Where a trusting authorization server resolves statuses for an issuer, resolution follows <span>[<a href="#STATUSLIST" class="cite xref">STATUSLIST</a>]</span>, including its caching rules and its requirement to reject where the referenced index lies outside the list. Such a server <span class="bcp14">MAY</span> therefore decide from a Status List Token it already holds within that token's validity. A server <span class="bcp14">MUST NOT</span> replace a Status List Token it holds with one whose <code>iat</code> is earlier, and <span class="bcp14">MUST</span> treat one whose <code>iat</code> is equal but whose contents differ as a resolution failure. A host serving an older token could otherwise restore a status the issuer has withdrawn. An issuer gives each token it publishes at a list URI a later <code>iat</code> than the last (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>).<a href="#section-3.2-4" class="pilcrow">¶</a></p>
+<p id="section-3.2-4">Where a trusting authorization server resolves statuses for an issuer, resolution follows <span>[<a href="#STATUSLIST" class="cite xref">STATUSLIST</a>]</span>, including its caching rules and its requirement to reject where the referenced index lies outside the list. Such a server <span class="bcp14">MAY</span> therefore decide from a Status List Token it already holds within that token's validity. A server <span class="bcp14">MUST NOT</span> replace a Status List Token it holds with one whose <code>iat</code> is earlier, and <span class="bcp14">MUST</span> treat one whose <code>iat</code> is equal but whose contents differ as a resolution failure. A host serving an older token could otherwise restore a status the issuer has withdrawn. An issuer gives each token it publishes at a list URI a later <code>iat</code> than the last (<a href="#status-publication" class="auto internal xref">Section 3.4</a>).<a href="#section-3.2-4" class="pilcrow">¶</a></p>
 <p id="section-3.2-5">Status constrains and never relaxes. A statement carrying no <code>status</code>, or whose status the server cannot resolve, is bounded by <code>exp</code> as it would be otherwise, and a server <span class="bcp14">MUST NOT</span> treat status as grounds to accept a statement past <code>exp</code>. What a server does when resolution fails is local policy. Refusing makes issuer availability a precondition for every request the statement governs; proceeding leaves a withdrawn statement acceptable for the rest of its lifetime.<a href="#section-3.2-5" class="pilcrow">¶</a></p>
 <p id="section-3.2-6">A trusting authorization server accepts only configured issuers (<a href="#issuer-trust" class="auto internal xref">Section 4</a>) and obtains their statement signing keys from the <code>software_statement_jwks_uri</code> value in the issuer's authorization server metadata (<a href="#authorization-server-metadata" class="auto internal xref">Section 11</a>), never from the statement.<a href="#section-3.2-6" class="pilcrow">¶</a></p>
 <p id="section-3.2-7">A trusting authorization server resolving the reviewed document <span class="bcp14">MUST</span> reject a document containing duplicate object member names, since parsers interpret them differently despite an identical digest.<a href="#section-3.2-7" class="pilcrow">¶</a></p>
@@ -1600,6 +1603,46 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
         </h3>
 <p id="section-3.3-1">A review covers the document that <code>cimd_digest</code> identifies. At registration, a digest mismatch is fatal (<span>[<a href="#REGISTRATION" class="cite xref">REGISTRATION</a>]</span>), because the registration would otherwise record metadata no issuer reviewed. At runtime, a mismatch is a policy input rather than an automatic failure: the statement still names a document the issuer reviewed, and the authorization server decides how to treat the change. At registration and at runtime alike, the remedy is re-issuance against the current document.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
 <p id="section-3.3-2">Because an issuer reviews the document it retrieves from the client identifier URL, a changed document is always served before any statement over it exists; a publisher shortens that gap by arranging prompt review. The statement's bounded lifetime limits how stale a review can become: drift that the digest comparison never observes still expires with the statement.<a href="#section-3.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="status-publication">
+<section id="section-3.4">
+        <h3 id="name-status-publication">
+<a href="#section-3.4" class="section-number selfRef">3.4. </a><a href="#name-status-publication" class="section-name selfRef">Status Publication</a>
+        </h3>
+<p id="section-3.4-1">An issuing authorization server that ends decisions before their expiry publishes statement status as <span>[<a href="#STATUSLIST" class="cite xref">STATUSLIST</a>]</span> defines and carries the <code>status</code> claim in the statements it issues (<a href="#profiles" class="auto internal xref">Section 3</a>). The statement records what was decided; the status list records whether that decision still stands.<a href="#section-3.4-1" class="pilcrow">¶</a></p>
+<p id="section-3.4-2">An issuer that publishes status:<a href="#section-3.4-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.4-3.1">
+            <p id="section-3.4-3.1.1"><span class="bcp14">MUST</span> publish it for every statement it issues under a given <code>iss</code> from the point it begins publishing, not for a subset, so that a trusting authorization server can read an absent claim as meaning the issuer publishes no status. Statements issued before that point carry no claim, so the inference holds once those have expired;<a href="#section-3.4-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.4-3.2">
+            <p id="section-3.4-3.2.1"><span class="bcp14">MUST</span> assign each statement its own index and <span class="bcp14">MUST NOT</span> reuse an index across statements. Withdrawing a statement then affects no other, including its replacement: withdrawing a superseded statement does not withdraw its replacement, and withdrawing a replacement does not restore its predecessor;<a href="#section-3.4-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.4-3.3">
+            <p id="section-3.4-3.3.1"><span class="bcp14">MUST</span> sign the Status List Token with a key published at the <code>jwks_uri</code> of its authorization server metadata <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>, never with a statement signing key (<a href="#authorization-server-metadata" class="auto internal xref">Section 11</a>);<a href="#section-3.4-3.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.4-3.4">
+            <p id="section-3.4-3.4.1"><span class="bcp14">MUST</span> include <code>exp</code> in every Status List Token it publishes, so that an older token cannot stand in for a newer one indefinitely; and<a href="#section-3.4-3.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.4-3.5">
+            <p id="section-3.4-3.5.1"><span class="bcp14">MUST</span> give each Status List Token it publishes at a given list URI an <code>iat</code> later than that of any token it published there before, so that a trusting authorization server can tell the newer of two apart.<a href="#section-3.4-3.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-3.4-4">An issuer that issues a replacement narrower than the statement it replaces <span class="bcp14">SHOULD</span> withdraw the earlier statement. A replacement is narrower when it:<a href="#section-3.4-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.4-5.1">
+            <p id="section-3.4-5.1.1">is over a document that no longer carries a key, redirection URI, or scope the earlier document carried;<a href="#section-3.4-5.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.4-5.2">
+            <p id="section-3.4-5.2.1">has a narrower <code>aud</code>, <code>aud_tenant</code>, or <code>statement_uses</code>; or<a href="#section-3.4-5.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.4-5.3">
+            <p id="section-3.4-5.3.1">has a shorter remaining lifetime.<a href="#section-3.4-5.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-3.4-6">What was removed may be why the replacement was issued; a trusting authorization server that has not yet seen the replacement, or at which it does not validate, would otherwise accept the earlier statement until it expires.<a href="#section-3.4-6" class="pilcrow">¶</a></p>
+<p id="section-3.4-7">Status does not replace lifetime. A trusting authorization server is not obliged to resolve status, so an issuer chooses <code>exp</code> assuming none does; status shortens a decision but does not bound it.<a href="#section-3.4-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1708,7 +1751,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
             <p id="section-5.1-6.3.1">another grant an authorization server names in <code>software_statement_presentation_grant_types_supported</code> (<a href="#authorization-server-metadata" class="auto internal xref">Section 11</a>).<a href="#section-5.1-6.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.1-7">Authorization-code redemption and refresh-token use continue an existing grant and follow <a href="#grant-lifecycle" class="auto internal xref">Section 5.6</a> and <a href="#refresh" class="auto internal xref">Section 5.6.1</a> instead. A request that asks an authorization server to issue a software statement, rather than to consume one, <span class="bcp14">MUST NOT</span> carry the <code>software_statement</code> parameter. <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> defines the response type, grant type, and requested token type that identify such a request.<a href="#section-5.1-7" class="pilcrow">¶</a></p>
+<p id="section-5.1-7">Authorization-code redemption and refresh-token use continue an existing grant and follow <a href="#grant-lifecycle" class="auto internal xref">Section 5.6</a> and <a href="#refresh" class="auto internal xref">Section 5.6.1</a> instead. A request that asks an authorization server to issue a software statement, rather than to consume one, <span class="bcp14">MUST NOT</span> carry the <code>software_statement</code> parameter.<a href="#section-5.1-7" class="pilcrow">¶</a></p>
 <p id="section-5.1-8">An authorization server advertises support through <code>software_statement_presentation_supported</code> (<a href="#authorization-server-metadata" class="auto internal xref">Section 11</a>).<a href="#section-5.1-8" class="pilcrow">¶</a></p>
 <div id="authorization-requests">
 <section id="section-5.1.1">
@@ -2212,21 +2255,27 @@ client-assertion-type%3Ajwt-bearer
 </dd>
         <dd class="break"></dd>
 <dt id="section-11-2.3">
-<code>software_statement_presentation_supported</code>:</dt>
+<code>software_statement_signing_alg_values_supported</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-11-2.4">
-          <p id="section-11-2.4.1"><span class="bcp14">OPTIONAL</span>. A JSON array naming the endpoints at which the authorization server accepts a software statement presented at runtime (<a href="#runtime-presentation" class="auto internal xref">Section 5.1</a>). Defined values are <code>token</code> and <code>pushed_authorization_request</code>; a client ignores a value it does not recognize. Omission, or an empty array, means runtime presentation is not offered; advertising only <code>token</code> offers it, without the front-channel path, to clients that need no redirect. This member describes the role of a trusting authorization server and implies neither acceptance of any particular statement issuer or subject namespace nor support for statement-governed registrations (<span>[<a href="#REGISTRATION" class="cite xref">REGISTRATION</a>]</span>). An authorization server advertising presentation at the pushed authorization request endpoint <span class="bcp14">MUST</span> publish <code>pushed_authorization_request_endpoint</code>, since <a href="#authorization-requests" class="auto internal xref">Section 5.1.1</a> makes presentation there the only front-channel path. A client also examines the ordinary client-authentication and DPoP metadata for the proof it intends to use. Admitting a public client's presentation at the pushed authorization request endpoint (<a href="#public-client-presentation" class="auto internal xref">Section 5.4.1</a>) is local policy; a refusal uses <a href="#errors" class="auto internal xref">Section 9</a>.<a href="#section-11-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.4.1"><span class="bcp14">REQUIRED</span> for an authorization server that issues software statements. A JSON array containing the asymmetric JWS <code>alg</code> values that the authorization server can use to sign software statements. The array <span class="bcp14">MUST NOT</span> contain <code>none</code> or a symmetric algorithm. This member describes the issuing role; an authorization server that only accepts software statements does not publish it.<a href="#section-11-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-11-2.5">
-<code>software_statement_presentation_grant_types_supported</code>:</dt>
+<code>software_statement_presentation_supported</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-11-2.6">
-          <p id="section-11-2.6.1"><span class="bcp14">OPTIONAL</span>. A JSON array of grant type identifiers on which the authorization server accepts a runtime presentation, in addition to those <a href="#runtime-presentation" class="auto internal xref">Section 5.1</a> names. Omission means only those.<a href="#section-11-2.6.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.6.1"><span class="bcp14">OPTIONAL</span>. A JSON array naming the endpoints at which the authorization server accepts a software statement presented at runtime (<a href="#runtime-presentation" class="auto internal xref">Section 5.1</a>). Defined values are <code>token</code> and <code>pushed_authorization_request</code>; a client ignores a value it does not recognize. Omission, or an empty array, means runtime presentation is not offered; advertising only <code>token</code> offers it, without the front-channel path, to clients that need no redirect. This member describes the role of a trusting authorization server and implies neither acceptance of any particular statement issuer or subject namespace nor support for statement-governed registrations (<span>[<a href="#REGISTRATION" class="cite xref">REGISTRATION</a>]</span>). An authorization server advertising presentation at the pushed authorization request endpoint <span class="bcp14">MUST</span> publish <code>pushed_authorization_request_endpoint</code>, since <a href="#authorization-requests" class="auto internal xref">Section 5.1.1</a> makes presentation there the only front-channel path. A client also examines the ordinary client-authentication and DPoP metadata for the proof it intends to use. Admitting a public client's presentation at the pushed authorization request endpoint (<a href="#public-client-presentation" class="auto internal xref">Section 5.4.1</a>) is local policy; a refusal uses <a href="#errors" class="auto internal xref">Section 9</a>.<a href="#section-11-2.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-11-2.7">
-<code>software_statement_pull_supported</code>:</dt>
+<code>software_statement_presentation_grant_types_supported</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-11-2.8">
-          <p id="section-11-2.8.1"><span class="bcp14">OPTIONAL</span>. Boolean value indicating whether the authorization server retrieves statements from a client's <code>software_statements_uri</code> when establishing a client that presented none (<a href="#pulled-statements" class="auto internal xref">Section 5.2</a>). If omitted, the default value is false. A client whose document names a location needs nothing further from the server; the member tells a client whether it also needs to present.<a href="#section-11-2.8.1" class="pilcrow">¶</a></p>
+          <p id="section-11-2.8.1"><span class="bcp14">OPTIONAL</span>. A JSON array of grant type identifiers on which the authorization server accepts a runtime presentation, in addition to those <a href="#runtime-presentation" class="auto internal xref">Section 5.1</a> names. Omission means only those.<a href="#section-11-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-2.9">
+<code>software_statement_pull_supported</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-2.10">
+          <p id="section-11-2.10.1"><span class="bcp14">OPTIONAL</span>. Boolean value indicating whether the authorization server retrieves statements from a client's <code>software_statements_uri</code> when establishing a client that presented none (<a href="#pulled-statements" class="auto internal xref">Section 5.2</a>). If omitted, the default value is false. A client whose document names a location needs nothing further from the server; the member tells a client whether it also needs to present.<a href="#section-11-2.10.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2324,7 +2373,7 @@ client-assertion-type%3Ajwt-bearer
 <a href="#section-13.6" class="section-number selfRef">13.6. </a><a href="#name-enforcement-bounds" class="section-name selfRef">Enforcement Bounds</a>
         </h3>
 <p id="section-13.6-1">Expiry is enforced at every presentation, so a lapsed statement prevents new runtime admission (<span>[<a href="#REGISTRATION" class="cite xref">REGISTRATION</a>]</span> defines its effect on registrations). A lapsed statement does not retroactively invalidate an establishment, revoke an access token, or terminate an outstanding grant. Issuer non-renewal ends runtime-established grants only where the server requires a current statement on refresh; otherwise they last for the life of their refresh tokens whatever the statement lifetime, unless the server has resolved a withdrawal (<a href="#refresh" class="auto internal xref">Section 5.6.1</a>).<a href="#section-13.6-1" class="pilcrow">¶</a></p>
-<p id="section-13.6-2">A narrowed re-review takes effect when the client publishes the narrower document and obtains a statement over it. Post-issuance metadata change is detected through <code>cimd_digest</code>, which covers exact bytes but requires the server to hold the current ones, retrieved or retained. The bounded statement lifetime limits what either signal can miss for new admissions. The <code>status</code> claim of <a href="#profiles" class="auto internal xref">Section 3</a>, resolved through <span>[<a href="#STATUSLIST" class="cite xref">STATUSLIST</a>]</span>, lets an issuer end a decision before its expiry, and <code>exp</code> remains the floor where no status resolves (<a href="#validation" class="auto internal xref">Section 3.2</a>). <span>[<a href="#SIGNALS" class="cite xref">SIGNALS</a>]</span> defines an optional, earlier notification of status change, on which neither this specification nor the status mechanism depends.<a href="#section-13.6-2" class="pilcrow">¶</a></p>
+<p id="section-13.6-2">A narrowed re-review takes effect when the client publishes the narrower document and obtains a statement over it. Post-issuance metadata change is detected through <code>cimd_digest</code>, which covers exact bytes but requires the server to hold the current ones, retrieved or retained. The bounded statement lifetime limits what either signal can miss for new admissions. The <code>status</code> claim of <a href="#profiles" class="auto internal xref">Section 3</a>, resolved through <span>[<a href="#STATUSLIST" class="cite xref">STATUSLIST</a>]</span>, lets an issuer end a decision before its expiry, and <code>exp</code> remains the floor where no status resolves (<a href="#validation" class="auto internal xref">Section 3.2</a>).<a href="#section-13.6-2" class="pilcrow">¶</a></p>
 <p id="section-13.6-3">Short statement lifetimes tighten the issuer's control and increase issuance and delivery traffic. A fleet of statements issued together expires together, so issuers <span class="bcp14">SHOULD</span> stagger expiries or renew ahead of the boundary to avoid synchronized lapses.<a href="#section-13.6-3" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -2368,7 +2417,7 @@ client-assertion-type%3Ajwt-bearer
       <h2 id="name-privacy-considerations">
 <a href="#section-14" class="section-number selfRef">14. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
-<p id="section-14-1">A presentation or delivery reveals to the authorization server the client's issuer relationship and, where the statement carries an <code>aud</code> claim, the other authorization servers the client intends to use; omitting that claim discloses nothing beyond the review (<span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span>). Pushed authorization requests (<a href="#authorization-requests" class="auto internal xref">Section 5.1.1</a>) keep statements out of browser history, referrers, and front-channel logs.<a href="#section-14-1" class="pilcrow">¶</a></p>
+<p id="section-14-1">A presentation or delivery reveals to the authorization server the client's issuer relationship and, where the statement carries an <code>aud</code> claim, the other authorization servers the client intends to use; omitting that claim discloses nothing beyond the review. Pushed authorization requests (<a href="#authorization-requests" class="auto internal xref">Section 5.1.1</a>) keep statements out of browser history, referrers, and front-channel logs.<a href="#section-14-1" class="pilcrow">¶</a></p>
 <p id="section-14-2">A central issuer also learns from renewals which of its statements are in active use, so issuance and renewal logs deserve the same care as the statements.<a href="#section-14-2" class="pilcrow">¶</a></p>
 <p id="section-14-3">Retrieving the document tells its host that the server is resolving the client. Pulling statements (<a href="#pulled-statements" class="auto internal xref">Section 5.2</a>) tells the host of <code>software_statements_uri</code> the same; that host is an additional party only where the URL is on another origin. Published statements are readable by anyone, so their <code>aud</code> and <code>aud_tenant</code> claims disclose which servers and tenants a review names; a statement whose audience is sensitive is presented rather than published.<a href="#section-14-3" class="pilcrow">¶</a></p>
 </section>
@@ -2701,12 +2750,12 @@ client-assertion-type%3Ajwt-bearer
           <dd class="break"></dd>
 <dt id="section-15.7-2.17">Metadata Name:</dt>
           <dd style="margin-left: 1.5em" id="section-15.7-2.18">
-            <p id="section-15.7-2.18.1"><code>software_statement_jwks_uri</code><a href="#section-15.7-2.18.1" class="pilcrow">¶</a></p>
+            <p id="section-15.7-2.18.1"><code>software_statement_signing_alg_values_supported</code><a href="#section-15.7-2.18.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.7-2.19">Metadata Description:</dt>
           <dd style="margin-left: 1.5em" id="section-15.7-2.20">
-            <p id="section-15.7-2.20.1">URL of the JWK Set containing only the keys with which the authorization server signs software statements.<a href="#section-15.7-2.20.1" class="pilcrow">¶</a></p>
+            <p id="section-15.7-2.20.1">JSON array containing the asymmetric JWS algorithms supported by the authorization server for signing software statements.<a href="#section-15.7-2.20.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.7-2.21">Change Controller:</dt>
@@ -2721,12 +2770,12 @@ client-assertion-type%3Ajwt-bearer
           <dd class="break"></dd>
 <dt id="section-15.7-2.25">Metadata Name:</dt>
           <dd style="margin-left: 1.5em" id="section-15.7-2.26">
-            <p id="section-15.7-2.26.1"><code>software_statement_pull_supported</code><a href="#section-15.7-2.26.1" class="pilcrow">¶</a></p>
+            <p id="section-15.7-2.26.1"><code>software_statement_jwks_uri</code><a href="#section-15.7-2.26.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.7-2.27">Metadata Description:</dt>
           <dd style="margin-left: 1.5em" id="section-15.7-2.28">
-            <p id="section-15.7-2.28.1">Boolean value indicating whether the authorization server retrieves software statements from a client's <code>software_statements_uri</code>.<a href="#section-15.7-2.28.1" class="pilcrow">¶</a></p>
+            <p id="section-15.7-2.28.1">URL of the JWK Set containing only the keys with which the authorization server signs software statements.<a href="#section-15.7-2.28.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-15.7-2.29">Change Controller:</dt>
@@ -2737,6 +2786,26 @@ client-assertion-type%3Ajwt-bearer
 <dt id="section-15.7-2.31">Specification Document(s):</dt>
           <dd style="margin-left: 1.5em" id="section-15.7-2.32">
             <p id="section-15.7-2.32.1">This specification, <a href="#authorization-server-metadata" class="auto internal xref">Section 11</a><a href="#section-15.7-2.32.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.7-2.33">Metadata Name:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.7-2.34">
+            <p id="section-15.7-2.34.1"><code>software_statement_pull_supported</code><a href="#section-15.7-2.34.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.7-2.35">Metadata Description:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.7-2.36">
+            <p id="section-15.7-2.36.1">Boolean value indicating whether the authorization server retrieves software statements from a client's <code>software_statements_uri</code>.<a href="#section-15.7-2.36.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.7-2.37">Change Controller:</dt>
+          <dd style="margin-left: 1.5em" id="section-15.7-2.38">
+            <p id="section-15.7-2.38.1">IESG<a href="#section-15.7-2.38.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-15.7-2.39">Specification Document(s):</dt>
+          <dd style="margin-left: 1.5em" id="section-15.7-2.40">
+            <p id="section-15.7-2.40.1">This specification, <a href="#authorization-server-metadata" class="auto internal xref">Section 11</a><a href="#section-15.7-2.40.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2852,10 +2921,6 @@ client-assertion-type%3Ajwt-bearer
         <dd>
 <span class="refTitle">"OAuth 2.0 Client Instance Assertion"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-client-instance-assertion">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-client-instance-assertion</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="ISSUANCE">[ISSUANCE]</dt>
-        <dd>
-<span class="refTitle">"CIMD Software Statement Issuance"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-issuance">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-issuance</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="OPENID-FED">[OPENID-FED]</dt>
         <dd>
 <span class="refTitle">"OpenID Federation 1.0"</span>, <span>n.d.</span>, <span>&lt;<a href="https://openid.net/specs/openid-federation-1_0.html">https://openid.net/specs/openid-federation-1_0.html</a>&gt;</span>. </dd>
@@ -2863,10 +2928,6 @@ client-assertion-type%3Ajwt-bearer
 <dt id="REGISTRATION">[REGISTRATION]</dt>
         <dd>
 <span class="refTitle">"CIMD Software Statement Registration"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-registration">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-registration</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="SIGNALS">[SIGNALS]</dt>
-        <dd>
-<span class="refTitle">"Shared Signals Events for CIMD Software Statements"</span>, <span>n.d.</span>, <span>&lt;<a href="https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-signals">https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-signals</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="UK-OPEN-BANKING">[UK-OPEN-BANKING]</dt>
       <dd>
@@ -2882,7 +2943,7 @@ client-assertion-type%3Ajwt-bearer
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-A-1">This mechanism began as a consumption section of <span>[<a href="#ISSUANCE" class="cite xref">ISSUANCE</a>]</span> and was split out so that consumption can evolve separately from issuance. It draws on working-group discussion of Client ID Metadata Documents and attestation-based client authentication.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<p id="appendix-A-1">This mechanism began as the consumption part of a draft on software statement issuance and was split out so that consumption can evolve separately from issuance. It draws on working-group discussion of Client ID Metadata Documents and attestation-based client authentication.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
