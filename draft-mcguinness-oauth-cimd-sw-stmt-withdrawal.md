@@ -68,11 +68,11 @@ CIMD Software Statement lets an issuer withdraw a review before the statement ex
 
 Responsiveness therefore depends on the fetch interval. For a withdrawal to take effect within minutes, every consumer has to poll at that interval, and most of those requests report no change.
 
-The parties already have a configured relationship: a trusting authorization server records each issuer's identifier, key source, scope, and lifetime policy in order to accept its statements at all ({{STATEMENT}}). This specification uses that relationship to carry a notification over the Shared Signals Framework {{SSF}}. The issuing authorization server transmits, the trusting authorization server receives, and events are Security Event Tokens {{RFC8417}} delivered by the push {{RFC8935}} or poll {{RFC8936}} delivery methods.
+The parties already have a configured relationship: a trusting authorization server records each issuer's identifier, key source, scope, and lifetime policy in order to accept its statements at all ({{STATEMENT}}). As an optional addition to the status list, this specification uses that relationship to carry a notification over the Shared Signals Framework {{SSF}}. The issuing authorization server transmits, the trusting authorization server receives, and events are Security Event Tokens {{RFC8417}} delivered by the push {{RFC8935}} or poll {{RFC8936}} delivery methods.
 
 An event carries no decision: it reports that the issuer changed a status, and the receiver resolves that status as it would have later anyway. The status list remains the authority on whether a statement stands. {{processing}} makes two properties normative: an event can only prompt a resolution and never itself increases what a client may do, and a receiver that misses events enforces status and expiry exactly as it would without them.
 
-For the events, this specification defines the subject identification, the event, its payload claims, and the receiver's processing rules. It defines no new endpoint, transport, subject identifier format, durable receiver record, or trust establishment mechanism. {{STATEMENT}} does not depend on this specification.
+The events are optional. An issuer and a trusting authorization server can use the status list without them, and the requirements of {{relationship}} through {{configuration}} apply only to implementations that support the events. For the events, this specification defines the subject identification, the event, its payload claims, and the receiver's processing rules. It defines no new endpoint, transport, subject identifier format, durable receiver record, or trust establishment mechanism. {{STATEMENT}} does not depend on this specification.
 
 # Conventions and Definitions
 
@@ -183,11 +183,11 @@ Applying an event does not revoke access tokens already issued. A receiver appli
 
 # Stream Configuration {#configuration}
 
-An issuing authorization server supporting this specification publishes Transmitter configuration metadata as {{SSF}} defines, discoverable from the issuer identifier the trusting authorization server has already configured. Stream creation, subject management, verification, and delivery follow {{SSF}}; this specification adds no configuration mechanism.
+An issuing authorization server that supports the events defined here publishes Transmitter configuration metadata as {{SSF}} defines, discoverable from the issuer identifier the trusting authorization server has already configured. Stream creation, subject management, verification, and delivery follow {{SSF}}; this specification adds no configuration mechanism.
 
-A trusting authorization server SHOULD create one stream per configured issuer, covering every subject that issuer attests rather than an enumerated set. A receiver cannot enumerate subjects: under runtime presentation ({{STATEMENT}}) it holds no state for software until its first presentation, by which time an event about that software would already have been missed.
+A trusting authorization server that supports these events SHOULD create one stream per configured issuer that offers them, covering every subject that issuer attests rather than an enumerated set. A receiver cannot enumerate subjects: under runtime presentation ({{STATEMENT}}) it holds no state for software until its first presentation, by which time an event about that software would already have been missed.
 
-A transmitter supporting this specification MUST therefore advertise `default_subjects` as `ALL` in its transmitter configuration {{SSF}}, so that a stream carries every subject appropriate to it without the receiver adding any. The subjects appropriate to a stream are those of the issuer's statements whose `aud` is absent or names the receiving authorization server; a receiver discards events for subjects outside the identifier scope for which it accepts that issuer ({{STATEMENT}}).
+A transmitter supporting these events MUST therefore advertise `default_subjects` as `ALL` in its transmitter configuration {{SSF}}, so that a stream carries every subject appropriate to it without the receiver adding any. The subjects appropriate to a stream are those of the issuer's statements whose `aud` is absent or names the receiving authorization server; a receiver discards events for subjects outside the identifier scope for which it accepts that issuer ({{STATEMENT}}).
 
 A receiver SHOULD request the event this specification defines, and SHOULD use the stream verification facility of {{SSF}} on a schedule, since a stream delivering nothing because it was misconfigured is otherwise indistinguishable from an issuer with nothing to report.
 
@@ -217,7 +217,7 @@ With the keys separated, compromise of a SET key lets an attacker drive resoluti
 
 ## Relationship to Scheduled Resolution
 
-{{STATUSLIST}} resolution costs a fetch and depends on the status endpoint's availability. This specification changes neither and adds no second source of status: it only shortens the interval between an issuer's change and a receiver's next fetch, for deployments where that interval matters more than the cost of maintaining a stream. A deployment that finds its scheduled interval acceptable does not need it.
+{{STATUSLIST}} resolution costs a fetch and depends on the status endpoint's availability. The events change neither and add no second source of status: they only shorten the interval between an issuer's change and a receiver's next fetch, for deployments where that interval matters more than the cost of maintaining a stream. A deployment that finds its scheduled interval acceptable does not need it.
 
 # Privacy Considerations
 
