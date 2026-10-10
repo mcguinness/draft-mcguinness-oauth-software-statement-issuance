@@ -54,9 +54,6 @@ informative:
   CAEP:
     target: https://openid.net/specs/openid-caep-1_0.html
     title: "OpenID Continuous Access Evaluation Profile 1.0"
-  ISSUANCE:
-    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-issuance
-    title: "CIMD Software Statement Issuance"
 
 --- abstract
 
@@ -82,7 +79,7 @@ This specification defines the subject identification, the event, its payload cl
 
 Transmitter, Receiver, Stream, and the delivery and configuration mechanisms are defined by {{SSF}}. Security Event Token, or SET, is defined by {{RFC8417}}. Subject identifier formats are defined by {{RFC9493}}. Status List Token, and the validation that resolves a status, are defined by {{STATUSLIST}}. The software statement, its claims including `status`, its validation, issuer trust configuration, and runtime presentation are defined by {{STATEMENT}}, and registration validity by {{REGISTRATION}}.
 
-Issuing Authorization Server and Trusting Authorization Server are defined by {{STATEMENT}}. For the events defined here, the issuing authorization server, which publishes the status of its statements ({{ISSUANCE}}), acts as a Transmitter, and a trusting authorization server that has configured it acts as a Receiver.
+Issuing Authorization Server and Trusting Authorization Server are defined by {{STATEMENT}}. For the events defined here, the issuing authorization server, which publishes the status of its statements ({{STATEMENT}}), acts as a Transmitter, and a trusting authorization server that has configured it acts as a Receiver.
 
 # Relationship to the Statement Family {#relationship}
 

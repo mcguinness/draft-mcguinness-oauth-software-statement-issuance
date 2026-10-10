@@ -40,9 +40,6 @@ normative:
 
 informative:
   RFC7592:
-  ISSUANCE:
-    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-issuance
-    title: "CIMD Software Statement Issuance"
   UK-OPEN-BANKING:
     target: https://openbankinguk.github.io/dcr-docs-pub/v3.3/dynamic-client-registration.html
     title: "Open Banking UK Dynamic Client Registration"
@@ -246,7 +243,7 @@ Deployments SHOULD pair statement-governed registrations with credential rotatio
 
 Open registration permits `client_name`, `logo_uri`, and `client_uri` values that imitate trusted software on consent screens. Requiring a statement replaces self-asserted branding with issuer-reviewed values. Servers that render such values on consent screens SHOULD prefer those from a reviewed document and SHOULD apply heightened scrutiny to registrations that claim user-visible branding without a statement.
 
-Requiring a statement for registration also means each new client identity needs another issuer decision, so a discarded client cannot return at no cost, and the per-`sub` bounds of {{repeated-registration}} limit how many registrations one piece of software obtains. Neither control makes metadata true: a client that misleads review can obtain a genuine statement for fraudulent metadata, so a statement is only as reliable as the issuer's verification ({{ISSUANCE}}).
+Requiring a statement for registration also means each new client identity needs another issuer decision, so a discarded client cannot return at no cost, and the per-`sub` bounds of {{repeated-registration}} limit how many registrations one piece of software obtains. Neither control makes metadata true: a client that misleads review can obtain a genuine statement for fraudulent metadata, so a statement is only as reliable as the issuer's verification.
 
 ## Enforcement Bounds {#enforcement-bounds}
 

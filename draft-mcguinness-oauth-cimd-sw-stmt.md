@@ -55,9 +55,6 @@ informative:
   REGISTRATION:
     target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-registration
     title: "CIMD Software Statement Registration"
-  ISSUANCE:
-    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-issuance
-    title: "CIMD Software Statement Issuance"
   OPENID-FED:
     target: https://openid.net/specs/openid-federation-1_0.html
     title: "OpenID Federation 1.0"
@@ -73,9 +70,6 @@ informative:
   CLIENT-INSTANCE:
     target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-client-instance-assertion
     title: "OAuth 2.0 Client Instance Assertion"
-  SIGNALS:
-    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-signals
-    title: "Shared Signals Events for CIMD Software Statements"
 
 --- abstract
 
@@ -93,7 +87,7 @@ The UK Open Banking Directory and the Australian Consumer Data Right Register ea
 
 {{OPENID-FED}} conveys attested metadata through trust chains: an authorization server resolves an entity to a trust anchor rather than configuring the issuer that vouched for it, and applies metadata derived by policy along that chain. This specification instead keeps the reviewed document as the metadata and leaves issuer trust to local configuration ({{issuer-trust}}). A federation can supply that issuer trust and carry a review as a trust mark, but resolved metadata is not the octets a digest covers, so a client's metadata comes from one source or the other, not both. Ecosystems already operating a federation should consider its registration mechanisms first.
 
-This specification defines the statement, its validation, issuer trust configuration ({{issuer-trust}}), and runtime consumption ({{cimd-presentation}}). {{ISSUANCE}} defines how a client obtains a statement. {{REGISTRATION}} defines consumption of the same statement in an {{RFC7591}} registration request, where the statement's expiry bounds the registration. {{REGISTRATION}} builds on this specification, which does not depend on it.
+This specification defines the statement, its validation, issuer trust configuration ({{issuer-trust}}), and runtime consumption ({{cimd-presentation}}). This specification does not define how a client obtains a statement. {{REGISTRATION}} defines consumption of the same statement in an {{RFC7591}} registration request, where the statement's expiry bounds the registration. {{REGISTRATION}} builds on this specification, which does not depend on it.
 
 A statement authorizes metadata, not its presenter, and nothing in this specification attests software instances or binaries. How the presenter is bound depends on the kind of client ({{sender-constraint}}):
 
@@ -164,7 +158,7 @@ Refusal Record:
 
 # The Software Statement {#profiles}
 
-The software statement is a compact JWT {{RFC7519}} protected by JWS {{RFC7515}}. Although {{RFC7591}} permits a MAC, a statement issued under this specification MUST use an asymmetric digital signature so trusting servers need not receive an issuer-held symmetric key. The issuer and trusting authorization server MUST follow {{RFC8725}} algorithm-verification guidance. The `none` algorithm and symmetric algorithms MUST NOT be used. An issuer advertises its signing algorithms in its authorization server metadata ({{ISSUANCE}}).
+The software statement is a compact JWT {{RFC7519}} protected by JWS {{RFC7515}}. Although {{RFC7591}} permits a MAC, a statement issued under this specification MUST use an asymmetric digital signature so trusting servers need not receive an issuer-held symmetric key. The issuer and trusting authorization server MUST follow {{RFC8725}} algorithm-verification guidance. The `none` algorithm and symmetric algorithms MUST NOT be used. An issuer advertises its signing algorithms in `software_statement_signing_alg_values_supported` ({{authorization-server-metadata}}).
 
 The JOSE header MUST include the `kid` header parameter, identifying the signing key within the issuer's statement key set ({{authorization-server-metadata}}). The JOSE header MUST also include the `typ` header parameter with the value `software-statement+jwt`, applying Section 3.11 of {{RFC8725}}. This value is the media type `application/software-statement+jwt` ({{media-type}}) with the `application/` prefix omitted (Section 4.1.9 of {{RFC7515}}). Explicit typing prevents confusion with other JWTs from the same issuer. Extensions can add claims; an incompatible revision would use a new `typ` value.
 
@@ -177,7 +171,7 @@ A statement asserts that its issuer evaluated the Client ID Metadata Document wh
 : REQUIRED. The exact client identifier URL presented in the request that produced the statement.
 
 `aud`:
-: OPTIONAL. One or more authorization server issuer identifiers ({{RFC8414}}) restricting which authorization servers may accept the statement. Where the claim is present, a trusting authorization server MUST reject the statement unless one of its locally configured audience identifiers exactly matches a value in it. {{ISSUANCE}} states the corresponding constraint on an issuer: a requested audience bounds what it may name. Where the claim is absent, the statement is unrestricted, and acceptance rests on the authorization server's configured trust in the issuer and its identifier scope ({{issuer-trust}}). Omitting the claim lets one review serve every authorization server that trusts the issuer, but also lets any holder of a copy use it at any of them. Where `statement_uses` permits registration, a holder can always choose registration, which requires no key. An issuer SHOULD therefore name an audience, and omit it only where it accepts that any server trusting it may register the software on the strength of a copy ({{REGISTRATION}}).
+: OPTIONAL. One or more authorization server issuer identifiers ({{RFC8414}}) restricting which authorization servers may accept the statement. Where the claim is present, a trusting authorization server MUST reject the statement unless one of its locally configured audience identifiers exactly matches a value in it. Where the claim is absent, the statement is unrestricted, and acceptance rests on the authorization server's configured trust in the issuer and its identifier scope ({{issuer-trust}}). Omitting the claim lets one review serve every authorization server that trusts the issuer, but also lets any holder of a copy use it at any of them. Where `statement_uses` permits registration, a holder can always choose registration, which requires no key. An issuer SHOULD therefore name an audience, and omit it only where it accepts that any server trusting it may register the software on the strength of a copy ({{REGISTRATION}}).
 
 `aud_tenant`:
 : OPTIONAL. A tenant identifier at a trusting authorization server, as {{IDJAG}} defines the claim, naming the tenant in which this statement's decision applies. A statement whose decision is confined to one tenant MUST carry it, and a trusting authorization server MUST reject a statement carrying it unless the value identifies the tenant the request belongs to. A trusting authorization server MUST NOT read the claim's absence as meaning the statement applies in every tenant, since an issuer also omits the claim where the authorization server is single-tenant or where the issuer does not know the identifier. An authorization server that requires a tenant-scoped decision and finds no `aud_tenant` rejects the statement rather than choosing between those readings. A listing review that applies wherever its `aud` reaches carries no `aud_tenant`.
@@ -198,7 +192,7 @@ A statement asserts that its issuer evaluated the Client ID Metadata Document wh
 : REQUIRED. The metadata digest ({{metadata-digest}}) of the Client ID Metadata Document the issuer evaluated. It binds the statement to the exact document content evaluated, so any party can determine whether the client's currently published metadata still matches it.
 
 `status`:
-: OPTIONAL. The `status` claim as {{STATUSLIST}} defines it, locating this statement in the issuer's Status List Token. It lets an issuer end a decision before `exp` without a trusting authorization server contacting the issuer for each statement. {{ISSUANCE}} requires an issuer that publishes status to carry the claim in every statement it issues from then on, since a trusting authorization server cannot otherwise distinguish a statement that omits the claim from one whose issuer publishes no status.
+: OPTIONAL. The `status` claim as {{STATUSLIST}} defines it, locating this statement in the issuer's Status List Token. It lets an issuer end a decision before `exp` without a trusting authorization server contacting the issuer for each statement. {{status-publication}} requires an issuer that publishes status to carry the claim in every statement it issues from then on, since a trusting authorization server cannot otherwise distinguish a statement that omits the claim from one whose issuer publishes no status.
 
 A statement issued under this specification MUST NOT contain client metadata claims. The reviewed metadata is the document the digest names; metadata copied into the statement would duplicate what the digest binds and reopen questions of precedence and partial review. Vouching for particular members without binding the whole document requires an extension defining what a partial review asserts and how a trusting authorization server applies it ({{extensions}}).
 
@@ -239,7 +233,7 @@ Before accepting a statement, a trusting authorization server MUST:
 
 Where the statement carries `status` and the trusting authorization server resolves statuses for that issuer, it MUST reject a statement whose status is `INVALID`, and MUST apply its configured policy for that issuer to a statement whose status is `SUSPENDED`. A rejection on status uses the refusal-record row of {{errors}}, because re-presenting the same statement cannot succeed while that status stands.
 
-Where a trusting authorization server resolves statuses for an issuer, resolution follows {{STATUSLIST}}, including its caching rules and its requirement to reject where the referenced index lies outside the list. Such a server MAY therefore decide from a Status List Token it already holds within that token's validity. A server MUST NOT replace a Status List Token it holds with one whose `iat` is earlier, and MUST treat one whose `iat` is equal but whose contents differ as a resolution failure. A host serving an older token could otherwise restore a status the issuer has withdrawn. An issuer gives each token it publishes at a list URI a later `iat` than the last ({{ISSUANCE}}).
+Where a trusting authorization server resolves statuses for an issuer, resolution follows {{STATUSLIST}}, including its caching rules and its requirement to reject where the referenced index lies outside the list. Such a server MAY therefore decide from a Status List Token it already holds within that token's validity. A server MUST NOT replace a Status List Token it holds with one whose `iat` is earlier, and MUST treat one whose `iat` is equal but whose contents differ as a resolution failure. A host serving an older token could otherwise restore a status the issuer has withdrawn. An issuer gives each token it publishes at a list URI a later `iat` than the last ({{status-publication}}).
 
 Status constrains and never relaxes. A statement carrying no `status`, or whose status the server cannot resolve, is bounded by `exp` as it would be otherwise, and a server MUST NOT treat status as grounds to accept a statement past `exp`. What a server does when resolution fails is local policy. Refusing makes issuer availability a precondition for every request the statement governs; proceeding leaves a withdrawn statement acceptable for the rest of its lifetime.
 
@@ -254,6 +248,28 @@ A trusting authorization server resolving the reviewed document MUST reject a do
 A review covers the document that `cimd_digest` identifies. At registration, a digest mismatch is fatal ({{REGISTRATION}}), because the registration would otherwise record metadata no issuer reviewed. At runtime, a mismatch is a policy input rather than an automatic failure: the statement still names a document the issuer reviewed, and the authorization server decides how to treat the change. At registration and at runtime alike, the remedy is re-issuance against the current document.
 
 Because an issuer reviews the document it retrieves from the client identifier URL, a changed document is always served before any statement over it exists; a publisher shortens that gap by arranging prompt review. The statement's bounded lifetime limits how stale a review can become: drift that the digest comparison never observes still expires with the statement.
+
+## Status Publication {#status-publication}
+
+An issuing authorization server that ends decisions before their expiry publishes statement status as {{STATUSLIST}} defines and carries the `status` claim in the statements it issues ({{profiles}}). The statement records what was decided; the status list records whether that decision still stands.
+
+An issuer that publishes status:
+
+* MUST publish it for every statement it issues under a given `iss` from the point it begins publishing, not for a subset, so that a trusting authorization server can read an absent claim as meaning the issuer publishes no status. Statements issued before that point carry no claim, so the inference holds once those have expired;
+* MUST assign each statement its own index and MUST NOT reuse an index across statements. Withdrawing a statement then affects no other, including its replacement: withdrawing a superseded statement does not withdraw its replacement, and withdrawing a replacement does not restore its predecessor;
+* MUST sign the Status List Token with a key published at the `jwks_uri` of its authorization server metadata {{RFC8414}}, never with a statement signing key ({{authorization-server-metadata}});
+* MUST include `exp` in every Status List Token it publishes, so that an older token cannot stand in for a newer one indefinitely; and
+* MUST give each Status List Token it publishes at a given list URI an `iat` later than that of any token it published there before, so that a trusting authorization server can tell the newer of two apart.
+
+An issuer that issues a replacement narrower than the statement it replaces SHOULD withdraw the earlier statement. A replacement is narrower when it:
+
+* is over a document that no longer carries a key, redirection URI, or scope the earlier document carried;
+* has a narrower `aud`, `aud_tenant`, or `statement_uses`; or
+* has a shorter remaining lifetime.
+
+What was removed may be why the replacement was issued; a trusting authorization server that has not yet seen the replacement, or at which it does not validate, would otherwise accept the earlier statement until it expires.
+
+Status does not replace lifetime. A trusting authorization server is not obliged to resolve status, so an issuer chooses `exp` assuming none does; status shortens a decision but does not bound it.
 
 # Issuer Trust Establishment {#issuer-trust}
 
@@ -317,7 +333,7 @@ At the token endpoint, a runtime presentation is valid on a request using:
 * the JWT or SAML assertion grants of {{RFC7521}}; or
 * another grant an authorization server names in `software_statement_presentation_grant_types_supported` ({{authorization-server-metadata}}).
 
-Authorization-code redemption and refresh-token use continue an existing grant and follow {{grant-lifecycle}} and {{refresh}} instead. A request that asks an authorization server to issue a software statement, rather than to consume one, MUST NOT carry the `software_statement` parameter. {{ISSUANCE}} defines the response type, grant type, and requested token type that identify such a request.
+Authorization-code redemption and refresh-token use continue an existing grant and follow {{grant-lifecycle}} and {{refresh}} instead. A request that asks an authorization server to issue a software statement, rather than to consume one, MUST NOT carry the `software_statement` parameter.
 
 An authorization server advertises support through `software_statement_presentation_supported` ({{authorization-server-metadata}}).
 
@@ -610,6 +626,9 @@ This specification defines the following authorization server metadata {{RFC8414
 `software_statement_jwks_uri`:
 : REQUIRED for an authorization server that issues software statements. URL of a JWK Set containing only the keys with which it signs software statements. The URL MUST use the `https` scheme, as {{RFC8414}} requires of `jwks_uri`. A trusting authorization server MUST validate the server's certificate when retrieving the statement key set, since a substituted key set would let a network attacker sign statements. The keys in this set MUST NOT appear in the JWK Set at the server's `jwks_uri`, and the server MUST NOT sign anything other than software statements with them. A trusting authorization server verifies statements only against this set ({{issuer-trust}}), so a key that signs another artifact, such as a Status List Token, cannot be taken for a statement signing key. This member describes the issuing role.
 
+`software_statement_signing_alg_values_supported`:
+: REQUIRED for an authorization server that issues software statements. A JSON array containing the asymmetric JWS `alg` values that the authorization server can use to sign software statements. The array MUST NOT contain `none` or a symmetric algorithm. This member describes the issuing role; an authorization server that only accepts software statements does not publish it.
+
 `software_statement_presentation_supported`:
 : OPTIONAL. A JSON array naming the endpoints at which the authorization server accepts a software statement presented at runtime ({{runtime-presentation}}). Defined values are `token` and `pushed_authorization_request`; a client ignores a value it does not recognize. Omission, or an empty array, means runtime presentation is not offered; advertising only `token` offers it, without the front-channel path, to clients that need no redirect. This member describes the role of a trusting authorization server and implies neither acceptance of any particular statement issuer or subject namespace nor support for statement-governed registrations ({{REGISTRATION}}). An authorization server advertising presentation at the pushed authorization request endpoint MUST publish `pushed_authorization_request_endpoint`, since {{authorization-requests}} makes presentation there the only front-channel path. A client also examines the ordinary client-authentication and DPoP metadata for the proof it intends to use. Admitting a public client's presentation at the pushed authorization request endpoint ({{public-client-presentation}}) is local policy; a refusal uses {{errors}}.
 
@@ -674,7 +693,7 @@ A retrieval failure leaves the relevant metadata or proof unverified, so the aut
 
 Expiry is enforced at every presentation, so a lapsed statement prevents new runtime admission ({{REGISTRATION}} defines its effect on registrations). A lapsed statement does not retroactively invalidate an establishment, revoke an access token, or terminate an outstanding grant. Issuer non-renewal ends runtime-established grants only where the server requires a current statement on refresh; otherwise they last for the life of their refresh tokens whatever the statement lifetime, unless the server has resolved a withdrawal ({{refresh}}).
 
-A narrowed re-review takes effect when the client publishes the narrower document and obtains a statement over it. Post-issuance metadata change is detected through `cimd_digest`, which covers exact bytes but requires the server to hold the current ones, retrieved or retained. The bounded statement lifetime limits what either signal can miss for new admissions. The `status` claim of {{profiles}}, resolved through {{STATUSLIST}}, lets an issuer end a decision before its expiry, and `exp` remains the floor where no status resolves ({{validation}}). {{SIGNALS}} defines an optional, earlier notification of status change, on which neither this specification nor the status mechanism depends.
+A narrowed re-review takes effect when the client publishes the narrower document and obtains a statement over it. Post-issuance metadata change is detected through `cimd_digest`, which covers exact bytes but requires the server to hold the current ones, retrieved or retained. The bounded statement lifetime limits what either signal can miss for new admissions. The `status` claim of {{profiles}}, resolved through {{STATUSLIST}}, lets an issuer end a decision before its expiry, and `exp` remains the floor where no status resolves ({{validation}}).
 
 Short statement lifetimes tighten the issuer's control and increase issuance and delivery traffic. A fleet of statements issued together expires together, so issuers SHOULD stagger expiries or renew ahead of the boundary to avoid synchronized lapses.
 
@@ -698,7 +717,7 @@ Servers SHOULD avoid logging software statements, which remain sensitive in tran
 
 # Privacy Considerations
 
-A presentation or delivery reveals to the authorization server the client's issuer relationship and, where the statement carries an `aud` claim, the other authorization servers the client intends to use; omitting that claim discloses nothing beyond the review ({{ISSUANCE}}). Pushed authorization requests ({{authorization-requests}}) keep statements out of browser history, referrers, and front-channel logs.
+A presentation or delivery reveals to the authorization server the client's issuer relationship and, where the statement carries an `aud` claim, the other authorization servers the client intends to use; omitting that claim discloses nothing beyond the review. Pushed authorization requests ({{authorization-requests}}) keep statements out of browser history, referrers, and front-channel logs.
 
 A central issuer also learns from renewals which of its statements are in active use, so issuance and renewal logs deserve the same care as the statements.
 
@@ -890,6 +909,18 @@ Specification Document(s):
 : This specification, {{authorization-server-metadata}}
 
 Metadata Name:
+: `software_statement_signing_alg_values_supported`
+
+Metadata Description:
+: JSON array containing the asymmetric JWS algorithms supported by the authorization server for signing software statements.
+
+Change Controller:
+: IESG
+
+Specification Document(s):
+: This specification, {{authorization-server-metadata}}
+
+Metadata Name:
 : `software_statement_jwks_uri`
 
 Metadata Description:
@@ -918,4 +949,4 @@ Specification Document(s):
 # Acknowledgments
 {:numbered="false"}
 
-This mechanism began as a consumption section of {{ISSUANCE}} and was split out so that consumption can evolve separately from issuance. It draws on working-group discussion of Client ID Metadata Documents and attestation-based client authentication.
+This mechanism began as the consumption part of a draft on software statement issuance and was split out so that consumption can evolve separately from issuance. It draws on working-group discussion of Client ID Metadata Documents and attestation-based client authentication.

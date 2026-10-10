@@ -15,11 +15,12 @@ New to the drafts? Start with the [FAQ](https://github.com/mcguinness/draft-mcgu
 | CIMD Software Statement Issuance | How a client obtains a statement: token exchange, a redirect flow returning a `software_statement_code`, and asynchronous review under Deferred Token Response | [HTML](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-issuance.html), [TXT](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-issuance.txt) |
 | Shared Signals Events for CIMD Software Statements | An optional event telling an authorization server that a statement's status changed, so it checks the status list at once rather than on its next scheduled check | [HTML](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-signals.html), [TXT](https://mcguinness.github.io/draft-mcguinness-oauth-software-statement-issuance/draft-mcguinness-oauth-cimd-sw-stmt-signals.txt) |
 
-The statement draft is the core. The other three build on it, and it depends on none of them. Datatracker pages will be available after first submission:
+The statement draft is the core. The other three build on it, and it depends on none of them.
+
+The statement and registration drafts are planned for submission; their Datatracker pages will be available after first submission:
 [statement](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt/),
-[registration](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-registration/),
-[issuance](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-issuance/),
-[signals](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-signals/).
+[registration](https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-registration/).
+The issuance and signals drafts are working drafts kept here for discussion and are not planned for submission yet.
 
 ## MCP Profile
 

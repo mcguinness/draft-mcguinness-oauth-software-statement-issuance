@@ -617,31 +617,13 @@ The denial is terminal for the request. A deferral resolves to the denied state,
 
 # Status Publication {#status-publication}
 
-An issuing authorization server that ends decisions before their expiry publishes statement status as {{STATUSLIST}} defines and carries the `status` claim in the statements it issues ({{STATEMENT}}). The statement records what was decided; the status list records whether that decision still stands.
-
-An issuer that publishes status:
-
-* MUST publish it for every statement it issues under a given `iss` from the point it begins publishing, not for a subset, so that a consumer can read an absent claim as meaning the issuer publishes no status. Statements issued before that point carry no claim, so the inference holds once those have expired;
-* MUST assign each statement its own index and MUST NOT reuse an index across statements. Withdrawing a statement then affects no other, including a replacement obtained through {{renewal}}: withdrawing a superseded statement does not withdraw its replacement, and withdrawing a replacement does not restore its predecessor;
-* MUST sign the Status List Token with a key published at the `jwks_uri` of its authorization server metadata {{RFC8414}}, never with a statement signing key ({{STATEMENT}});
-* MUST include `exp` in every Status List Token it publishes, so that an older token cannot stand in for a newer one indefinitely; and
-* MUST give each Status List Token it publishes at a given list URI an `iat` later than that of any token it published there before, so that a consumer can tell the newer of two apart.
-
-An issuer that issues a replacement narrower than the statement it replaces SHOULD withdraw the earlier statement. A replacement is narrower when it:
-
-* is over a document that no longer carries a key, redirection URI, or scope the earlier document carried;
-* has a narrower `aud`, `aud_tenant`, or `statement_uses`; or
-* has a shorter remaining lifetime.
-
-What was removed may be why the replacement was issued; a consumer that has not yet seen the replacement, or at which it does not validate, would otherwise accept the earlier statement until it expires.
-
-Status does not replace lifetime. A consumer is not obliged to resolve status, so an issuer chooses `exp` assuming none does; status shortens a decision but does not bound it.
+An issuing authorization server that ends decisions before their expiry publishes statement status as {{STATUSLIST}} defines, and carries the `status` claim in the statements it issues, as the Status Publication section of {{STATEMENT}} requires. Withdrawing a statement does not withdraw a replacement obtained through {{renewal}}, and withdrawing a replacement does not restore its predecessor.
 
 # Authorization Server Metadata {#authorization-server-metadata}
 
 The issuing authorization server is a role, not necessarily a general-purpose OAuth deployment: an issuer offering only token exchange can consist of a token endpoint, an authorization server metadata document, and signing keys, with no authorization endpoint, access tokens, or protected resources.
 
-An authorization server that issues software statements under this specification advertises `true` for `client_id_metadata_document_supported` ({{CIMD}}), publishes `software_statement_signing_alg_values_supported` (below), and publishes its statement signing keys only at `software_statement_jwks_uri` ({{STATEMENT}}).
+An authorization server that issues software statements under this specification advertises `true` for `client_id_metadata_document_supported` ({{CIMD}}), publishes `software_statement_signing_alg_values_supported` ({{STATEMENT}}), and publishes its statement signing keys only at `software_statement_jwks_uri` ({{STATEMENT}}).
 
 An issuer that may defer a request ({{deferred-processing}}) advertises `true` for `deferred_token_response_supported` ({{DTR}}) and, because deferrals are cancellable, lists `urn:ietf:params:oauth:token-type:deferral-code` in `revocation_endpoint_token_type_values_supported`, as {{DTR}} requires. A synchronous issuer advertises neither and need not implement {{DTR}}.
 
@@ -656,9 +638,6 @@ An authorization server supporting the token exchange profile ({{token-exchange-
 A client that requires deferral MUST NOT send a request to an authorization server that does not advertise `deferred_token_response_supported`, since such an issuer answers with a statement or a terminal denial, never a deferral.
 
 This specification defines the following additional authorization server metadata members:
-
-`software_statement_signing_alg_values_supported`:
-: REQUIRED for an authorization server that issues software statements under this specification. A JSON array containing the asymmetric JWS `alg` values that the authorization server can use to sign software statements. The array MUST NOT contain `none` or a symmetric algorithm. This member describes the issuing role; an authorization server that only accepts software statements does not publish it.
 
 `software_statement_subject_token_types_supported`:
 : REQUIRED for an authorization server that supports the token exchange profile ({{token-exchange-profile}}), and absent otherwise. A JSON array of the `subject_token_type` values the authorization server accepts when `requested_token_type` is `urn:ietf:params:oauth:token-type:software-statement`. Publishing this member signals support for the profile; listing `urn:ietf:params:oauth:token-type:software-statement` among its values advertises renewal by prior statement ({{renewal}}).
@@ -841,18 +820,6 @@ Specification Document(s):
 ## OAuth Authorization Server Metadata Registry
 
 This specification requests registration of the following values in the IANA "OAuth Authorization Server Metadata" registry established by {{RFC8414}}:
-
-Metadata Name:
-: `software_statement_signing_alg_values_supported`
-
-Metadata Description:
-: JSON array containing the asymmetric JWS algorithms supported by the authorization server for signing software statements.
-
-Change Controller:
-: IESG
-
-Specification Document(s):
-: This specification, {{authorization-server-metadata}}
 
 Metadata Name:
 : `software_statement_subject_token_types_supported`
