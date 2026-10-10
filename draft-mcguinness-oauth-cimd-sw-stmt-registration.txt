@@ -72,8 +72,7 @@ Table of Contents
      9.1.  Statements at Registration
      9.2.  Renewal Authenticates the Credential
      9.3.  Registration Fraud and Impersonation
-     9.4.  Enforcement Bounds
-     9.5.  Observable State
+     9.4.  Observable State
    10. Privacy Considerations
    11. IANA Considerations
      11.1.  OAuth Dynamic Client Registration Metadata Registry
@@ -95,14 +94,6 @@ Table of Contents
    leaving an organization that reviews client software no interoperable
    way to keep that review current at the authorization servers that
    relied on it.
-
-   Two regulated ecosystems already use statements at registration.  The
-   UK Open Banking Directory and the Australian Consumer Data Right
-   Register each run a central issuer whose statements many unrelated
-   authorization servers consume through the [RFC7591]
-   software_statement member ([UK-OPEN-BANKING], [AU-CDR]).  Both carry
-   client metadata in the statement rather than binding it to a document
-   the consumer retrieves.
 
    [STATEMENT] defines the statement, its validation, issuer trust
    configuration, and runtime consumption.  This specification defines
@@ -159,9 +150,7 @@ Table of Contents
    The statement is consumed in the software_statement member of an
    [RFC7591] registration request.  The authorization server validates
    it under the validation rules of [STATEMENT] and registers the client
-   under its ordinary registration policy.  This section defines how the
-   registration's metadata is derived; its subsections define the
-   registration's validity and renewal.
+   under its ordinary registration policy.
 
    In [RFC7591], values in a software statement take precedence over
    those in the request; a statement under [STATEMENT] carries no client
@@ -169,16 +158,17 @@ Table of Contents
    server consuming a statement under this specification:
 
    *  MUST resolve the Client ID Metadata Document at the statement's
-      sub;
+      sub, rejecting the registration where retrieval does not complete;
 
    *  MUST validate the document as [CIMD] requires, including that its
       client_id member matches the client identifier URL it is held for,
       which is the statement's sub;
 
    *  MUST verify that the digest of the retrieved representation equals
-      cimd_digest, and MUST derive the registered metadata by parsing
-      the same octets it digested, not a second retrieval or a cached
-      copy it has not digested;
+      cimd_digest, rejecting the registration where it does not, and
+      MUST derive the registered metadata by parsing the same octets it
+      digested, not a second retrieval or a cached copy it has not
+      digested;
 
    *  MUST take every client metadata value from that document, and MUST
       NOT take any client metadata value from the registration request,
@@ -194,50 +184,24 @@ Table of Contents
       rules of [STATEMENT]), whatever authentication method the document
       declares.
 
-   Such a redirection URI delivers authorization codes to whichever
-   local application claims it.  Registration has no review-only form,
-   as runtime presentation does ([STATEMENT]), because the registration
-   is the admission.
+   Registration has no review-only form, as runtime presentation does
+   ([STATEMENT]), because the registration is the admission.
 
    Taking every value from the document prevents metadata substitution.
-   Constraining only the members the document carries would leave every
-   omitted member attacker-supplied: a document naming jwks_uri and no
-   jwks would admit a request-supplied jwks, giving a holder of someone
-   else's statement a registration with reviewed branding and its own
-   key.
-
-   As at every consumption point, the server never consumes a statement
-   from a software_statement member of the reviewed document
-   ([STATEMENT]).
+   At registration a statement is a bearer artifact, so a request-
+   supplied value for a member the document omits, such as a jwks beside
+   a document naming only jwks_uri, would give any holder of a copy a
+   registration with reviewed branding and its own key.
 
    An authorization server that pre-registers a client identifier URL,
-   which [CIMD] permits and names as the expected enterprise pattern,
-   participates by retaining the exact octets it digested when it
+   as [CIMD] permits, can retain the exact octets it digested when it
    onboarded that URL.  Such a server MAY satisfy the resolution
    requirement above by comparing cimd_digest against the digest of the
    retained octets, and MUST retrieve the document afresh where that
    comparison fails.  It SHOULD revalidate retained octets on the
    schedule the document's caching directives allow, for example with a
    conditional request, since otherwise a statement over an older
-   document keeps matching bytes the publisher no longer serves.  A
-   server holding no such octets retrieves the document.
-
-   The authorization server handles three failures as follows:
-
-   *  Where the digest does not match, the document has changed since
-      review, and the authorization server MUST reject the registration
-      with invalid_software_statement; the remedy is re-issuance over
-      the current document.
-
-   *  Where the document carries metadata the authorization server's
-      policy refuses, it rejects the registration with
-      invalid_client_metadata, since the refused values are the client's
-      own.
-
-   *  Where the retrieval does not complete, the authorization server
-      MUST reject with temporarily_unavailable and SHOULD use HTTP
-      status code 503, so that a client retries rather than discarding a
-      sound statement.
+   document keeps matching bytes the publisher no longer serves.
 
    The retrieval is client-controlled and reachable before any client is
    registered, so the external-retrieval protections and resource bounds
@@ -266,11 +230,12 @@ Table of Contents
       (Section 3.2), it MUST reject requests under the registration,
       other than the revalidation requests Section 3.2 permits: with
       invalid_client at the token and pushed authorization request
-      endpoints, and with statement_required at the authorization
-      endpoint (Section 6).
+      endpoints, because the registration rather than the grant has
+      lapsed, and with statement_required at the authorization endpoint
+      ([STATEMENT]).
 
    *  It SHOULD retain the expired record so that it can process a later
-      authenticated revalidation (Section 9.5); since a valid
+      authenticated revalidation (Section 9.4); since a valid
       replacement restores the registration (Section 3.2), no grace
       period is needed.
 
@@ -278,10 +243,8 @@ Table of Contents
    refusal record for the governing statement ([STATEMENT]), the
    registration ceases to be valid as it does at its effective expiry,
    and Section 3.2 is the recovery path; the client learns of the
-   withdrawal only from the rejection.  A server that uses no withdrawal
-   mechanism is bounded by the effective expiry alone.
-
-   The disposition of outstanding grants is local policy (Section 9.4).
+   withdrawal only from the rejection.  The disposition of outstanding
+   grants is local policy.
 
    If [CIMD] defines an expiry that a document asserts for its own
    client identifier, that value MAY only shorten the effective expiry
@@ -307,9 +270,7 @@ Table of Contents
 
    A server that omits the signal or advertises false does not bound
    registrations by statement expiry but still consumes the statement as
-   Section 3 requires, since a statement carries no metadata and
-   consuming one as ordinary [RFC7591] input would leave the
-   registration self-asserted.
+   Section 3 requires.
 
 3.2.  Revalidation
 
@@ -335,9 +296,7 @@ Table of Contents
    *  validate under the validation rules of [STATEMENT], including its
       audience where it carries one;
 
-   *  carry the governing statement's iss and sub;
-
-   *  be unexpired; and
+   *  carry the governing statement's iss and sub; and
 
    *  have an iat later than the governing statement's iat.
 
@@ -395,15 +354,9 @@ Table of Contents
    Section 6 defines.
 
    For a statement-governed registration, a statement from the governing
-   issuer is a delivery under Section 3.2: the request authenticates as
-   the registered client under the registration's own method, the
-   statement's sub equals the sub recorded for the registration, and the
-   statement renews validity and re-derives the registration's metadata.
-   Where the registration is still valid and the server requires a
-   current statement, a refresh-token request that omits one or delivers
-   one failing these rules is rejected with statement_required.  Where
-   the registration has already expired, Section 3.2 governs, including
-   its error codes.
+   issuer is a delivery under Section 3.2.  Where the registration is
+   still valid and the server requires a current statement, a refresh-
+   token request that omits one is rejected with statement_required.
 
    Where the registration is not statement-governed, a statement neither
    renews nor alters it; the server applies a reviewed change, if at
@@ -411,25 +364,15 @@ Table of Contents
 
 5.  Repeated Registration
 
-   One unexpired statement can be consumed more than once ([STATEMENT]),
-   and a server whose policy permits it can create more than one
-   registration from it.  The safe default is one registration per (iss,
-   sub) at one authorization server, counted across replacements, since
-   a replacement carries a new jti and a bound keyed on it would reset
-   at every renewal.  On repeated consumption, local policy can reject
-   the request, treat it as idempotent, or create another registration;
-   [RFC7591] defines no duplicate-registration protocol.  An idempotent
-   response MUST NOT return the existing registration's credentials,
-   such as its registration_access_token, since a repeated request can
-   come from any holder of a copy of the statement.
-
-   Where the reviewed document carries jwks or jwks_uri, every
-   registration derived from the statement uses that key material rather
-   than an instance-supplied replacement.  Software whose instances hold
-   their own keys therefore cannot register them: Section 3 takes no key
-   from the request, since at registration a statement is a bearer
-   artifact and a request-supplied key would let any holder of a copy
-   register reviewed branding under its own key.
+   One unexpired statement can be consumed more than once, within the
+   bounds of [STATEMENT]; the safe default is one registration per (iss,
+   sub) at one authorization server.  On repeated consumption, local
+   policy can reject the request, treat it as idempotent, or create
+   another registration; [RFC7591] defines no duplicate-registration
+   protocol.  An idempotent response MUST NOT return the existing
+   registration's credentials, such as its registration_access_token,
+   since a repeated request can come from any holder of a copy of the
+   statement.
 
 6.  Error Responses
 
@@ -466,6 +409,10 @@ Table of Contents
    +----------------------------------+-------------------------------+
    | Retrieval did not complete       | temporarily_unavailable       |
    +----------------------------------+-------------------------------+
+   | Document exceeds the server's    | invalid_client_metadata       |
+   | size bound ([STATEMENT]), so     |                               |
+   | that retrying cannot succeed     |                               |
+   +----------------------------------+-------------------------------+
    | Document with a redirection URI  | invalid_client_metadata       |
    | another application could claim  |                               |
    | (Section 3)                      |                               |
@@ -474,17 +421,9 @@ Table of Contents
                                  Table 1
 
    A registration management request ([RFC7592]) carrying a failing
-   replacement uses the same codes.  An authorization server SHOULD use
-   HTTP status code 503 with temporarily_unavailable and 400 with the
-   others.
-
-   Registration expiry is reported as invalid_client at the token and
-   pushed authorization request endpoints, because the registration
-   rather than the grant has lapsed, and as statement_required at the
-   authorization endpoint, which tells the client to deliver a
-   replacement through the pushed authorization request endpoint
-   ([STATEMENT]).  Neither rejection indicates refresh-token replay
-   ([RFC9700]).
+   replacement uses the same codes.  Registration expiry is reported as
+   Section 3.1 defines.  An authorization server SHOULD use HTTP status
+   code 503 with temporarily_unavailable and 400 with the others.
 
 7.  Example
 
@@ -532,11 +471,9 @@ Table of Contents
 9.1.  Statements at Registration
 
    A statement consumed at registration is a reusable bearer artifact
-   until it expires.  An issuer limits that exposure with a narrow
-   audience and a short lifetime, and a statement permits registration
-   only where its statement_uses claim names registration ([STATEMENT]).
-   The repeated-consumption bounds of [STATEMENT] and Section 5 limit
-   what a stolen statement can create.
+   until it expires.  Its audience, lifetime, and statement_uses claim
+   ([STATEMENT]) and the bounds of Section 5 limit what a stolen
+   statement can create.
 
 9.2.  Renewal Authenticates the Credential
 
@@ -551,39 +488,28 @@ Table of Contents
    credential rotation, sender-constrained client authentication, and
    the repeated-consumption limits of [STATEMENT] and Section 5, and
    SHOULD treat a credential compromise as requiring re-registration
-   rather than renewal.  Runtime presentation does not have this
-   limitation, because every presentation binds the presenter to the
-   reviewed document, by a key the document carries or, for a public
-   client, by the redirection URIs it lists.
+   rather than renewal.  Runtime presentation ([STATEMENT]) does not
+   have this limitation, because it binds every presenter to the
+   reviewed document.
 
 9.3.  Registration Fraud and Impersonation
 
    Open registration permits client_name, logo_uri, and client_uri
-   values that imitate trusted software on consent screens.  Requiring a
-   statement replaces self-asserted branding with issuer-reviewed
-   values.  Servers that render such values on consent screens SHOULD
-   prefer those from a reviewed document and SHOULD apply heightened
-   scrutiny to registrations that claim user-visible branding without a
-   statement.
+   values that imitate trusted software on consent screens (Section 5 of
+   [RFC7591]).  Requiring a statement replaces self-asserted branding
+   with issuer-reviewed values.  Servers that render such values on
+   consent screens SHOULD prefer those from a reviewed document and
+   SHOULD apply heightened scrutiny to registrations that claim user-
+   visible branding without a statement.
 
    Requiring a statement for registration also means each new client
    identity needs another issuer decision, so a discarded client cannot
-   return at no cost, and the per-sub bounds of Section 5 limit how many
-   registrations one piece of software obtains.  Neither control makes
-   metadata true: a client that misleads review can obtain a genuine
-   statement for fraudulent metadata, so a statement is only as reliable
-   as the issuer's verification.
+   return at no cost.  Neither requirement makes metadata true: a client
+   that misleads review can obtain a genuine statement for fraudulent
+   metadata, so a statement is only as reliable as the issuer's
+   verification.
 
-9.4.  Enforcement Bounds
-
-   A lapsed statement makes requests under a statement-governed
-   registration fail at the registration's effective expiry
-   (Section 3.1).  Grants under the registration remain subject to the
-   server's grant policy after it expires, and a registration at a
-   server that does not advertise the validity model is not bounded by
-   the statement.
-
-9.5.  Observable State
+9.4.  Observable State
 
    A retained expired registration is distinguishable from an unknown
    client, because recovery requires the server to authenticate the
@@ -598,11 +524,8 @@ Table of Contents
 
 10.  Privacy Considerations
 
-   A registration request reveals to the authorization server the
-   client's issuer relationship and, where the statement carries an aud
-   claim, the other authorization servers the client intends to
-   establish relationships with, as a runtime presentation does
-   ([STATEMENT]).
+   A registration request reveals to the authorization server what a
+   runtime presentation does ([STATEMENT]).
 
 11.  IANA Considerations
 
@@ -721,19 +644,10 @@ Table of Contents
 
 12.2.  Informative References
 
-   [AU-CDR]   "Consumer Data Standards", n.d.,
-              <https://consumerdatastandardsaustralia.github.io/
-              standards/>.
-
    [RFC7592]  Richer, J., Ed., Jones, M., Bradley, J., and M. Machulak,
               "OAuth 2.0 Dynamic Client Registration Management
               Protocol", RFC 7592, DOI 10.17487/RFC7592, July 2015,
               <https://www.rfc-editor.org/rfc/rfc7592>.
-
-   [UK-OPEN-BANKING]
-              "Open Banking UK Dynamic Client Registration", n.d.,
-              <https://openbankinguk.github.io/dcr-docs-pub/v3.3/
-              dynamic-client-registration.html>.
 
 Acknowledgments
 
