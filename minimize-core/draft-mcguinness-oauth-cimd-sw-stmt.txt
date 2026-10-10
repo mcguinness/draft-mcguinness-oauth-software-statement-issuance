@@ -902,10 +902,18 @@ Table of Contents
    state references it.
 
    A token request that redeems an authorization code opened by a
-   presentation MUST demonstrate possession of the same proven key under
-   the same sender-constraint mechanism, and MUST NOT carry the
-   software_statement parameter.  A redemption carrying a statement is
-   rejected with invalid_request, and a failed key binding with
+   presentation:
+
+   *  MUST have a client_id exactly equal to the establishment's sub,
+      even where the client authenticates;
+
+   *  MUST demonstrate possession of the same proven key under the same
+      sender-constraint mechanism; and
+
+   *  MUST NOT carry the software_statement parameter.
+
+   A redemption carrying a statement is rejected with invalid_request; a
+   wrong client identifier or failed key binding is rejected with
    invalid_grant.  This prohibition covers redemption of a code bound to
    an establishment; a registered client redeeming its own code may
    deliver a replacement statement under [REGISTRATION], which is a
@@ -993,11 +1001,11 @@ Table of Contents
    The server retains the watermark at least as long as the maximum
    statement lifetime it honors for that issuer.
 
-   For the same reason, the first presentation of a replacement retires
-   its predecessor for every instance of the software at that server, so
-   instances need the current statement from a source they share, such
-   as an endpoint the publisher operates, rather than a copy fixed when
-   each was built or installed.
+   For the same reason, the first presentation of a replacement that
+   establishes the client retires its predecessor for every instance of
+   the software at that server, so instances need the current statement
+   from a source they share, such as an endpoint the publisher operates,
+   rather than a copy fixed when each was built or installed.
 
    A trusting authorization server SHOULD bound the number of
    establishments, and any registrations ([REGISTRATION]), derived from
