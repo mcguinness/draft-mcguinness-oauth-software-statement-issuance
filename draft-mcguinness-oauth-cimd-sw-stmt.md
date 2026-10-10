@@ -297,14 +297,16 @@ A server that records such a requirement MUST NOT admit software in a covered na
 
 An authorization server that issued a statement already holds the decision that statement records. Where it is also the trusting authorization server, it MAY admit the client on that record rather than require the statement to be presented back to it, at registration or at runtime.
 
-Such a server MUST apply the conditions it would apply to a presentation, since a decision it made is not a document it has re-read:
+Such a server MUST apply the conditions it would apply to a presented statement, since a decision it made is not a document it has re-read:
 
 * the recorded decision is unexpired, and so is the registration where the validity model of {{REGISTRATION}} governs it;
 * its status is current, where the server publishes status ({{validation}});
 * the document at `sub` has been obtained; and
 * that document's digest equals the one recorded ({{metadata-digest}}).
 
-A client dealing only with the server that reviewed it therefore presents nothing; portability matters only to other servers.
+At runtime, the recorded decision replaces the presented statement, not the proof of who is making the request. The request MUST meet the sender constraint of {{sender-constraint}} against the reviewed document, as a presentation would, and a successful admission creates an establishment ({{grant-lifecycle}}). At registration, the rules of {{REGISTRATION}} apply as they do to a statement presented there.
+
+A client dealing only with the server that reviewed it therefore presents no statement; portability matters only to other servers.
 
 ## Multi-Tenant Issuers {#multi-tenant-issuers}
 
