@@ -378,7 +378,13 @@ An authorization server MAY reuse an establishment across presentations that res
 
 The establishment persists while the grant depends on it. The authorization server MUST bind the resulting `request_uri`, authorization code, refresh token, and other grant continuation state to the establishment, as applicable, and MAY discard it once no such state references it.
 
-A token request that redeems an authorization code opened by a presentation MUST demonstrate possession of the same proven key under the same sender-constraint mechanism, and MUST NOT carry the `software_statement` parameter. A redemption carrying a statement is rejected with `invalid_request`, and a failed key binding with `invalid_grant`. This prohibition covers redemption of a code bound to an establishment; a registered client redeeming its own code may deliver a replacement statement under {{REGISTRATION}}, which is a delivery, not a presentation.
+A token request that redeems an authorization code opened by a presentation:
+
+* MUST have a `client_id` exactly equal to the establishment's `sub`, even where the client authenticates;
+* MUST demonstrate possession of the same proven key under the same sender-constraint mechanism; and
+* MUST NOT carry the `software_statement` parameter.
+
+A redemption carrying a statement is rejected with `invalid_request`; a wrong client identifier or failed key binding is rejected with `invalid_grant`. This prohibition covers redemption of a code bound to an establishment; a registered client redeeming its own code may deliver a replacement statement under {{REGISTRATION}}, which is a delivery, not a presentation.
 
 Expiry after presentation does not by itself invalidate an establishment already bound; the authorization server controls continued use as {{refresh}} defines.
 
