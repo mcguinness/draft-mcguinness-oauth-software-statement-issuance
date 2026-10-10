@@ -81,23 +81,11 @@ A Client ID Metadata Document carries a client's own claims and can change at an
 
 A Client ID Metadata Document {{CIMD}} identifies a client by a URL and supplies its metadata from a document the client controls; that metadata is the client's own claim and can change at any time. An organization that reviews client software, such as a publisher program, an enterprise security function, or an ecosystem operator, has no interoperable way to record its review of a particular version of the document, or to have an authorization server it has never dealt with enforce that review.
 
-This specification defines that record and its enforcement. The software statement (Section 2.3 of {{RFC7591}}) profiled here names the client by its document URL and binds the review to the document's exact octets by a digest ({{metadata-digest}}). An authorization server that trusts the statement's issuer admits the client at request time on the reviewed document, and no other, without creating a registration ({{cimd-presentation}}). The document remains the metadata and the statement carries the decision. One review is therefore portable across every authorization server in the statement's audience, each of which configures its own issuer trust, subject scope, grant policy, and token lifetime. An enterprise operating a statement issuer is the motivating deployment ({{deployment-model}}).
+This specification profiles the software statement (Section 2.3 of {{RFC7591}}) for that purpose. A statement names the client by its document URL and binds the review to the document's exact octets by a digest ({{metadata-digest}}). An authorization server that trusts the statement's issuer admits the client at request time on the reviewed document, and no other, without creating a registration ({{cimd-presentation}}). The document remains the metadata and the statement records the decision, so one review is portable across every authorization server in the statement's audience, each of which keeps its own issuer trust, grant policy, and token lifetime.
 
-The UK Open Banking Directory and the Australian Consumer Data Right Register each operate a central issuer whose statements many unrelated authorization servers consume at registration through the {{RFC7591}} `software_statement` parameter ({{UK-OPEN-BANKING}}, {{AU-CDR}}). Neither conforms to this specification: neither binds a statement to a document version the authorization server retrieves, and both carry client metadata in the statement.
+A statement vouches for metadata, not for its presenter. Possession of a statement alone admits nothing: the presenter proves a key the reviewed document carries or, for software distributed to end users, receives the authorization code at a redirection URI the document lists and no other application on the device can claim ({{sender-constraint}}).
 
-{{OPENID-FED}} conveys attested metadata through trust chains: an authorization server resolves an entity to a trust anchor rather than configuring the issuer that vouched for it, and applies metadata derived by policy along that chain. This specification instead keeps the reviewed document as the metadata and leaves issuer trust to local configuration ({{issuer-trust}}). A federation can supply that issuer trust and carry a review as a trust mark, but resolved metadata is not the octets a digest covers, so a client's metadata comes from one source or the other, not both. Ecosystems already operating a federation should consider its registration mechanisms first.
-
-This specification defines the statement, its validation, issuer trust configuration ({{issuer-trust}}), and runtime consumption ({{cimd-presentation}}). This specification does not define how a client obtains a statement. {{REGISTRATION}} defines consumption of the same statement in an {{RFC7591}} registration request, where the statement's expiry bounds the registration. {{REGISTRATION}} builds on this specification, which does not depend on it.
-
-A statement authorizes metadata, not its presenter, and nothing in this specification attests software instances or binaries. How the presenter is bound depends on the kind of client ({{sender-constraint}}):
-
-* A confidential client proves a key the reviewed document carries.
-* Software distributed to end users, which can hold no such key, is bound by the reviewed redirection URIs instead.
-* Software whose redirection URIs another application could claim is reviewed but not admitted on the strength of the review.
-
-This specification defines only one layer of the decision to let a client act: admission, which sits above the sender-constraint proof that identifies the presenter and the grant that carries a user's authorization. A statement records who reviewed the software and what they attested, not whether a particular customer currently permits the software to operate in its tenant. That question is answered on the customer's schedule rather than the reviewer's; where a customer's identity provider mediates the grant, the question is answered continuously by whether that provider issues an assertion ({{identity-assertions}}). A tenant-scoped decision (`aud_tenant`) constrains where a review applies; it does not authorize any particular user or transaction.
-
-Ceasing statement renewal stops new admissions after the applicable expiry, and ends continuation of a grant where the server requires a current statement ({{refresh}}). It does not revoke issued access tokens ({{enforcement-bounds}}).
+This specification defines the statement, its validation, issuer trust ({{issuer-trust}}), and runtime admission ({{cimd-presentation}}). It does not define how a client obtains a statement. {{REGISTRATION}} defines consumption of the same statement in an {{RFC7591}} registration request; it builds on this specification, which does not depend on it. {{deployment-model}} describes the motivating deployment, and {{relationship}} relates this specification to other work.
 
 ## Protocol Overview
 
@@ -107,28 +95,6 @@ The following non-normative sequence summarizes runtime admission:
 2. The authorization server validates the statement ({{profiles}}), resolves the reviewed document ({{effective-metadata}}), and verifies the sender constraint against it ({{sender-constraint}}).
 3. The request proceeds under that document's metadata, and no persistent registration is created.
 4. The state on which the rest of the grant depends persists as an establishment ({{grant-lifecycle}}).
-
-## Relationship to Client Attestation {#relationship-attestation}
-
-This section is non-normative.
-
-A software statement is an attestation: a signed third-party assertion about a client, accepted by an authorization server that trusts the signer. It is an attributable claim bounded by the signer's process, not proof that what it says is true. It differs from the client attestation of {{ABCA}} and the client instance assertion of {{CLIENT-INSTANCE}} in subject, authority, lifetime, and effect, not in kind.
-
-Subject:
-: A software statement attests client software and the metadata a reviewer evaluated. A client attestation attests a running instance and the key it holds.
-
-Authority:
-: A software statement is signed by a review authority whose scope is a set of client identifiers. A client attestation is signed by a client attester whose scope is a deployment of the software. An authorization server configures trust in the two independently.
-
-Lifetime and audience:
-: A software statement carries a reviewer-chosen expiry and, optionally, an audience, and is consumed at every authorization server that trusts its issuer, within that audience where it names one. A client attestation carries its own expiry and is presented with a proof bound to the request it accompanies.
-
-Effect:
-: A software statement supports admission: it says which client this is and what metadata a named reviewer stands behind. A client attestation supplies presenter proof: that the party sending this request holds a key someone vouches for. Neither grants access, and neither substitutes for the other.
-
-A deployment holding only a client attestation knows what is running but not whether anyone approved it; one holding only a software statement knows the software was reviewed but not that this sender is running it. Runtime presentation therefore always requires both the statement and a sender constraint ({{sender-constraint}}).
-
-This specification defines no new attestation format and no new attester role. Where the presenter proves a key the reviewed document carries, it uses ordinary client authentication or DPoP; binding a presenter attestation defined elsewhere is an extension ({{extensions}}).
 
 # Conventions and Definitions
 
@@ -508,9 +474,33 @@ The two lifecycles need no synchronization. Onboarding a provider is one trust c
 
 When the customer's issuer stops renewing, the application lapses in that customer's tenant at every provider that requires the customer's decision, leaving the listing and other customers unaffected. When the marketplace stops renewing, the listing expires in every tenant that relies on it, along with registrations a provider bounds by it ({{REGISTRATION}}). Either lapse stops new runtime presentations of the lapsed statements after `exp` and ends refresh-based continuation where the provider requires a current statement ({{refresh}}). Already-issued access tokens remain governed by their own lifetime, and providers retain local control over grants and emergency deprovisioning.
 
-# Relationship to Identity Assertions {#identity-assertions}
+# Relationship to Other Work {#relationship}
 
-A statement records that a named party reviewed software and vouched for its metadata, not that a particular customer currently permits that software to act in its tenant. The two change on different clocks.
+This section is non-normative.
+
+## Client Attestation {#relationship-attestation}
+
+A software statement is an attestation: a signed third-party assertion about a client, accepted by an authorization server that trusts the signer. It is an attributable claim bounded by the signer's process, not proof that what it says is true. It differs from the client attestation of {{ABCA}} and the client instance assertion of {{CLIENT-INSTANCE}} in subject, authority, lifetime, and effect, not in kind.
+
+Subject:
+: A software statement attests client software and the metadata a reviewer evaluated. A client attestation attests a running instance and the key it holds.
+
+Authority:
+: A software statement is signed by a review authority whose scope is a set of client identifiers. A client attestation is signed by a client attester whose scope is a deployment of the software. An authorization server configures trust in the two independently.
+
+Lifetime and audience:
+: A software statement carries a reviewer-chosen expiry and, optionally, an audience, and is consumed at every authorization server that trusts its issuer, within that audience where it names one. A client attestation carries its own expiry and is presented with a proof bound to the request it accompanies.
+
+Effect:
+: A software statement supports admission: it says which client this is and what metadata a named reviewer stands behind. A client attestation supplies presenter proof: that the party sending this request holds a key someone vouches for. Neither grants access, and neither substitutes for the other.
+
+A deployment holding only a client attestation knows what is running but not whether anyone approved it; one holding only a software statement knows the software was reviewed but not that this sender is running it. Runtime presentation therefore always requires both the statement and a sender constraint ({{sender-constraint}}).
+
+This specification defines no new attestation format and no new attester role. Where the presenter proves a key the reviewed document carries, it uses ordinary client authentication or DPoP; binding a presenter attestation defined elsewhere is an extension ({{extensions}}).
+
+## Identity Assertions {#identity-assertions}
+
+This specification defines one layer of the decision to let a client act: admission, which sits above the sender-constraint proof that identifies the presenter and the grant that carries a user's authorization. A statement records that a named party reviewed software and vouched for its metadata, not that a particular customer currently permits that software to act in its tenant. The two change on different clocks. A tenant-scoped decision (`aud_tenant`) constrains where a review applies; it does not authorize any particular user or transaction.
 
 Where a customer's identity provider mediates a grant, as when a cross-domain identity assertion carries the customer's users to a provider, the identity provider already answers the second question per grant. It issues assertions only for clients the customer permits, so withdrawal takes effect on the next grant and no artifact outlives the decision. A deployment that wants that property should rely on the identity provider rather than reproduce it with statements.
 
@@ -519,6 +509,14 @@ This specification addresses the durable question, which a statement answers whe
 * a publisher program or ecosystem directory vouching to servers it will never see;
 * a provider admitting software it has never registered; or
 * a customer that wants an auditable, portable record of what its review covered, rather than an inference from an assertion having been issued.
+
+## OpenID Federation
+
+{{OPENID-FED}} conveys attested metadata through trust chains: an authorization server resolves an entity to a trust anchor rather than configuring the issuer that vouched for it, and applies metadata derived by policy along that chain. This specification instead keeps the reviewed document as the metadata and leaves issuer trust to local configuration ({{issuer-trust}}). A federation can supply that issuer trust and carry a review as a trust mark, but resolved metadata is not the octets a digest covers, so a client's metadata comes from one source or the other, not both. Ecosystems already operating a federation should consider its registration mechanisms first.
+
+## Existing Software Statement Ecosystems
+
+The UK Open Banking Directory and the Australian Consumer Data Right Register each operate a central issuer whose statements many unrelated authorization servers consume at registration through the {{RFC7591}} `software_statement` parameter ({{UK-OPEN-BANKING}}, {{AU-CDR}}). Neither conforms to this specification: neither binds a statement to a document version the authorization server retrieves, and both carry client metadata in the statement.
 
 # Error Responses {#errors}
 
