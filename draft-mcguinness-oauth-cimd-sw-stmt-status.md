@@ -45,8 +45,6 @@ normative:
   SSF:
     target: https://openid.net/specs/openid-sharedsignals-framework-1_0.html
     title: "OpenID Shared Signals Framework Specification 1.0"
-
-informative:
   CAEP:
     target: https://openid.net/specs/openid-caep-1_0.html
     title: "OpenID Continuous Access Evaluation Profile 1.0"
