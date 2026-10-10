@@ -113,12 +113,12 @@ The retrieval is client-controlled and reachable before any client is registered
 
 An authorization server that advertises `software_statement_registration_validity_supported` as `true` MUST apply the following validity model to every registration it creates from a validated software statement, whichever issuer signed it, so that a client can rely on the signal ({{authorization-server-metadata}}) before it registers:
 
-* It MUST record the governing statement's `iss`, `jti`, `sub`, and `iat`, and its `status` claim where it carries one, with the registration, and the registration's effective expiry: the earlier of the statement's `exp` and its `iat` plus the maximum statement lifetime the server records for that issuer in its issuer trust configuration ({{STATEMENT}}). The effective expiry is what a renewal extends and what `registration_expires_at` reports.
+* It MUST record the governing statement's `iss`, `jti`, `sub`, and `iat`, and any claim by which a withdrawal mechanism locates it, such as `status`, with the registration, and the registration's effective expiry: the earlier of the statement's `exp` and its `iat` plus the maximum statement lifetime the server records for that issuer in its issuer trust configuration ({{STATEMENT}}). The effective expiry is what a renewal extends and what `registration_expires_at` reports.
 * The registration is valid until that effective expiry.
 * Once the effective expiry passes without a replacement ({{revalidation}}), it MUST reject requests under the registration, other than the revalidation requests {{revalidation}} permits: with `invalid_client` at the token and pushed authorization request endpoints, and with `statement_required` at the authorization endpoint ({{errors}}).
 * It SHOULD retain the expired record so that it can process a later authenticated revalidation ({{oracle-considerations}}); since a valid replacement restores the registration ({{revalidation}}), no grace period is needed.
 
-The effective expiry is an upper bound. Where the server resolves status for the governing statement's issuer and that status resolves as `INVALID`, or as `SUSPENDED` where its policy for that issuer refuses it ({{STATEMENT}}), the registration ceases to be valid as it does at its effective expiry, and {{revalidation}} is the recovery path; the client learns of the withdrawal only from the rejection. A server that does not resolve status is bounded by the effective expiry alone.
+The effective expiry is an upper bound. Where the server holds a refusal record for the governing statement ({{STATEMENT}}), the registration ceases to be valid as it does at its effective expiry, and {{revalidation}} is the recovery path; the client learns of the withdrawal only from the rejection. A server that uses no withdrawal mechanism is bounded by the effective expiry alone.
 
 The disposition of outstanding grants is local policy ({{enforcement-bounds}}).
 
@@ -187,7 +187,7 @@ Rejections at a registration endpoint use the error response of Section 3.2.2 of
 | --- | --- |
 | Malformed, or failing signature or claim validation | `invalid_software_statement` |
 | Valid but not acceptable here: issuer not configured, `aud` excludes this server, `sub` outside the issuer's scope, `aud_tenant` not this request's tenant or absent where required, `statement_uses` excludes this use | `unapproved_software_statement` |
-| Expired, or refused by a refusal record, including a status resolved as `INVALID`, or as `SUSPENDED` where policy refuses it, or superseded under the `iat` floor of {{STATEMENT}} | `invalid_software_statement` |
+| Expired, refused by a refusal record, or superseded under the `iat` floor of {{STATEMENT}} | `invalid_software_statement` |
 | Required statement absent | `unapproved_software_statement` |
 | Digest does not match the retrieved document | `invalid_software_statement` |
 | Document carries metadata this server's policy refuses | `invalid_client_metadata` |

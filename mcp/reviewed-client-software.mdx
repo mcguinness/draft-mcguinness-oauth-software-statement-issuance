@@ -107,7 +107,7 @@ A statement that passes validation, names the document the server fetched, and i
 
 The MCP Authorization Server **MUST NOT** require an MCP Client it admits under this profile to register. Where no statement remains after retrieval, or retrieval does not complete, the server applies the policy it applies to any Client ID Metadata Document client it has not reviewed. A retrieval failure is never treated as a withdrawal.
 
-Where the server resolves statement status, a withdrawn statement ends refresh for the grants it opened, as CIMD Software Statement requires.
+Where the server learns of a withdrawal, through a withdrawal mechanism such as a status list or from its operator, the withdrawn statement ends refresh for the grants it opened, as CIMD Software Statement requires.
 
 MCP requires access tokens in the `Authorization: Bearer` header. Where a public client binds a DPoP key at redemption, the MCP Authorization Server **MUST** issue the access token with a `token_type` of `Bearer` and bind only the refresh token to that key, as [Section 5 of RFC9449](https://datatracker.ietf.org/doc/html/rfc9449#section-5) permits, unless it knows the MCP Server accepts DPoP-bound access tokens.
 
@@ -117,7 +117,7 @@ For a client whose document carries any loopback redirection URI, whatever authe
 
 - **MUST** treat the client exactly as an unreviewed Client ID Metadata Document client, and **MUST NOT** let the statement satisfy a policy that requires reviewed software;
 - **MUST NOT** present the review to the user as an assurance about the application requesting access;
-- **MAY** record the statement's issuer for audit and inventory, and **MAY** refuse the request where the statement's status shows a withdrawal.
+- **MAY** record the statement's issuer for audit and inventory, and **MAY** refuse the request where the server holds a refusal record for the statement.
 
 ### 4.5 Tenants
 
@@ -259,4 +259,4 @@ Withdrawal is not a denylist. A publisher that stops serving a withdrawn stateme
 
 ### 8.5 Further Considerations
 
-The security and privacy considerations of CIMD Software Statement apply, including those on issuer trust, statement key compartments, multi-tenant consumers, status resolution, and external retrieval.
+The security and privacy considerations of CIMD Software Statement apply, including those on issuer trust, statement key compartments, multi-tenant consumers, withdrawal, and external retrieval.

@@ -47,11 +47,11 @@ normative:
   IDJAG:
     target: https://datatracker.ietf.org/doc/draft-ietf-oauth-identity-assertion-authz-grant
     title: "Identity Assertion Authorization Grant"
+
+informative:
   STATUSLIST:
     target: https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list
     title: "Token Status List"
-
-informative:
   REGISTRATION:
     target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-registration
     title: "CIMD Software Statement Registration"
@@ -120,7 +120,7 @@ Proven Key:
 : The key for which the presenter demonstrates possession during runtime presentation. The accepted proof path binds this key to the statement as specified in {{sender-constraint}}.
 
 Refusal Record:
-: State an authorization server holds when it has learned that a statement ceased to be acceptable before its expiry, whether from a status it resolved ({{validation}}) or from its own operator. Wherever this specification requires a statement to be current, a statement matching a refusal record is not current. A refusal derived from a resolved status lasts only as long as that status: a later resolution supersedes it, and a server MUST NOT retain such a refusal once a later resolution no longer supports it. A refusal its operator entered persists on the operator's own terms.
+: State an authorization server holds when it has learned that a statement ceased to be acceptable before its expiry, whether from a withdrawal mechanism it uses for the issuer ({{withdrawal}}) or from its own operator. Wherever this specification requires a statement to be current, a statement matching a refusal record is not current. A refusal derived from a withdrawal mechanism lasts only as long as that mechanism reports the withdrawal: a later report supersedes it, and a server MUST NOT retain such a refusal once the mechanism no longer supports it. A refusal its operator entered persists on the operator's own terms.
 
 # The Software Statement {#profiles}
 
@@ -158,7 +158,7 @@ A statement asserts that its issuer evaluated the Client ID Metadata Document wh
 : REQUIRED. The metadata digest ({{metadata-digest}}) of the Client ID Metadata Document the issuer evaluated. It binds the statement to the exact document content evaluated, so any party can determine whether the client's currently published metadata still matches it.
 
 `status`:
-: OPTIONAL. The `status` claim as {{STATUSLIST}} defines it, locating this statement in the issuer's Status List Token. It lets an issuer end a decision before `exp` without a trusting authorization server contacting the issuer for each statement. {{status-publication}} requires an issuer that publishes status to carry the claim in every statement it issues from then on, since a trusting authorization server cannot otherwise distinguish a statement that omits the claim from one whose issuer publishes no status.
+: OPTIONAL. The `status` claim as {{STATUSLIST}} defines it, by which a statement locates itself in a Status List Token. Only a withdrawal mechanism that uses the claim processes it; this specification does not ({{withdrawal}}).
 
 A statement issued under this specification MUST NOT contain client metadata claims. The reviewed metadata is the document the digest names; metadata copied into the statement would duplicate what the digest binds and reopen questions of precedence and partial review. Vouching for particular members without binding the whole document requires an extension defining what a partial review asserts and how a trusting authorization server applies it ({{extensions}}).
 
@@ -197,11 +197,7 @@ Before accepting a statement, a trusting authorization server MUST:
 * reject a statement carrying any claim registered in the IANA "OAuth Dynamic Client Registration Metadata" registry, which {{profiles}} forbids, and ignore any other claim it does not recognize; and
 * apply the JWT validation guidance in {{RFC8725}}.
 
-Where the statement carries `status` and the trusting authorization server resolves statuses for that issuer, it MUST reject a statement whose status is `INVALID`, and MUST apply its configured policy for that issuer to a statement whose status is `SUSPENDED`. A rejection on status uses the refusal-record row of {{errors}}, because re-presenting the same statement cannot succeed while that status stands.
-
-Where a trusting authorization server resolves statuses for an issuer, resolution follows {{STATUSLIST}}, including its caching rules and its requirement to reject where the referenced index lies outside the list. Such a server MAY therefore decide from a Status List Token it already holds within that token's validity. A server MUST NOT replace a Status List Token it holds with one whose `iat` is earlier, and MUST treat one whose `iat` is equal but whose contents differ as a resolution failure. A host serving an older token could otherwise restore a status the issuer has withdrawn. An issuer gives each token it publishes at a list URI a later `iat` than the last ({{status-publication}}).
-
-Status constrains and never relaxes. A statement carrying no `status`, or whose status the server cannot resolve, is bounded by `exp` as it would be otherwise, and a server MUST NOT treat status as grounds to accept a statement past `exp`. What a server does when resolution fails is local policy. Refusing makes issuer availability a precondition for every request the statement governs; proceeding leaves a withdrawn statement acceptable for the rest of its lifetime.
+A trusting authorization server MUST reject a statement for which it holds a refusal record ({{withdrawal}}). The rejection uses the refusal-record row of {{errors}}, because re-presenting the same statement cannot succeed while the refusal stands.
 
 A trusting authorization server accepts only configured issuers ({{issuer-trust}}) and obtains their statement signing keys from the `software_statement_jwks_uri` value in the issuer's authorization server metadata ({{authorization-server-metadata}}), never from the statement.
 
@@ -215,19 +211,13 @@ A review covers the document that `cimd_digest` identifies. At registration, a d
 
 Because an issuer reviews the document it retrieves from the client identifier URL, a changed document is always served before any statement over it exists; a publisher shortens that gap by arranging prompt review. The statement's bounded lifetime limits how stale a review can become: drift that the digest comparison never observes still expires with the statement.
 
-## Status Publication {#status-publication}
+## Withdrawal {#withdrawal}
 
-An issuing authorization server that ends decisions before their expiry publishes statement status as {{STATUSLIST}} defines and carries the `status` claim in the statements it issues ({{profiles}}). The statement records what was decided; the status list records whether that decision still stands.
+An issuer can end a decision before the statement's `exp` by withdrawing it. How a trusting authorization server learns of a withdrawal is a withdrawal mechanism. This specification requires no withdrawal mechanism and defines none; Token Status List {{STATUSLIST}} is one, and extensions define how a mechanism applies to these statements ({{extensions}}). A trusting authorization server that learns of a withdrawal, through a mechanism it uses for that issuer or from its own operator, holds a refusal record for the statement.
 
-An issuer that publishes status:
+A withdrawal constrains and never relaxes. A statement for which no withdrawal mechanism reports a withdrawal, or for which the server cannot consult the mechanism it uses, is bounded by `exp` as it would be otherwise, and a server MUST NOT treat any withdrawal mechanism as grounds to accept a statement past `exp`. What a server does when it cannot consult a mechanism it relies on is local policy. Refusing makes issuer availability a precondition for every request the statement governs; proceeding leaves a withdrawn statement acceptable for the rest of its lifetime.
 
-* MUST publish it for every statement it issues under a given `iss` from the point it begins publishing, not for a subset, so that a trusting authorization server can read an absent claim as meaning the issuer publishes no status. Statements issued before that point carry no claim, so the inference holds once those have expired;
-* MUST assign each statement its own index and MUST NOT reuse an index across statements. Withdrawing a statement then affects no other, including its replacement: withdrawing a superseded statement does not withdraw its replacement, and withdrawing a replacement does not restore its predecessor;
-* MUST sign the Status List Token with a key published at the `jwks_uri` of its authorization server metadata {{RFC8414}}, never with a statement signing key ({{authorization-server-metadata}});
-* MUST include `exp` in every Status List Token it publishes, so that an older token cannot stand in for a newer one indefinitely; and
-* MUST give each Status List Token it publishes at a given list URI an `iat` later than that of any token it published there before, so that a trusting authorization server can tell the newer of two apart.
-
-An issuer that issues a replacement narrower than the statement it replaces SHOULD withdraw the earlier statement. A replacement is narrower when it:
+An issuer that uses a withdrawal mechanism and issues a replacement narrower than the statement it replaces SHOULD withdraw the earlier statement. A replacement is narrower when it:
 
 * is over a document that no longer carries a key, redirection URI, or scope the earlier document carried;
 * has a narrower `aud`, `aud_tenant`, or `statement_uses`; or
@@ -235,7 +225,7 @@ An issuer that issues a replacement narrower than the statement it replaces SHOU
 
 What was removed may be why the replacement was issued; a trusting authorization server that has not yet seen the replacement, or at which it does not validate, would otherwise accept the earlier statement until it expires.
 
-Status does not replace lifetime. A trusting authorization server is not obliged to resolve status, so an issuer chooses `exp` assuming none does; status shortens a decision but does not bound it.
+Withdrawal does not replace lifetime. A trusting authorization server is not obliged to use any withdrawal mechanism, so an issuer chooses `exp` assuming none does; a withdrawal shortens a decision but does not bound it.
 
 # Issuer Trust Establishment {#issuer-trust}
 
@@ -266,7 +256,7 @@ An authorization server that issued a statement already holds the decision that 
 Such a server MUST apply the conditions it would apply to a presented statement, since a decision it made is not a document it has re-read:
 
 * the recorded decision is unexpired, and so is the registration where the validity model of {{REGISTRATION}} governs it;
-* its status is current, where the server publishes status ({{validation}});
+* the server has not withdrawn the decision ({{withdrawal}});
 * the document at `sub` has been obtained; and
 * that document's digest equals the one recorded ({{metadata-digest}}).
 
@@ -389,7 +379,7 @@ A presentation is review-only where the reviewed document carries any redirectio
 
 A review-only presentation creates no establishment, admits nothing, and does not advance the watermark of {{multi-instance}}, since it changes nothing for the software's other instances. The authorization server proceeds as it would for the same Client ID Metadata Document client presenting no statement. The statement of a review-only presentation MUST NOT satisfy a policy requiring reviewed software, and the authorization server SHOULD NOT present that review to the user as an assurance about the presenter. Where the server's policy requires reviewed software, it rejects a review-only client with `unauthorized_client`, since no statement can make such a client reviewed.
 
-For a review-only presentation, the authorization server MAY record the statement's issuer for audit and inventory. For such a presentation, it MAY refuse the request where the statement's status shows a withdrawal, since status constrains and never relaxes ({{validation}}), subject to the bounds of {{external-retrieval}}.
+For a review-only presentation, the authorization server MAY record the statement's issuer for audit and inventory. For such a presentation, it MAY refuse the request where it holds a refusal record for the statement, since a withdrawal constrains and never relaxes ({{withdrawal}}), subject to the bounds of {{external-retrieval}}.
 
 A presentation at the token endpoint under {{runtime-presentation}} opens no redirect and has nothing to bind it, so an authorization server MUST reject one from a client whose reviewed document carries no key material, with `invalid_client`. A statement pulled for such a client at the token endpoint is instead review-only ({{pulled-statements}}).
 
@@ -408,7 +398,7 @@ A presentation refused because the bound on establishments of {{multi-instance}}
 A successful presentation creates an establishment, the state a server persists for the grant, comprising:
 
 * the validated `sub`;
-* the statement identity, its `iss`, `jti`, `iat`, and expiry, and its `status` claim where it carries one;
+* the statement identity, its `iss`, `jti`, `iat`, and expiry, and any claim by which a withdrawal mechanism locates it, such as `status`;
 * the authorization server's own tenant the grant was opened for, where it hosts more than one;
 * the reviewed metadata and the digest it matched ({{effective-metadata}});
 * the issuer trust decision; and
@@ -432,7 +422,7 @@ A statement MUST be unexpired when presented. Expiry after presentation does not
 
 On refresh-token use the authorization server MUST verify possession of the establishment's proven key under the same sender-constraint mechanism. It MAY, by local policy, additionally require a current unexpired statement, and SHOULD require one once the establishment's recorded statement has expired ({{enforcement-bounds}}). The recorded statement satisfies that requirement while it is unexpired and no refusal record covers it; a replacement is needed only once the recorded statement expires or a refusal record covers it.
 
-Where the authorization server holds a refusal record for the establishment's recorded statement, it MUST reject a refresh without a presented or pulled replacement satisfying this section, whatever its policy on currency otherwise: a withdrawal ends grant continuation at once rather than waiting on local policy. A server that resolves status for the recorded statement's issuer SHOULD check that statement at each refresh against a Status List Token it holds within that token's validity, so that a withdrawal the server has resolved reaches open grants and not only new ones.
+Where the authorization server holds a refusal record for the establishment's recorded statement, it MUST reject a refresh without a presented or pulled replacement satisfying this section, whatever its policy on currency otherwise: a withdrawal ends grant continuation at once rather than waiting on local policy. A server that uses a withdrawal mechanism for the recorded statement's issuer SHOULD consult it for that statement at each refresh, so that a withdrawal reaches open grants and not only new ones.
 
 When a replacement is needed, the client presents it in the `software_statement` parameter of the refresh request, or, for an establishment created from a pulled statement, the server pulls one ({{pulled-statements}}). A statement with the recorded statement's `iss` and `jti` is not a replacement: if the client offers it again, the server rechecks it as the recorded statement, under the first paragraph of this section. The replacement:
 
@@ -546,7 +536,7 @@ The codes apply as follows:
 | --- | --- | --- |
 | Malformed, or failing signature or claim validation | `invalid_client` | `invalid_client` |
 | Valid but not acceptable here: issuer not configured, `aud` excludes this server, `sub` outside the issuer's scope, `aud_tenant` not this request's tenant or absent where required, `statement_uses` excludes this use | `invalid_client` | `invalid_client` |
-| Expired, or refused by a refusal record, including a status resolved as `INVALID`, or as `SUSPENDED` where policy refuses it, or superseded under the `iat` floor of {{multi-instance}} | `statement_required` | `statement_required` |
+| Expired, refused by a refusal record ({{withdrawal}}), or superseded under the `iat` floor of {{multi-instance}} | `statement_required` | `statement_required` |
 | Required statement absent, including one from an issuer required for the tenant ({{issuer-trust}}) | `statement_required` | `statement_required` |
 | Digest does not match the retrieved document | see {{effective-metadata}} | see {{effective-metadata}} |
 | Document carries metadata this server's policy refuses | `unauthorized_client` or `invalid_scope` | `unauthorized_client` or `invalid_scope` |
@@ -645,6 +635,7 @@ The following extensions are left to separate specifications:
 * Endorsed keys: a client attestation {{ABCA}}, or an assertion from an issuer named by an `instance_issuers` delegation in the reviewed document {{CLIENT-INSTANCE}}, vouching for a key that document does not carry. This extension would admit software whose instances hold their own keys.
 * Statement conveyance within a client attestation, rather than as a request parameter.
 * Partial review, by which an issuer vouches for particular members rather than a whole document ({{profiles}}).
+* Withdrawal mechanisms, such as Token Status List {{STATUSLIST}}, by which an issuer ends a decision before its expiry ({{withdrawal}}).
 
 # Security Considerations {#security-considerations}
 
@@ -691,17 +682,11 @@ A retrieval failure leaves the relevant metadata or proof unverified, so the aut
 
 ## Enforcement Bounds {#enforcement-bounds}
 
-Expiry is enforced at every presentation, so a lapsed statement prevents new runtime admission ({{REGISTRATION}} defines its effect on registrations). A lapsed statement does not retroactively invalidate an establishment, revoke an access token, or terminate an outstanding grant. Issuer non-renewal ends runtime-established grants only where the server requires a current statement on refresh; otherwise they last for the life of their refresh tokens whatever the statement lifetime, unless the server has resolved a withdrawal ({{refresh}}).
+Expiry is enforced at every presentation, so a lapsed statement prevents new runtime admission ({{REGISTRATION}} defines its effect on registrations). A lapsed statement does not retroactively invalidate an establishment, revoke an access token, or terminate an outstanding grant. Issuer non-renewal ends runtime-established grants only where the server requires a current statement on refresh; otherwise they last for the life of their refresh tokens whatever the statement lifetime, unless the server holds a refusal record ({{refresh}}).
 
-A narrowed re-review takes effect when the client publishes the narrower document and obtains a statement over it. Post-issuance metadata change is detected through `cimd_digest`, which covers exact bytes but requires the server to hold the current ones, retrieved or retained. The bounded statement lifetime limits what either signal can miss for new admissions. The `status` claim of {{profiles}}, resolved through {{STATUSLIST}}, lets an issuer end a decision before its expiry, and `exp` remains the floor where no status resolves ({{validation}}).
+A narrowed re-review takes effect when the client publishes the narrower document and obtains a statement over it. Post-issuance metadata change is detected through `cimd_digest`, which covers exact bytes but requires the server to hold the current ones, retrieved or retained. The bounded statement lifetime limits what either signal can miss for new admissions. A withdrawal mechanism, where the server uses one, lets an issuer end a decision before its expiry, and `exp` remains the floor ({{withdrawal}}).
 
 Short statement lifetimes tighten the issuer's control and increase issuance and delivery traffic. A fleet of statements issued together expires together, so issuers SHOULD stagger expiries or renew ahead of the boundary to avoid synchronized lapses.
-
-## Status Resolution
-
-Resolving status adds a dependency on the issuer and a retrieval the client does not control. Because {{STATUSLIST}} aggregates many statements into one list, a retrieval tells the issuer only that some trusting authorization server is checking. A server SHOULD retrieve the list on the list's own schedule rather than once per request, so that its request timing does not disclose the client population it serves. Per-request resolution would also make every request the statement governs depend on issuer availability.
-
-A status list is signed by the issuer, and a server MUST obtain the list's verification keys from the `jwks_uri` of the issuer's authorization server metadata {{RFC8414}}, reached from the configured `iss`, never from the list itself. That key set is separate from the issuer's statement key set ({{authorization-server-metadata}}), so a key that signs the list cannot sign statements.
 
 ## Document Resolution
 

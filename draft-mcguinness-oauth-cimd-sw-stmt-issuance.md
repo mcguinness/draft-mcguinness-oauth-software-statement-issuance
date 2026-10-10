@@ -60,6 +60,9 @@ normative:
     title: "OAuth 2.0 Form Post Response Mode"
 
 informative:
+  WITHDRAWAL:
+    target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-withdrawal
+    title: "Token Status List and Shared Signals for CIMD Software Statements"
   REGISTRATION:
     target: https://datatracker.ietf.org/doc/draft-mcguinness-oauth-cimd-sw-stmt-registration
     title: "CIMD Software Statement Registration"
@@ -617,7 +620,7 @@ The denial is terminal for the request. A deferral resolves to the denied state,
 
 # Status Publication {#status-publication}
 
-An issuing authorization server that ends decisions before their expiry publishes statement status as {{STATUSLIST}} defines, and carries the `status` claim in the statements it issues, as the Status Publication section of {{STATEMENT}} requires. Withdrawing a statement does not withdraw a replacement obtained through {{renewal}}, and withdrawing a replacement does not restore its predecessor.
+An issuing authorization server that ends decisions before their expiry publishes statement status as {{STATUSLIST}} defines, and carries the `status` claim in the statements it issues, as {{WITHDRAWAL}} defines. Withdrawing a statement does not withdraw a replacement obtained through {{renewal}}, and withdrawing a replacement does not restore its predecessor.
 
 # Authorization Server Metadata {#authorization-server-metadata}
 

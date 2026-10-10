@@ -1,7 +1,7 @@
 ---
-title: "Shared Signals Events for CIMD Software Statements"
-abbrev: oauth-cimd-sw-stmt-signals
-docname: draft-mcguinness-oauth-cimd-sw-stmt-signals-latest
+title: "Token Status List and Shared Signals for CIMD Software Statements"
+abbrev: oauth-cimd-sw-stmt-withdrawal
+docname: draft-mcguinness-oauth-cimd-sw-stmt-withdrawal-latest
 category: std
 
 ipr: trust200902
@@ -14,6 +14,7 @@ keyword:
  - Shared Signals
  - Security Event Token
  - Status List
+ - Withdrawal
 
 stand_alone: yes
 pi: [toc, sortrefs, symrefs]
@@ -57,13 +58,13 @@ informative:
 
 --- abstract
 
-A software statement records a reviewer's decision about client software. An issuer withdraws that decision before the statement expires by publishing a status through Token Status List, which a trusting authorization server resolves on the list's own schedule, so that schedule determines how quickly a withdrawal takes effect. This specification profiles the Shared Signals Framework so that an issuer can notify the servers relying on its statements that a status has changed, prompting them to resolve it at once. The status list remains the authority; an event only says when to look. A receiver that misses every event reaches the same result on its ordinary schedule, so the mechanism reduces latency without becoming necessary for correctness.
+CIMD Software Statement lets an issuer withdraw a review before the statement expires, and defines how an authorization server treats a withdrawal it learns of, but leaves the withdrawal mechanism open. This specification defines two complementary mechanisms. Token Status List carries the status of each statement: an issuer publishes it, and a trusting authorization server resolves it on the list's own schedule and refuses a withdrawn statement. A Shared Signals event tells the servers relying on an issuer's statements that a status has changed, prompting them to resolve it at once. The status list remains the authority; an event only says when to look, so a receiver that misses every event reaches the same result on its ordinary schedule.
 
 --- middle
 
 # Introduction
 
-{{STATEMENT}} defines a software statement, in which an issuer vouches for a reviewed Client ID Metadata Document, and the `status` claim by which a statement locates itself in the issuer's Status List Token {{STATUSLIST}}. An issuer withdraws a decision before its expiry by setting that status, and a trusting authorization server learns of the change when it next resolves the list.
+{{STATEMENT}} defines a software statement, in which an issuer vouches for a reviewed Client ID Metadata Document. It lets an issuer withdraw a decision before its expiry, and has a trusting authorization server that learns of a withdrawal hold a refusal record, but it requires and defines no withdrawal mechanism. This specification defines two. {{token-status-list}} profiles Token Status List {{STATUSLIST}}: an issuer withdraws a decision by setting the statement's status, and a trusting authorization server learns of the change when it next resolves the list.
 
 Responsiveness therefore depends on the fetch interval. For a withdrawal to take effect within minutes, every consumer has to poll at that interval, and most of those requests report no change.
 
@@ -71,17 +72,47 @@ The parties already have a configured relationship: a trusting authorization ser
 
 An event carries no decision: it reports that the issuer changed a status, and the receiver resolves that status as it would have later anyway. The status list remains the authority on whether a statement stands. {{processing}} makes two properties normative: an event can only prompt a resolution and never itself increases what a client may do, and a receiver that misses events enforces status and expiry exactly as it would without them.
 
-This specification defines the subject identification, the event, its payload claims, and the receiver's processing rules. It defines no new endpoint, transport, subject identifier format, durable receiver record, or trust establishment mechanism. {{STATEMENT}} does not depend on it.
+For the events, this specification defines the subject identification, the event, its payload claims, and the receiver's processing rules. It defines no new endpoint, transport, subject identifier format, durable receiver record, or trust establishment mechanism. {{STATEMENT}} does not depend on this specification.
 
 # Conventions and Definitions
 
 {::boilerplate bcp14-tagged}
 
-Transmitter, Receiver, Stream, and the delivery and configuration mechanisms are defined by {{SSF}}. Security Event Token, or SET, is defined by {{RFC8417}}. Subject identifier formats are defined by {{RFC9493}}. Status List Token, and the validation that resolves a status, are defined by {{STATUSLIST}}. The software statement, its claims including `status`, its validation, issuer trust configuration, and runtime presentation are defined by {{STATEMENT}}, and registration validity by {{REGISTRATION}}.
+Transmitter, Receiver, Stream, and the delivery and configuration mechanisms are defined by {{SSF}}. Security Event Token, or SET, is defined by {{RFC8417}}. Subject identifier formats are defined by {{RFC9493}}. Status List Token, and the validation that resolves a status, are defined by {{STATUSLIST}}. The software statement, its claims, its validation, issuer trust configuration, runtime presentation, withdrawal, and Refusal Record are defined by {{STATEMENT}}, and registration validity by {{REGISTRATION}}.
 
 Issuing Authorization Server and Trusting Authorization Server are defined by {{STATEMENT}}. For the events defined here, the issuing authorization server, which publishes the status of its statements ({{STATEMENT}}), acts as a Transmitter, and a trusting authorization server that has configured it acts as a Receiver.
 
-# Relationship to the Statement Family {#relationship}
+# Token Status List {#token-status-list}
+
+An issuer may use Token Status List {{STATUSLIST}} as the withdrawal mechanism of {{STATEMENT}} for its statements. A trusting authorization server may resolve those statuses for any issuer it has configured.
+
+## The `status` Claim
+
+A statement locates itself in the issuer's Status List Token with the `status` claim, as {{STATUSLIST}} defines it. It lets an issuer end a decision before `exp` without a trusting authorization server contacting the issuer for each statement. {{status-publication}} requires an issuer that publishes status to carry the claim in every statement it issues from then on, since a trusting authorization server cannot otherwise distinguish a statement that omits the claim from one whose issuer publishes no status.
+
+## Status Publication {#status-publication}
+
+An issuing authorization server that ends decisions before their expiry publishes statement status as {{STATUSLIST}} defines and carries the `status` claim in the statements it issues ({{STATEMENT}}). The statement records what was decided; the status list records whether that decision still stands.
+
+An issuer that publishes status:
+
+* MUST publish it for every statement it issues under a given `iss` from the point it begins publishing, not for a subset, so that a trusting authorization server can read an absent claim as meaning the issuer publishes no status. Statements issued before that point carry no claim, so the inference holds once those have expired;
+* MUST assign each statement its own index and MUST NOT reuse an index across statements. Withdrawing a statement then affects no other, including its replacement: withdrawing a superseded statement does not withdraw its replacement, and withdrawing a replacement does not restore its predecessor;
+* MUST sign the Status List Token with a key published at the `jwks_uri` of its authorization server metadata {{RFC8414}}, never with a statement signing key ({{STATEMENT}});
+* MUST include `exp` in every Status List Token it publishes, so that an older token cannot stand in for a newer one indefinitely; and
+* MUST give each Status List Token it publishes at a given list URI an `iat` later than that of any token it published there before, so that a trusting authorization server can tell the newer of two apart.
+
+## Status Resolution {#status-resolution}
+
+Where the statement carries `status` and the trusting authorization server resolves statuses for that issuer, it MUST reject a statement whose status is `INVALID`, and MUST apply its configured policy for that issuer to a statement whose status is `SUSPENDED`. A status of `INVALID`, or of `SUSPENDED` where that policy refuses the statement, is a withdrawal: the server holds a refusal record ({{STATEMENT}}), which lasts only as long as that status. A rejection on status uses the refusal-record row of the error responses of {{STATEMENT}}, because re-presenting the same statement cannot succeed while that status stands.
+
+Where a trusting authorization server resolves statuses for an issuer, resolution follows {{STATUSLIST}}, including its caching rules and its requirement to reject where the referenced index lies outside the list. Such a server MAY therefore decide from a Status List Token it already holds within that token's validity, including when it checks a recorded statement at refresh ({{STATEMENT}}). A server MUST NOT replace a Status List Token it holds with one whose `iat` is earlier, and MUST treat one whose `iat` is equal but whose contents differ as a resolution failure. A host serving an older token could otherwise restore a status the issuer has withdrawn. An issuer gives each token it publishes at a list URI a later `iat` than the last ({{status-publication}}).
+
+A statement carrying no `status`, or whose status the server cannot resolve, is bounded by `exp`, as {{STATEMENT}} provides for any withdrawal mechanism.
+
+A status list is signed by the issuer, and a server MUST obtain the list's verification keys from the `jwks_uri` of the issuer's authorization server metadata {{RFC8414}}, reached from the configured `iss`, never from the list itself. That key set is separate from the issuer's statement key set ({{STATEMENT}}), so a key that signs the list cannot sign statements.
+
+# Event Issuer Trust and Keys {#relationship}
 
 An event bears only on the statements the transmitting issuer has made about the named subject, never on statements another issuer made about the same software.
 
@@ -131,7 +162,7 @@ A trusting authorization server that receives an event defined here MUST:
 1. verify the SET as {{RFC8417}} requires, including its `typ`, and verify that its issuer is configured and its keys were obtained as {{relationship}} requires;
 2. reject an event whose `aud` does not contain its issuer identifier ({{relationship}}), and an event whose type it does not recognize;
 3. resolve the subject ({{subjects}}); and
-4. resolve the status of the affected statements from the issuer's Status List Token as {{STATUSLIST}} defines, without waiting for the schedule it would otherwise have used, and apply the resolved status under the rules of {{STATEMENT}}.
+4. resolve the status of the affected statements from the issuer's Status List Token as {{STATUSLIST}} defines, without waiting for the schedule it would otherwise have used, and apply the resolved status as {{status-resolution}} defines.
 
 The affected statements are the one the event's `software_statement_jti` names or, where the event names none, the statements for that subject and issuer that the receiver holds or has cached a status for.
 
@@ -145,7 +176,7 @@ Events can also arrive out of order. Because a receiver applies each accepted ev
 
 Two constraints bound every event:
 
-* An event MUST NOT by itself create standing, extend a statement's lifetime, or otherwise increase what a client may do. A receiver MUST ignore any payload member that would have such an effect. What a client may do follows from a valid statement and its resolved status, as {{STATEMENT}} defines.
+* An event MUST NOT by itself create standing, extend a statement's lifetime, or otherwise increase what a client may do. A receiver MUST ignore any payload member that would have such an effect. What a client may do follows from a valid statement and its resolved status, as {{STATEMENT}} and {{status-resolution}} define.
 * A receiver MUST continue to resolve status on its own schedule, and to enforce statement expiry, independently of this mechanism. Stream loss, transmitter unavailability, or delivery failure leaves both controls in force.
 
 Applying an event does not revoke access tokens already issued. A receiver applies its own grant and token lifetime policy, as it does when a statement expires or its status changes.
@@ -161,6 +192,10 @@ A transmitter supporting this specification MUST therefore advertise `default_su
 A receiver SHOULD request the event this specification defines, and SHOULD use the stream verification facility of {{SSF}} on a schedule, since a stream delivering nothing because it was misconfigured is otherwise indistinguishable from an issuer with nothing to report.
 
 # Security Considerations
+
+## Status Resolution Schedule
+
+Resolving status adds a dependency on the issuer and a retrieval the client does not control. Because {{STATUSLIST}} aggregates many statements into one list, a retrieval tells the issuer only that some trusting authorization server is checking. A server SHOULD retrieve the list on the list's own schedule rather than once per request, so that its request timing does not disclose the client population it serves. Per-request resolution would also make every request the statement governs depend on issuer availability.
 
 ## What an Event Cannot Do
 

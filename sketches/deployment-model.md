@@ -5,7 +5,7 @@ This is a non-normative companion to the four drafts in this repository. It sket
 * [CIMD Software Statement](../draft-mcguinness-oauth-cimd-sw-stmt.md), the statement draft: the artifact, its validation, issuer trust, and admitting a client at request time on a statement it presents or the provider pulls.
 * [CIMD Software Statement Registration](../draft-mcguinness-oauth-cimd-sw-stmt-registration.md), the registration draft: consuming a statement in an RFC 7591 registration, which the statement bounds and a replacement renews.
 * [CIMD Software Statement Issuance](../draft-mcguinness-oauth-cimd-sw-stmt-issuance.md), the issuance draft: how a client obtains one.
-* [Shared Signals Events for CIMD Software Statements](../draft-mcguinness-oauth-cimd-sw-stmt-signals.md), the signals draft: telling a provider that a status changed, so it resolves sooner than its schedule would. No other draft depends on it.
+* [Token Status List and Shared Signals for CIMD Software Statements](../draft-mcguinness-oauth-cimd-sw-stmt-withdrawal.md), the withdrawal draft: Token Status List as an optional withdrawal mechanism, and an event telling a provider that a status changed, so it resolves sooner than its schedule would. The statement draft requires no withdrawal mechanism, and no other draft depends on this one.
 
 ## The situation being addressed
 
@@ -141,11 +141,11 @@ They compose, and a deployment needing only the first can stop there and never t
 
 ## Composition with Shared Signals
 
-A statement is carried by the client it admits, and a client has no reason to stop presenting one, so ending a review early needs somewhere a provider can check. That place is the reviewer's status list. Statements can carry a `status` claim locating them in it, per [Token Status List](https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list/), and a provider resolves that status on its own schedule. Withdrawing a review is then a matter of setting one entry, and one signed list answers for every statement the reviewer has issued.
+A statement is carried by the client it admits, and a client has no reason to stop presenting one, so ending a review early needs somewhere a provider can check. The statement draft leaves the mechanism open; the withdrawal draft defines one, the reviewer's status list. Statements can carry a `status` claim locating them in it, per [Token Status List](https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list/), and a provider resolves that status on its own schedule. Withdrawing a review is then a matter of setting one entry, and one signed list answers for every statement the reviewer has issued.
 
 What remains is latency. A provider resolving hourly learns of a delisting within the hour. Shortening that for everyone means everyone polls harder, and nearly every poll reports no change.
 
-The signals draft closes that gap over the [Shared Signals Framework](https://openid.net/specs/openid-sharedsignals-framework-1_0.html). The reviewer transmits, the authorization server receives, events travel as [Security Event Tokens](https://www.rfc-editor.org/rfc/rfc8417.html), and subjects use the `uri` format of [RFC 9493](https://www.rfc-editor.org/rfc/rfc9493.html). Nothing new is invented at the transport or trust layer.
+The withdrawal draft closes that gap over the [Shared Signals Framework](https://openid.net/specs/openid-sharedsignals-framework-1_0.html). The reviewer transmits, the authorization server receives, events travel as [Security Event Tokens](https://www.rfc-editor.org/rfc/rfc8417.html), and subjects use the `uri` format of [RFC 9493](https://www.rfc-editor.org/rfc/rfc9493.html). Nothing new is invented at the transport or trust layer.
 
 One event, carrying no decision:
 
@@ -187,8 +187,8 @@ What does not compose is metadata. Resolved metadata is derived, and parties oth
 | Discovery | Statement | Authorization Server Metadata |
 | How a client obtains a statement | Issuance | Token Exchange Profile, Software Statement Authorization Request, Deferred Processing |
 | Renewal from a prior statement | Issuance | Renewal |
-| Ending a review before expiry | Statement, Issuance | `status` claim, Status Publication |
-| Reducing withdrawal latency | Signals | Status Changed, Receiver Processing |
+| Ending a review before expiry | Statement, Withdrawal | Withdrawal; Token Status List |
+| Reducing withdrawal latency | Withdrawal | Status Changed, Receiver Processing |
 | Issuer trust without per-reviewer enrollment | None yet | Sketched in the Federation companion |
 
 ## What changes, concretely
